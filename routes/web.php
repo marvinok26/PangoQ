@@ -7,7 +7,9 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SavingsWalletController;
 use App\Http\Controllers\TripController;
 use App\Http\Controllers\ProfileController;
+use App\Services\LanguageService;
 use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 
 // Landing page route
 Route::get('/', function () {
-    return view('welcome'); 
+    return view('welcome');
 })->name('home');
 
 // Language switcher route
@@ -25,6 +27,71 @@ Route::get('language/{locale}', function ($locale) {
     app()->make(App\Services\LanguageService::class)->setLanguage($locale);
     return back();
 })->name('language.switch');
+
+// Public pages - accessible without login
+// Product
+Route::get('/features', function () {
+    return view('pages.features');
+})->name('features');
+
+Route::get('/pricing', function () {
+    return view('pages.pricing');
+})->name('pricing');
+
+Route::get('/mobile-app', function () {
+    return view('pages.mobile-app');
+})->name('mobile-app');
+
+Route::get('/destinations', function () {
+    return view('pages.destinations');
+})->name('destinations');
+
+// Resources
+Route::get('/travel-guides', function () {
+    return view('pages.travel-guides');
+})->name('travel-guides');
+
+Route::get('/trip-ideas', function () {
+    return view('pages.trip-ideas');
+})->name('trip-ideas');
+
+Route::get('/blog', function () {
+    return view('pages.blog');
+})->name('blog');
+
+Route::get('/support', function () {
+    return view('pages.support');
+})->name('support');
+
+// Company
+Route::get('/about', function () {
+    return view('pages.about');
+})->name('about');
+
+Route::get('/careers', function () {
+    return view('pages.careers');
+})->name('careers');
+
+Route::get('/press', function () {
+    return view('pages.press');
+})->name('press');
+
+Route::get('/contact', function () {
+    return view('pages.contact');
+})->name('contact');
+
+// Legal
+Route::get('/privacy', function () {
+    return view('pages.privacy');
+})->name('privacy');
+
+Route::get('/terms', function () {
+    return view('pages.terms');
+})->name('terms');
+
+Route::get('/cookies', function () {
+    return view('pages.cookies');
+})->name('cookies');
 
 // Trip Planning Route - Accessible without login
 Route::get('/plan', [TripController::class, 'create'])->name('trips.plan');

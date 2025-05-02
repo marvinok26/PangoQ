@@ -1,10 +1,14 @@
+{{-- resources/views/components/footer.blade.php --}}
+
 <footer class="bg-white pt-16 pb-12 border-t border-gray-100">
     <div class="container mx-auto px-4 lg:px-8">
         <div class="grid grid-cols-2 md:grid-cols-6 gap-8 mb-16">
             <div class="col-span-2">
                 <div class="flex items-center mb-4">
-                    <div class="h-8 w-8 bg-secondary-600 rounded-full"></div>
-                    <span class="ml-2 text-xl font-bold text-secondary-600">pangoQ</span>
+                    <a href="{{ route('home') }}" class="flex items-center">
+                        <div class="h-8 w-8 bg-secondary-600 rounded-full"></div>
+                        <span class="ml-2 text-xl font-bold text-secondary-600">pangoQ</span>
+                    </a>
                 </div>
                 <p class="text-gray-600 mb-4">Making group travel planning simple, collaborative, and enjoyable.</p>
                 <div class="flex space-x-4">
@@ -32,45 +36,45 @@
             <div>
                 <h3 class="font-semibold text-gray-900 mb-3">Product</h3>
                 <ul class="space-y-2">
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Features</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Pricing</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Mobile App</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Destinations</a></li>
+                    <li><a href="{{ route('features') }}" class="text-gray-600 hover:text-secondary-600">Features</a></li>
+                    <li><a href="{{ route('pricing') }}" class="text-gray-600 hover:text-secondary-600">Pricing</a></li>
+                    <li><a href="{{ route('mobile-app') }}" class="text-gray-600 hover:text-secondary-600">Mobile App</a></li>
+                    <li><a href="{{ route('destinations') }}" class="text-gray-600 hover:text-secondary-600">Destinations</a></li>
                 </ul>
             </div>
             
             <div>
                 <h3 class="font-semibold text-gray-900 mb-3">Resources</h3>
                 <ul class="space-y-2">
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Travel Guides</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Trip Ideas</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Blog</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Support Center</a></li>
+                    <li><a href="{{ route('travel-guides') }}" class="text-gray-600 hover:text-secondary-600">Travel Guides</a></li>
+                    <li><a href="{{ route('trip-ideas') }}" class="text-gray-600 hover:text-secondary-600">Trip Ideas</a></li>
+                    <li><a href="{{ route('blog') }}" class="text-gray-600 hover:text-secondary-600">Blog</a></li>
+                    <li><a href="{{ route('support') }}" class="text-gray-600 hover:text-secondary-600">Support Center</a></li>
                 </ul>
             </div>
             
             <div>
                 <h3 class="font-semibold text-gray-900 mb-3">Company</h3>
                 <ul class="space-y-2">
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">About Us</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Careers</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Press</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Contact</a></li>
+                    <li><a href="{{ route('about') }}" class="text-gray-600 hover:text-secondary-600">About Us</a></li>
+                    <li><a href="{{ route('careers') }}" class="text-gray-600 hover:text-secondary-600">Careers</a></li>
+                    <li><a href="{{ route('press') }}" class="text-gray-600 hover:text-secondary-600">Press</a></li>
+                    <li><a href="{{ route('contact') }}" class="text-gray-600 hover:text-secondary-600">Contact</a></li>
                 </ul>
             </div>
             
             <div>
                 <h3 class="font-semibold text-gray-900 mb-3">Legal</h3>
                 <ul class="space-y-2">
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Privacy Policy</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Terms of Service</a></li>
-                    <li><a href="#" class="text-gray-600 hover:text-secondary-600">Cookie Policy</a></li>
+                    <li><a href="{{ route('privacy') }}" class="text-gray-600 hover:text-secondary-600">Privacy Policy</a></li>
+                    <li><a href="{{ route('terms') }}" class="text-gray-600 hover:text-secondary-600">Terms of Service</a></li>
+                    <li><a href="{{ route('cookies') }}" class="text-gray-600 hover:text-secondary-600">Cookie Policy</a></li>
                 </ul>
             </div>
         </div>
         
         <div class="pt-8 border-t border-gray-100 text-center">
-            <p class="text-gray-500">&copy; 2025 PangoQ. All rights reserved.</p>
+            <p class="text-gray-500">&copy; {{ date('Y') }} PangoQ. All rights reserved.</p>
         </div>
     </div>
 </footer>
