@@ -3,145 +3,128 @@
 namespace App\Http\Controllers;
 
 use App\Models\Trip;
-use App\Models\Destination;
-use App\Services\TripService;
+use App\Models\Itinerary;
+use App\Models\Activity;
+use App\Models\TripMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
 class TripController extends Controller
 {
     /**
-     * The trip service instance.
+     * Display a listing of trips.
      */
-    protected $tripService;
-
-    /**
-     * Create a new controller instance.
-     */
-    public function __construct(TripService $tripService)
+    public function index()
     {
-        $this->tripService = $tripService;
+        $user = Auth::user();
         
-        // Add except for create so anyone can access the trip creation form
-        // $this->middleware('auth')->except(['create']);
-        
-        // Only the trip members can access these routes
-        // $this->middleware('tripmember')->only(['show', 'edit', 'update', 'destroy']);
-    }
-
-    /**
-     * Display a listing of the trips.
-     */
-    public function index(): View
-    {
-        $trips = Auth::check() 
-            ? Auth::user()->trips()->latest()->get() 
-            : collect();
-        
-        return view('livewire.pages.trips.index', compact('trips'));
+        // Get trips where the user is the creator or a member
+        $trips = Trip::where('creator_id', $user->id)
+            ->orWhereHas('members', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return view('trips.index', compact('trips'));
     }
 
     /**
      * Show the form for creating a new trip.
      */
-    public function create(): View
+    public function create()
     {
-        $destinations = Destination::all();
-        return view('livewire.pages.trips.create', compact('destinations'));
-    }
-
-    /**
-     * Store a newly created trip in storage.
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'destination' => 'required|string|max:255',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'budget' => 'nullable|numeric|min:0',
-        ]);
-        
-        $trip = $this->tripService->createTrip($validated, Auth::id());
-        
-        return redirect()->route('trips.show', $trip)
-            ->with('success', 'Trip created successfully!');
+        return view('trips.create');
     }
 
     /**
      * Display the specified trip.
      */
-    public function show(Trip $trip): View
+    public function show(Trip $trip)
     {
-        $trip->load(['itineraries.activities', 'members.user', 'savingsWallet']);
-        
-        return view('livewire.pages.trips.show', compact('trip'));
-    }
-
-    /**
-     * Show the form for editing the specified trip.
-     */
-    public function edit(Trip $trip): View
-    {
-        return view('livewire.pages.trips.edit', compact('trip'));
-    }
-
-    /**
-     * Update the specified trip in storage.
-     */
-    public function update(Request $request, Trip $trip)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'destination' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'budget' => 'nullable|numeric|min:0',
-            'status' => 'sometimes|in:planning,active,completed,cancelled',
-        ]);
-        
-        $trip->update($validated);
-        
-        if (isset($validated['status'])) {
-            $this->tripService->updateTripStatus($trip, $validated['status']);
+        // Check if the user is authorized to view the trip
+        if (!$trip->isMember(Auth::id()) && !$trip->isOrganizer(Auth::id())) {
+            abort(403, 'You do not have permission to view this trip.');
         }
         
-        return redirect()->route('trips.show', $trip)
-            ->with('success', 'Trip updated successfully!');
-    }
-
-    /**
-     * Remove the specified trip from storage.
-     */
-    public function destroy(Trip $trip)
-    {
-        // Only allow the creator to delete the trip
-        if (Auth::id() !== $trip->creator_id) {
-            return back()->with('error', 'You do not have permission to delete this trip.');
-        }
-        
-        $trip->delete();
-        
-        return redirect()->route('trips.index')
-            ->with('success', 'Trip deleted successfully!');
-    }
-
-    /**
-     * Invite members to the trip.
-     */
-    public function invite(Request $request, Trip $trip)
-    {
-        $validated = $request->validate([
-            'emails' => 'required|array',
-            'emails.*' => 'required|email',
+        // Load trip relationships
+        $trip->load([
+            'creator', 
+            'members.user', 
+            'itineraries' => function($query) {
+                $query->orderBy('day_number', 'asc');
+            }, 
+            'itineraries.activities',
+            'savingsWallet'
         ]);
         
-        $this->tripService->inviteMembers($trip, $validated['emails']);
+        return view('trips.show', compact('trip'));
+    }
+
+    /**
+     * Finalize a trip and set it to 'active' status.
+     */
+    public function finalize(Trip $trip)
+    {
+        // Check if the user is authorized to finalize the trip
+        if (!$trip->isOrganizer(Auth::id())) {
+            abort(403, 'You do not have permission to finalize this trip.');
+        }
         
-        return back()->with('success', 'Invitations sent successfully!');
+        // Set trip status to active
+        $trip->update(['status' => 'active']);
+        
+        // Redirect back with success message
+        return redirect()->route('trips.show', $trip->id)
+            ->with('success', 'Trip has been finalized successfully!');
+    }
+    
+    /**
+     * Generate and download PDF itinerary.
+     */
+    public function downloadPdf(Trip $trip)
+    {
+        // Check if the user is authorized to download the itinerary
+        if (!$trip->isMember(Auth::id()) && !$trip->isOrganizer(Auth::id())) {
+            abort(403, 'You do not have permission to download this itinerary.');
+        }
+        
+        // Load trip relationships
+        $trip->load([
+            'creator', 
+            'members.user', 
+            'itineraries' => function($query) {
+                $query->orderBy('day_number', 'asc');
+            }, 
+            'itineraries.activities'
+        ]);
+        
+        // TODO: Generate PDF
+        
+        // For now, just redirect back with a message
+        return redirect()->back()->with('info', 'PDF download feature coming soon!');
+    }
+    
+    /**
+     * Print-friendly itinerary view.
+     */
+    public function printView(Trip $trip)
+    {
+        // Check if the user is authorized to view the itinerary
+        if (!$trip->isMember(Auth::id()) && !$trip->isOrganizer(Auth::id())) {
+            abort(403, 'You do not have permission to view this itinerary.');
+        }
+        
+        // Load trip relationships
+        $trip->load([
+            'creator', 
+            'members.user', 
+            'itineraries' => function($query) {
+                $query->orderBy('day_number', 'asc');
+            }, 
+            'itineraries.activities'
+        ]);
+        
+        return view('trips.print', compact('trip'));
     }
 }

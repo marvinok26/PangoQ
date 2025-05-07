@@ -68,84 +68,8 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('register') }}" class="space-y-6">
-                    @csrf
-
-                    <!-- Name -->
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                        <input id="name" 
-                               class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
-                               type="text" 
-                               name="name" 
-                               value="{{ old('name') }}" 
-                               placeholder="John Doe"
-                               required 
-                               autofocus />
-                    </div>
-
-                    <!-- Email Address -->
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                        <input id="email" 
-                               class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
-                               type="email" 
-                               name="email" 
-                               value="{{ old('email') }}" 
-                               placeholder="you@example.com"
-                               required />
-                    </div>
-
-                    <!-- Password -->
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input id="password" 
-                               class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
-                               type="password" 
-                               name="password" 
-                               placeholder="••••••••"
-                               required 
-                               autocomplete="new-password" />
-                        <p class="mt-1 text-xs text-gray-500">Must be at least 8 characters</p>
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div>
-                        <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                        <input id="password_confirmation" 
-                               class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
-                               type="password" 
-                               name="password_confirmation" 
-                               placeholder="••••••••"
-                               required />
-                    </div>
-
-                    <!-- Terms and Conditions -->
-                    <div class="mt-4">
-                        <div class="flex items-start">
-                            <div class="flex items-center h-5">
-                                <input id="terms" 
-                                       type="checkbox" 
-                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
-                                       name="terms" 
-                                       required>
-                            </div>
-                            <div class="ml-3 text-sm">
-                                <label for="terms" class="text-gray-600">
-                                    I agree to the <a href="{{ route('terms') }}" class="text-blue-600 hover:text-blue-500 hover:underline">Terms of Service</a> and 
-                                    <a href="{{ route('privacy') }}" class="text-blue-600 hover:text-blue-500 hover:underline">Privacy Policy</a>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <button type="submit" 
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                            {{ __('Create Account') }}
-                        </button>
-                    </div>
-                </form>
+            
+ 
 
                 <div class="mt-8 text-center text-sm">
                     <p class="text-gray-600">
@@ -158,5 +82,26 @@
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Find all forms on the page
+            document.querySelectorAll('form').forEach(form => {
+                // Check if form already has a CSRF token
+                if (!form.querySelector('input[name="_token"]')) {
+                    // Create a new hidden input field for the CSRF token
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = '_token';
+                    // Get the token from the meta tag if available
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    // Otherwise, use the PHP generated token (will be replaced by Blade)
+                    input.value = token || '{{ csrf_token() }}';
+                    // Add the input field to the form
+                    form.appendChild(input);
+                    console.log('Added CSRF token to form');
+                }
+            });
+        });
+    </script>
 </div>
 @endsection

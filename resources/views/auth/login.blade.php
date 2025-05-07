@@ -100,9 +100,15 @@
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                            <a class="text-xs font-medium text-blue-600 hover:text-blue-500" href="{{ route('password.request') }}">
-                                {{ __('Forgot your password?') }}
-                            </a>
+                            @if(Route::has('password.request'))
+                                <a class="text-xs font-medium text-blue-600 hover:text-blue-500" href="{{ route('password.request') }}">
+                                    {{ __('Forgot your password?') }}
+                                </a>
+                            @else
+                                <a class="text-xs font-medium text-blue-600 hover:text-blue-500" href="#">
+                                    {{ __('Forgot your password?') }}
+                                </a>
+                            @endif
                         </div>
                         <input id="password" 
                                class="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
@@ -150,5 +156,26 @@
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Find all forms on the page
+            document.querySelectorAll('form').forEach(form => {
+                // Check if form already has a CSRF token
+                if (!form.querySelector('input[name="_token"]')) {
+                    // Create a new hidden input field for the CSRF token
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = '_token';
+                    // Get the token from the meta tag if available
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    // Otherwise, use the PHP generated token (will be replaced by Blade)
+                    input.value = token || '{{ csrf_token() }}';
+                    // Add the input field to the form
+                    form.appendChild(input);
+                    console.log('Added CSRF token to form');
+                }
+            });
+        });
+    </script>
 </div>
 @endsection

@@ -2,153 +2,115 @@
 
 namespace App\Livewire\Trips;
 
-use App\Models\Destination;
-use App\Services\TripService;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use App\Models\Destination;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 class CreateTrip extends Component
 {
-    public string $title = '';
-    public string $description = '';
-    public string $destination = '';
-    public ?string $start_date = null;
-    public ?string $end_date = null;
-    public ?float $budget = null;
-    public string $privacy = 'friends';
+    public $currentStep = 1;
+    public $totalSteps = 5;
+    public $showNavButtons = false;
     
-    // Step tracking
-    public int $currentStep = 1;
-    public int $totalSteps = 3;
-    
-    // Destination search
-    public string $destinationQuery = '';
-    public array $destinationResults = [];
-    public bool $showDestinationDropdown = false;
-    
-    // Invite friends
-    public array $inviteEmails = [];
-    public string $newEmail = '';
-    
-    protected $rules = [
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'destination' => 'required|string|max:255',
-        'start_date' => 'required|date|after_or_equal:today',
-        'end_date' => 'required|date|after_or_equal:start_date',
-        'budget' => 'nullable|numeric|min:0',
-        'privacy' => 'required|in:public,friends,private',
+    // Use specific events for each step transition
+    protected $listeners = [
+        'destinationSelected' => 'selectDestination',
+        'completeDetailsStep' => 'moveToItinerary',
+        'completeItineraryStep' => 'moveToInvites',
+        'completeInvitesStep' => 'moveToReview',
+        'goToPreviousStep' => 'previousStep'
     ];
     
     public function mount()
     {
-        // Set default dates (today and a week from today)
-        $this->start_date = now()->format('Y-m-d');
-        $this->end_date = now()->addDays(7)->format('Y-m-d');
+        Log::info("CreateTrip component mounted with step: {$this->currentStep}");
     }
     
     public function render()
     {
+        // Debug info
+        session(['debug_info' => "Current step: {$this->currentStep}"]);
+        
         return view('livewire.trips.create-trip');
     }
     
-    public function searchDestinations()
+    // Specific transition methods for each step
+    public function moveToItinerary()
     {
-        if (strlen($this->destinationQuery) >= 2) {
-            $this->destinationResults = Destination::where('name->en', 'like', '%' . $this->destinationQuery . '%')
-                ->orWhere('country', 'like', '%' . $this->destinationQuery . '%')
-                ->orWhere('city', 'like', '%' . $this->destinationQuery . '%')
-                ->take(5)
-                ->get()
-                ->toArray();
-                
-            $this->showDestinationDropdown = true;
-        } else {
-            $this->destinationResults = [];
-            $this->showDestinationDropdown = false;
+        Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
+        $this->currentStep = 3;
+    }
+    
+    public function moveToInvites()
+    {
+        Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
+        $this->currentStep = 4;
+    }
+    
+    public function moveToReview()
+    {
+        Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
+        $this->currentStep = 5;
+    }
+    
+    public function previousStep()
+    {
+        $oldStep = $this->currentStep;
+        if ($this->currentStep > 1) {
+            $this->currentStep--;
+        }
+        Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
+    }
+    
+    public function goToStep($step)
+    {
+        $oldStep = $this->currentStep;
+        // Only allow valid steps
+        if ($step >= 1 && $step <= $this->totalSteps) {
+            // Only allow backward navigation or one step forward
+            if ($step < $this->currentStep || $step == $this->currentStep + 1) {
+                $this->currentStep = $step;
+                Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+            }
+        }
+    }
+    
+    public function skipToSummary()
+    {
+        if (session('selected_destination') && session('trip_details')) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = $this->totalSteps;
+            Log::info("Skipped from step {$oldStep} to summary (step 5)");
         }
     }
     
     public function selectDestination($destination)
     {
-        if (is_array($destination)) {
-            $this->destination = $destination['name']['en'] ?? $destination['name'];
-        } else {
-            $this->destination = $destination;
-        }
+        // Store destination
+        Session::put('selected_destination', $destination);
         
-        $this->destinationQuery = $this->destination;
-        $this->showDestinationDropdown = false;
-    }
-    
-    public function addEmail()
-    {
-        $this->validate([
-            'newEmail' => 'required|email|not_in:' . implode(',', $this->inviteEmails),
-        ]);
-        
-        $this->inviteEmails[] = $this->newEmail;
-        $this->newEmail = '';
-    }
-    
-    public function removeEmail($index)
-    {
-        unset($this->inviteEmails[$index]);
-        $this->inviteEmails = array_values($this->inviteEmails);
-    }
-    
-    public function nextStep()
-    {
-        if ($this->currentStep === 1) {
-            $this->validate([
-                'destination' => 'required|string|max:255',
-                'start_date' => 'required|date|after_or_equal:today',
-                'end_date' => 'required|date|after_or_equal:start_date',
-            ]);
-        } elseif ($this->currentStep === 2) {
-            $this->validate([
-                'title' => 'required|string|max:255',
-                'privacy' => 'required|in:public,friends,private',
-            ]);
-        }
-        
-        $this->currentStep = min($this->currentStep + 1, $this->totalSteps);
-    }
-    
-    public function previousStep()
-    {
-        $this->currentStep = max($this->currentStep - 1, 1);
+        // Go to Trip Details
+        $oldStep = $this->currentStep;
+        $this->currentStep = 2;
+        Log::info("Selected destination, moved from step {$oldStep} to 2");
     }
     
     public function createTrip()
     {
-        $this->validate();
+        // Get trip data
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
         
-        $tripData = [
-            'title' => $this->title,
-            'description' => $this->description,
-            'destination' => $this->destination,
-            'start_date' => $this->start_date,
-            'end_date' => $this->end_date,
-            'budget' => $this->budget,
-        ];
-        
-        $tripService = app(TripService::class);
-        $trip = $tripService->createTrip($tripData, Auth::id());
-        
-        // If there are emails to invite, send invitations
-        if (count($this->inviteEmails) > 0) {
-            $tripService->inviteMembers($trip, $this->inviteEmails);
+        if (!$selectedDestination || !$tripDetails) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = !$selectedDestination ? 1 : 2;
+            Log::info("Missing data, moved from step {$oldStep} to {$this->currentStep}");
+            return;
         }
         
-        session()->flash('success', 'Trip created successfully!');
-        
-        // Redirect to the trip page
-        return redirect()->route('trips.show', $trip);
-    }
-    
-    public function skipToSummary()
-    {
-        $this->currentStep = $this->totalSteps;
+        // Success!
+        session()->flash('message', 'Trip created successfully!');
+        return redirect()->route('dashboard');
     }
 }

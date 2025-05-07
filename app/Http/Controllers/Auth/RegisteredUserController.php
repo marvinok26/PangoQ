@@ -36,8 +36,10 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
+        // Let's automatically log in the user after registration
         Auth::login($user);
 
-        return redirect(route('dashboard'));
+        // Direct to dashboard
+        return redirect()->intended(route('dashboard'));
     }
 }

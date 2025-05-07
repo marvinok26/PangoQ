@@ -4,15 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Trip extends Model
 {
     use HasFactory;
-
+    
     protected $fillable = [
         'creator_id',
         'title',
@@ -21,87 +17,83 @@ class Trip extends Model
         'start_date',
         'end_date',
         'budget',
-        'status',
+        'status'
     ];
-
+    
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'budget' => 'decimal:2',
     ];
-
-    public function creator(): BelongsTo
+    
+    // Relationships
+    
+    // A trip belongs to a creator (user)
+    public function creator()
     {
         return $this->belongsTo(User::class, 'creator_id');
     }
-
-    public function members(): HasMany
+    
+    // A trip has many members
+    public function members()
     {
         return $this->hasMany(TripMember::class);
     }
-
-    public function acceptedMembers()
-    {
-        return $this->members()->where('invitation_status', 'accepted');
-    }
-
-    public function pendingInvitations()
-    {
-        return $this->members()->where('invitation_status', 'pending');
-    }
-
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'trip_members')
-            ->withPivot('role', 'invitation_status')
-            ->withTimestamps();
-    }
-
-    public function itineraries(): HasMany
+    
+    // A trip has many itineraries (days)
+    public function itineraries()
     {
         return $this->hasMany(Itinerary::class);
     }
-
-    public function savingsWallet(): HasOne
+    
+    // A trip has a savings wallet
+    public function savingsWallet()
     {
         return $this->hasOne(SavingsWallet::class);
     }
-
-    public function getDurationInDaysAttribute(): int
+    
+    // Get all users associated with the trip
+    public function users()
     {
-        return $this->start_date->diffInDays($this->end_date) + 1;
+        return $this->belongsToMany(User::class, 'trip_members', 'trip_id', 'user_id')
+            ->withPivot('role', 'invitation_status')
+            ->withTimestamps();
     }
-
-    public function getTripDateRangeAttribute(): string
+    
+    // Helpers
+    
+    // Calculate duration in days
+    public function getDurationAttribute()
     {
-        return $this->start_date->format('M j') . ' - ' . $this->end_date->format('M j, Y');
+        return $this->start_date->diffInDays($this->end_date) + 1; // +1 to include the end day
     }
-
-    public function isCreator(int $userId): bool
+    
+    // Check if user is a member of the trip
+    public function isMember($userId)
     {
-        return $this->creator_id === $userId;
+        return $this->members()->where('user_id', $userId)->exists();
     }
-
-    public function isMember(int $userId): bool
+    
+    // Check if user is the organizer of the trip
+    public function isOrganizer($userId)
     {
-        return $this->members()
-            ->where('user_id', $userId)
-            ->where('invitation_status', 'accepted')
-            ->exists();
+        return $this->creator_id === $userId || 
+               $this->members()->where('user_id', $userId)
+                   ->where('role', 'organizer')
+                   ->exists();
     }
-
-    public function canAccess(int $userId): bool
+    
+    // Scope for upcoming trips
+    public function scopeUpcoming($query)
     {
-        return $this->isCreator($userId) || $this->isMember($userId);
+        return $query->where('start_date', '>=', now())
+            ->orderBy('start_date', 'asc');
     }
-
-    public function getStatusColorAttribute(): string
+    
+    // Scope for past trips
+    public function scopePast($query)
     {
-        return [
-            'planning' => 'blue',
-            'active' => 'green',
-            'completed' => 'purple',
-            'cancelled' => 'red',
-        ][$this->status] ?? 'gray';
+        return $query->where('end_date', '<', now())
+            ->orderBy('end_date', 'desc');
     }
 }

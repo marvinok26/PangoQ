@@ -4,42 +4,46 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TripMember extends Model
 {
     use HasFactory;
-
+    
     protected $fillable = [
         'trip_id',
         'user_id',
-        'invitation_email',
         'role',
         'invitation_status',
+        'invitation_email'
     ];
-
-    public function trip(): BelongsTo
+    
+    // A trip member belongs to a trip
+    public function trip()
     {
         return $this->belongsTo(Trip::class);
     }
-
-    public function user(): BelongsTo
+    
+    // A trip member belongs to a user
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
-
-    public function isPending(): bool
+    
+    // Scope for pending invitations
+    public function scopePending($query)
     {
-        return $this->invitation_status === 'pending';
+        return $query->where('invitation_status', 'pending');
     }
-
-    public function isAccepted(): bool
+    
+    // Scope for accepted invitations
+    public function scopeAccepted($query)
     {
-        return $this->invitation_status === 'accepted';
+        return $query->where('invitation_status', 'accepted');
     }
-
-    public function isOrganizer(): bool
+    
+    // Scope for declined invitations
+    public function scopeDeclined($query)
     {
-        return $this->role === 'organizer';
+        return $query->where('invitation_status', 'declined');
     }
 }

@@ -1,0 +1,1643 @@
+
+
+=== File: TripDetails.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+
+class TripDetails extends Component
+{
+    public $title;
+    public $start_date;
+    public $end_date;
+    public $travelers = 4;
+    public $budget;
+    public $activityInterests = [];
+    public $accommodationType;
+    public $tripType;
+    public $tripPace = 5;
+    public $destination;
+
+    public function mount()
+    {
+        // Set default dates (two weeks from now for one week)
+        $this->start_date = now()->addWeeks(2)->format('Y-m-d');
+        $this->end_date = now()->addWeeks(3)->format('Y-m-d');
+        
+        // Get destination from session
+        $selectedDestination = session('selected_destination');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+            
+            // Set default title based on destination
+            if (empty($this->title) && isset($selectedDestination['name'])) {
+                $this->title = "Trip to " . $selectedDestination['name'];
+            }
+        }
+        
+        // Load saved trip details if available
+        $tripDetails = session('trip_details');
+        if ($tripDetails) {
+            $this->title = $tripDetails['title'] ?? $this->title;
+            $this->start_date = $tripDetails['start_date'] ?? $this->start_date;
+            $this->end_date = $tripDetails['end_date'] ?? $this->end_date;
+            $this->travelers = $tripDetails['travelers'] ?? $this->travelers;
+            $this->budget = $tripDetails['budget'] ?? $this->budget;
+            $this->activityInterests = $tripDetails['activity_interests'] ?? $this->activityInterests;
+            $this->accommodationType = $tripDetails['accommodation_type'] ?? $this->accommodationType;
+            $this->tripType = $tripDetails['trip_type'] ?? $this->tripType;
+            $this->tripPace = $tripDetails['trip_pace'] ?? $this->tripPace;
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.trip-details');
+    }
+
+    public function updated($field)
+    {
+        // Validate fields on change
+        if (in_array($field, ['title', 'start_date', 'end_date', 'travelers', 'budget'])) {
+            $this->validateOnly($field, $this->getValidationRules());
+        }
+    }
+
+    public function getValidationRules()
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'travelers' => 'required|integer|min:1',
+            'budget' => 'nullable|numeric|min:0',
+            'activityInterests' => 'nullable|array',
+            'accommodationType' => 'nullable|string',
+            'tripType' => 'nullable|string',
+            'tripPace' => 'nullable|integer|min:1|max:10',
+        ];
+    }
+
+    public function saveTripDetails()
+    {
+        // Validate data
+        $validatedData = $this->validate($this->getValidationRules());
+
+        // Prepare data for session storage
+        $tripDetails = [
+            'title' => $this->title,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
+            'travelers' => $this->travelers,
+            'budget' => $this->budget,
+            'activity_interests' => $this->activityInterests,
+            'accommodation_type' => $this->accommodationType,
+            'trip_type' => $this->tripType,
+            'trip_pace' => $this->tripPace,
+        ];
+
+        // Save to session
+        session(['trip_details' => $tripDetails]);
+        
+        // Log for debugging
+        Log::info("Trip Details saved, dispatching specific event to move to itinerary");
+        
+        // Use a specific named event instead of a generic one
+        $this->dispatch('completeDetailsStep');
+    }
+}
+
+=== File: CreateTrip.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use App\Models\Destination;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+
+class CreateTrip extends Component
+{
+    public $currentStep = 1;
+    public $totalSteps = 5;
+    public $showNavButtons = false;
+    
+    // Use specific events for each step transition
+    protected $listeners = [
+        'destinationSelected' => 'selectDestination',
+        'completeDetailsStep' => 'moveToItinerary',
+        'completeItineraryStep' => 'moveToInvites',
+        'completeInvitesStep' => 'moveToReview',
+        'goToPreviousStep' => 'previousStep'
+    ];
+    
+    public function mount()
+    {
+        Log::info("CreateTrip component mounted with step: {$this->currentStep}");
+    }
+    
+    public function render()
+    {
+        // Debug info
+        session(['debug_info' => "Current step: {$this->currentStep}"]);
+        
+        return view('livewire.trips.create-trip');
+    }
+    
+    // Specific transition methods for each step
+    public function moveToItinerary()
+    {
+        Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
+        $this->currentStep = 3;
+    }
+    
+    public function moveToInvites()
+    {
+        Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
+        $this->currentStep = 4;
+    }
+    
+    public function moveToReview()
+    {
+        Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
+        $this->currentStep = 5;
+    }
+    
+    public function previousStep()
+    {
+        $oldStep = $this->currentStep;
+        if ($this->currentStep > 1) {
+            $this->currentStep--;
+        }
+        Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
+    }
+    
+    public function goToStep($step)
+    {
+        $oldStep = $this->currentStep;
+        // Only allow valid steps
+        if ($step >= 1 && $step <= $this->totalSteps) {
+            // Only allow backward navigation or one step forward
+            if ($step < $this->currentStep || $step == $this->currentStep + 1) {
+                $this->currentStep = $step;
+                Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+            }
+        }
+    }
+    
+    public function skipToSummary()
+    {
+        if (session('selected_destination') && session('trip_details')) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = $this->totalSteps;
+            Log::info("Skipped from step {$oldStep} to summary (step 5)");
+        }
+    }
+    
+    public function selectDestination($destination)
+    {
+        // Store destination
+        Session::put('selected_destination', $destination);
+        
+        // Go to Trip Details
+        $oldStep = $this->currentStep;
+        $this->currentStep = 2;
+        Log::info("Selected destination, moved from step {$oldStep} to 2");
+    }
+    
+    public function createTrip()
+    {
+        // Get trip data
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        
+        if (!$selectedDestination || !$tripDetails) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = !$selectedDestination ? 1 : 2;
+            Log::info("Missing data, moved from step {$oldStep} to {$this->currentStep}");
+            return;
+        }
+        
+        // Success!
+        session()->flash('message', 'Trip created successfully!');
+        return redirect()->route('dashboard');
+    }
+}
+
+=== File: Review.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Trip;
+use App\Models\Itinerary;
+use App\Models\Activity;
+use App\Models\TripMember;
+use Carbon\Carbon;
+
+class Review extends Component
+{
+    public $destination;
+    public $destinationInfo;
+    public $tripTitle;
+    public $startDate;
+    public $endDate;
+    public $budget;
+    public $travelers;
+    public $tripType;
+    public $tripPace;
+    public $activityInterests = [];
+    public $accommodationType;
+    public $dayActivities = [];
+    public $invitedFriends = [];
+    public $totalDays;
+    public $showBudget = true; // For toggling budget visibility
+    
+    public function mount()
+    {
+        // Get all trip data from session
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        $tripActivities = session('trip_activities');
+        $tripInvites = session('trip_invites');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+            $this->destinationInfo = $selectedDestination;
+        }
+        
+        if ($tripDetails) {
+            $this->tripTitle = $tripDetails['title'] ?? '';
+            $this->startDate = $tripDetails['start_date'] ?? '';
+            $this->endDate = $tripDetails['end_date'] ?? '';
+            $this->budget = $tripDetails['budget'] ?? '';
+            $this->travelers = $tripDetails['travelers'] ?? 4;
+            $this->tripType = $tripDetails['trip_type'] ?? '';
+            $this->tripPace = $tripDetails['trip_pace'] ?? 5;
+            $this->activityInterests = $tripDetails['activity_interests'] ?? [];
+            $this->accommodationType = $tripDetails['accommodation_type'] ?? '';
+            
+            // Calculate total days
+            if ($this->startDate && $this->endDate) {
+                $start = Carbon::parse($this->startDate);
+                $end = Carbon::parse($this->endDate);
+                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+            }
+        }
+        
+        if ($tripActivities) {
+            $this->dayActivities = $tripActivities;
+        }
+        
+        if ($tripInvites) {
+            $this->invitedFriends = $tripInvites;
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.review');
+    }
+    
+    public function saveTrip()
+    {
+        // In a real application, you would save the trip to the database
+        // For now, we'll just simulate successful creation
+        
+        // Gather all trip data
+        $tripData = [
+            'destination' => $this->destination,
+            'title' => $this->tripTitle,
+            'start_date' => $this->startDate,
+            'end_date' => $this->endDate,
+            'budget' => $this->budget,
+            'travelers' => $this->travelers,
+            'trip_type' => $this->tripType,
+            'trip_pace' => $this->tripPace,
+            'activity_interests' => $this->activityInterests,
+            'accommodation_type' => $this->accommodationType,
+            'activities' => $this->dayActivities,
+            'invites' => $this->invitedFriends
+        ];
+        
+        // Save the trip data to session (for demo purposes)
+        session(['saved_trip' => $tripData]);
+        
+        // In a real app, you would typically redirect to the trip view page
+        // For now, redirect to dashboard with success message
+        session()->flash('message', 'Trip created successfully!');
+        return redirect()->route('dashboard');
+    }
+}
+
+=== File: DestinationSelection.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use App\Models\Destination;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+
+class DestinationSelection extends Component
+{
+    public $destinationQuery = '';
+    public $showDestinationDropdown = false;
+    public $destinationResults = [];
+    public $recentSearches = [];
+    public $popularDestinations = [];
+   
+    public function mount()
+    {
+        // Load popular destinations from database
+        $this->loadPopularDestinations();
+        
+        // Load recent searches if available
+        $this->loadRecentSearches();
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.destination-selection');
+    }
+
+    public function searchDestinations()
+    {
+        if (strlen($this->destinationQuery) >= 2) {
+            $this->destinationResults = Destination::where('name', 'like', '%' . $this->destinationQuery . '%')
+                ->orWhere('country', 'like', '%' . $this->destinationQuery . '%')
+                ->orWhere('city', 'like', '%' . $this->destinationQuery . '%')
+                ->take(5)
+                ->get()
+                ->toArray();
+
+            $this->showDestinationDropdown = true;
+        } else {
+            $this->resetDestinationResults();
+        }
+    }
+
+    public function resetDestinationResults()
+    {
+        $this->destinationResults = [];
+        $this->showDestinationDropdown = false;
+    }
+    
+    public function selectDestination($name)
+    {
+        $destination = Destination::where('name', $name)->first();
+        
+        if ($destination) {
+            // Store destination in session for persistence
+            Session::put('selected_destination', $destination->toArray());
+            
+            // Add to recent searches if authenticated
+            $this->saveRecentSearch($destination);
+            
+            // Dispatch event to parent component
+            $this->dispatch('destinationSelected', destination: $destination->toArray());
+        }
+        
+        $this->resetDestinationResults();
+    }
+
+    private function loadPopularDestinations()
+    {
+        // In a real implementation, you might load trending or featured destinations
+        // For now, we'll just get a random selection
+        $this->popularDestinations = Destination::inRandomOrder()->take(6)->get();
+    }
+
+    private function loadRecentSearches()
+    {
+        // Get recent searches from session if authenticated
+        if (Auth::check()) {
+            $this->recentSearches = Session::get('recent_searches', []);
+        } else {
+            $this->recentSearches = []; // Ensure it's always an array
+        }
+    }
+
+    private function saveRecentSearch($destination)
+    {
+        if (Auth::check()) {
+            $recentSearches = Session::get('recent_searches', []);
+            
+            // Check if already in recent searches
+            $exists = false;
+            foreach ($recentSearches as $search) {
+                if (isset($search['id']) && $search['id'] == $destination->id) {
+                    $exists = true;
+                    break;
+                }
+            }
+            
+            // Add to recent searches if not already present
+            if (!$exists) {
+                array_unshift($recentSearches, $destination->toArray());
+                // Keep only last 4 searches
+                $recentSearches = array_slice($recentSearches, 0, 4);
+                Session::put('recent_searches', $recentSearches);
+                $this->recentSearches = $recentSearches;
+            }
+        }
+    }
+}
+
+=== File: ItineraryPlanning.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+
+class ItineraryPlanning extends Component
+{
+    public $destination;
+    public $tripTitle;
+    public $startDate;
+    public $endDate;
+    public $budget;
+    public $travelers;
+    public $activeDay = 1;
+    public $dayActivities = [];
+    public $totalDays;
+    
+    // For new activities
+    public $newActivity = [
+        'title' => '',
+        'description' => '',
+        'location' => '',
+        'start_time' => '09:00',
+        'end_time' => '12:00',
+        'cost' => '',
+        'category' => '',
+        'time_of_day' => 'morning'
+    ];
+    
+    // Invited friends
+    public $inviteEmails = [];
+    
+    // Suggested activities
+    public $suggestedActivities = [];
+    
+    public function mount()
+    {
+        // Get trip details from session
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        $tripInvites = session('trip_invites');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+        }
+        
+        if ($tripDetails) {
+            $this->tripTitle = $tripDetails['title'] ?? '';
+            $this->startDate = $tripDetails['start_date'] ?? '';
+            $this->endDate = $tripDetails['end_date'] ?? '';
+            $this->budget = $tripDetails['budget'] ?? '';
+            $this->travelers = $tripDetails['travelers'] ?? 4;
+            
+            // Calculate total days
+            if ($this->startDate && $this->endDate) {
+                $start = Carbon::parse($this->startDate);
+                $end = Carbon::parse($this->endDate);
+                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+            }
+        }
+        
+        if ($tripInvites) {
+            $this->inviteEmails = $tripInvites;
+        }
+        
+        // Load saved activities if available
+        $savedActivities = session('trip_activities');
+        if ($savedActivities) {
+            $this->dayActivities = $savedActivities;
+        } else {
+            // Initialize empty activities for each day
+            for ($i = 1; $i <= $this->totalDays; $i++) {
+                $this->dayActivities[$i] = [];
+            }
+        }
+        
+        // Load some suggested activities
+        $this->loadSuggestedActivities();
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.itinerary-planning');
+    }
+    
+    public function changeActiveDay($day)
+    {
+        if ($day >= 1 && $day <= $this->totalDays) {
+            $this->activeDay = $day;
+        }
+    }
+    
+    public function addActivity()
+    {
+        $this->validate([
+            'newActivity.title' => 'required|string|max:255',
+            'newActivity.time_of_day' => 'required|in:morning,afternoon,evening',
+            'newActivity.start_time' => 'required',
+            'newActivity.end_time' => 'required',
+            'newActivity.location' => 'required|string',
+            'newActivity.cost' => 'nullable|numeric|min:0',
+            'newActivity.category' => 'required|string',
+        ]);
+        
+        // Generate a unique ID for the activity
+        $id = uniqid();
+        
+        // Add to current day's activities
+        $this->dayActivities[$this->activeDay][] = array_merge($this->newActivity, ['id' => $id]);
+        
+        // Save to session
+        session(['trip_activities' => $this->dayActivities]);
+        
+        // Reset form
+        $this->resetNewActivity();
+        
+        // Close modal
+        $this->dispatch('closeAddActivityModal');
+    }
+    
+    public function resetNewActivity()
+    {
+        $this->newActivity = [
+            'title' => '',
+            'description' => '',
+            'location' => '',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'cost' => '',
+            'category' => '',
+            'time_of_day' => 'morning'
+        ];
+    }
+    
+    public function removeActivity($day, $activityId)
+    {
+        if (isset($this->dayActivities[$day])) {
+            $this->dayActivities[$day] = array_filter($this->dayActivities[$day], function($activity) use ($activityId) {
+                return $activity['id'] !== $activityId;
+            });
+            
+            // Re-index array
+            $this->dayActivities[$day] = array_values($this->dayActivities[$day]);
+            
+            // Save to session
+            session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    public function addSuggestedActivity($index)
+    {
+        $suggestion = $this->suggestedActivities[$index] ?? null;
+        
+        if ($suggestion) {
+            // Determine time of day based on activity type
+            $timeOfDay = 'afternoon'; // Default
+            if (stripos($suggestion['title'], 'breakfast') !== false || 
+                stripos($suggestion['title'], 'morning') !== false) {
+                $timeOfDay = 'morning';
+            } elseif (stripos($suggestion['title'], 'dinner') !== false || 
+                      stripos($suggestion['title'], 'sunset') !== false || 
+                      stripos($suggestion['title'], 'night') !== false || 
+                      stripos($suggestion['title'], 'evening') !== false) {
+                $timeOfDay = 'evening';
+            }
+            
+            // Set appropriate times based on time of day
+            $startTime = $timeOfDay === 'morning' ? '09:00' : ($timeOfDay === 'afternoon' ? '14:00' : '19:00');
+            $endTime = $timeOfDay === 'morning' ? '12:00' : ($timeOfDay === 'afternoon' ? '17:00' : '21:00');
+            
+            // Add to current day's activities
+            $this->dayActivities[$this->activeDay][] = [
+                'id' => uniqid(),
+                'title' => $suggestion['title'],
+                'description' => $suggestion['description'],
+                'location' => $suggestion['location'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'cost' => $suggestion['cost'],
+                'category' => $suggestion['category'],
+                'time_of_day' => $timeOfDay
+            ];
+            
+            // Save to session
+            session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    private function loadSuggestedActivities()
+    {
+        // In a real app, these would come from a database based on the destination
+        $this->suggestedActivities = [
+            [
+                'id' => 'sugg1',
+                'title' => 'Local City Tour',
+                'location' => $this->destination,
+                'description' => 'Explore the highlights of ' . $this->destination . ' with a knowledgeable local guide.',
+                'cost' => 45,
+                'category' => 'cultural'
+            ],
+            [
+                'id' => 'sugg2',
+                'title' => 'Beach Day',
+                'location' => 'Popular Beach in ' . $this->destination,
+                'description' => 'Relax by the ocean, swim, and enjoy beach activities.',
+                'cost' => 10,
+                'category' => 'relaxation'
+            ],
+            [
+                'id' => 'sugg3',
+                'title' => 'Local Food Tour',
+                'location' => 'Market District in ' . $this->destination,
+                'description' => 'Taste the local cuisine and discover hidden food gems.',
+                'cost' => 55,
+                'category' => 'food'
+            ],
+            [
+                'id' => 'sugg4',
+                'title' => 'Sunset Cruise',
+                'location' => 'Harbor area in ' . $this->destination,
+                'description' => 'Enjoy a beautiful sunset from the water with drinks and snacks.',
+                'cost' => 75,
+                'category' => 'adventure'
+            ]
+        ];
+    }
+    
+    public function continueToNextStep()
+    {
+        // Save activities to session
+        session(['trip_activities' => $this->dayActivities]);
+        
+        // Log for debugging
+        Log::info("Itinerary planning saved, dispatching specific event to move to invites");
+        
+        // Use a specific named event
+        $this->dispatch('completeItineraryStep');
+    }
+}
+
+=== File: bundle_code.py ===
+
+import os
+
+EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
+OUTPUT_FILE = "bundled_code.txt"
+
+def is_hidden(path):
+    return any(part.startswith('.') for part in path.split(os.sep))
+
+def should_skip_file(filepath, root):
+    filename = os.path.basename(filepath)
+    ext = os.path.splitext(filename)[1].lower()
+
+    # Skip hidden files
+    if is_hidden(os.path.relpath(filepath)):
+        return True
+
+    # Skip excluded files and extensions
+    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
+        return True
+
+    # Skip files in excluded dirs
+    for part in os.path.relpath(root).split(os.sep):
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Skip empty files
+    if os.path.getsize(filepath) == 0:
+        return True
+
+    return False
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for root, dirs, files in os.walk("."):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
+
+        for file in files:
+            filepath = os.path.join(root, file)
+            if should_skip_file(filepath, root):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
+                    output.write(f.read())
+            except Exception as e:
+                print(f"Skipped {filepath} due to error: {e}")
+
+
+=== File: bundled_code.txt ===
+
+
+
+=== File: TripDetails.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+
+class TripDetails extends Component
+{
+    public $title;
+    public $start_date;
+    public $end_date;
+    public $travelers = 4;
+    public $budget;
+    public $activityInterests = [];
+    public $accommodationType;
+    public $tripType;
+    public $tripPace = 5;
+    public $destination;
+
+    public function mount()
+    {
+        // Set default dates (two weeks from now for one week)
+        $this->start_date = now()->addWeeks(2)->format('Y-m-d');
+        $this->end_date = now()->addWeeks(3)->format('Y-m-d');
+        
+        // Get destination from session
+        $selectedDestination = session('selected_destination');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+            
+            // Set default title based on destination
+            if (empty($this->title) && isset($selectedDestination['name'])) {
+                $this->title = "Trip to " . $selectedDestination['name'];
+            }
+        }
+        
+        // Load saved trip details if available
+        $tripDetails = session('trip_details');
+        if ($tripDetails) {
+            $this->title = $tripDetails['title'] ?? $this->title;
+            $this->start_date = $tripDetails['start_date'] ?? $this->start_date;
+            $this->end_date = $tripDetails['end_date'] ?? $this->end_date;
+            $this->travelers = $tripDetails['travelers'] ?? $this->travelers;
+            $this->budget = $tripDetails['budget'] ?? $this->budget;
+            $this->activityInterests = $tripDetails['activity_interests'] ?? $this->activityInterests;
+            $this->accommodationType = $tripDetails['accommodation_type'] ?? $this->accommodationType;
+            $this->tripType = $tripDetails['trip_type'] ?? $this->tripType;
+            $this->tripPace = $tripDetails['trip_pace'] ?? $this->tripPace;
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.trip-details');
+    }
+
+    public function updated($field)
+    {
+        // Validate fields on change
+        if (in_array($field, ['title', 'start_date', 'end_date', 'travelers', 'budget'])) {
+            $this->validateOnly($field, $this->getValidationRules());
+        }
+    }
+
+    public function getValidationRules()
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'travelers' => 'required|integer|min:1',
+            'budget' => 'nullable|numeric|min:0',
+            'activityInterests' => 'nullable|array',
+            'accommodationType' => 'nullable|string',
+            'tripType' => 'nullable|string',
+            'tripPace' => 'nullable|integer|min:1|max:10',
+        ];
+    }
+
+    public function saveTripDetails()
+    {
+        // Validate data
+        $validatedData = $this->validate($this->getValidationRules());
+
+        // Prepare data for session storage
+        $tripDetails = [
+            'title' => $this->title,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
+            'travelers' => $this->travelers,
+            'budget' => $this->budget,
+            'activity_interests' => $this->activityInterests,
+            'accommodation_type' => $this->accommodationType,
+            'trip_type' => $this->tripType,
+            'trip_pace' => $this->tripPace,
+        ];
+
+        // Save to session
+        session(['trip_details' => $tripDetails]);
+        
+        // Log for debugging
+        Log::info("Trip Details saved, dispatching specific event to move to itinerary");
+        
+        // Use a specific named event instead of a generic one
+        $this->dispatch('completeDetailsStep');
+    }
+}
+
+=== File: CreateTrip.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use App\Models\Destination;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+
+class CreateTrip extends Component
+{
+    public $currentStep = 1;
+    public $totalSteps = 5;
+    public $showNavButtons = false;
+    
+    // Use specific events for each step transition
+    protected $listeners = [
+        'destinationSelected' => 'selectDestination',
+        'completeDetailsStep' => 'moveToItinerary',
+        'completeItineraryStep' => 'moveToInvites',
+        'completeInvitesStep' => 'moveToReview',
+        'goToPreviousStep' => 'previousStep'
+    ];
+    
+    public function mount()
+    {
+        Log::info("CreateTrip component mounted with step: {$this->currentStep}");
+    }
+    
+    public function render()
+    {
+        // Debug info
+        session(['debug_info' => "Current step: {$this->currentStep}"]);
+        
+        return view('livewire.trips.create-trip');
+    }
+    
+    // Specific transition methods for each step
+    public function moveToItinerary()
+    {
+        Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
+        $this->currentStep = 3;
+    }
+    
+    public function moveToInvites()
+    {
+        Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
+        $this->currentStep = 4;
+    }
+    
+    public function moveToReview()
+    {
+        Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
+        $this->currentStep = 5;
+    }
+    
+    public function previousStep()
+    {
+        $oldStep = $this->currentStep;
+        if ($this->currentStep > 1) {
+            $this->currentStep--;
+        }
+        Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
+    }
+    
+    public function goToStep($step)
+    {
+        $oldStep = $this->currentStep;
+        // Only allow valid steps
+        if ($step >= 1 && $step <= $this->totalSteps) {
+            // Only allow backward navigation or one step forward
+            if ($step < $this->currentStep || $step == $this->currentStep + 1) {
+                $this->currentStep = $step;
+                Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+            }
+        }
+    }
+    
+    public function skipToSummary()
+    {
+        if (session('selected_destination') && session('trip_details')) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = $this->totalSteps;
+            Log::info("Skipped from step {$oldStep} to summary (step 5)");
+        }
+    }
+    
+    public function selectDestination($destination)
+    {
+        // Store destination
+        Session::put('selected_destination', $destination);
+        
+        // Go to Trip Details
+        $oldStep = $this->currentStep;
+        $this->currentStep = 2;
+        Log::info("Selected destination, moved from step {$oldStep} to 2");
+    }
+    
+    public function createTrip()
+    {
+        // Get trip data
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        
+        if (!$selectedDestination || !$tripDetails) {
+            $oldStep = $this->currentStep;
+            $this->currentStep = !$selectedDestination ? 1 : 2;
+            Log::info("Missing data, moved from step {$oldStep} to {$this->currentStep}");
+            return;
+        }
+        
+        // Success!
+        session()->flash('message', 'Trip created successfully!');
+        return redirect()->route('dashboard');
+    }
+}
+
+=== File: Review.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Trip;
+use App\Models\Itinerary;
+use App\Models\Activity;
+use App\Models\TripMember;
+use Carbon\Carbon;
+
+class Review extends Component
+{
+    public $destination;
+    public $destinationInfo;
+    public $tripTitle;
+    public $startDate;
+    public $endDate;
+    public $budget;
+    public $travelers;
+    public $tripType;
+    public $tripPace;
+    public $activityInterests = [];
+    public $accommodationType;
+    public $dayActivities = [];
+    public $invitedFriends = [];
+    public $totalDays;
+    public $showBudget = true; // For toggling budget visibility
+    
+    public function mount()
+    {
+        // Get all trip data from session
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        $tripActivities = session('trip_activities');
+        $tripInvites = session('trip_invites');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+            $this->destinationInfo = $selectedDestination;
+        }
+        
+        if ($tripDetails) {
+            $this->tripTitle = $tripDetails['title'] ?? '';
+            $this->startDate = $tripDetails['start_date'] ?? '';
+            $this->endDate = $tripDetails['end_date'] ?? '';
+            $this->budget = $tripDetails['budget'] ?? '';
+            $this->travelers = $tripDetails['travelers'] ?? 4;
+            $this->tripType = $tripDetails['trip_type'] ?? '';
+            $this->tripPace = $tripDetails['trip_pace'] ?? 5;
+            $this->activityInterests = $tripDetails['activity_interests'] ?? [];
+            $this->accommodationType = $tripDetails['accommodation_type'] ?? '';
+            
+            // Calculate total days
+            if ($this->startDate && $this->endDate) {
+                $start = Carbon::parse($this->startDate);
+                $end = Carbon::parse($this->endDate);
+                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+            }
+        }
+        
+        if ($tripActivities) {
+            $this->dayActivities = $tripActivities;
+        }
+        
+        if ($tripInvites) {
+            $this->invitedFriends = $tripInvites;
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.review');
+    }
+    
+    public function saveTrip()
+    {
+        // In a real application, you would save the trip to the database
+        // For now, we'll just simulate successful creation
+        
+        // Gather all trip data
+        $tripData = [
+            'destination' => $this->destination,
+            'title' => $this->tripTitle,
+            'start_date' => $this->startDate,
+            'end_date' => $this->endDate,
+            'budget' => $this->budget,
+            'travelers' => $this->travelers,
+            'trip_type' => $this->tripType,
+            'trip_pace' => $this->tripPace,
+            'activity_interests' => $this->activityInterests,
+            'accommodation_type' => $this->accommodationType,
+            'activities' => $this->dayActivities,
+            'invites' => $this->invitedFriends
+        ];
+        
+        // Save the trip data to session (for demo purposes)
+        session(['saved_trip' => $tripData]);
+        
+        // In a real app, you would typically redirect to the trip view page
+        // For now, redirect to dashboard with success message
+        session()->flash('message', 'Trip created successfully!');
+        return redirect()->route('dashboard');
+    }
+}
+
+=== File: DestinationSelection.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use App\Models\Destination;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+
+class DestinationSelection extends Component
+{
+    public $destinationQuery = '';
+    public $showDestinationDropdown = false;
+    public $destinationResults = [];
+    public $recentSearches = [];
+    public $popularDestinations = [];
+   
+    public function mount()
+    {
+        // Load popular destinations from database
+        $this->loadPopularDestinations();
+        
+        // Load recent searches if available
+        $this->loadRecentSearches();
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.destination-selection');
+    }
+
+    public function searchDestinations()
+    {
+        if (strlen($this->destinationQuery) >= 2) {
+            $this->destinationResults = Destination::where('name', 'like', '%' . $this->destinationQuery . '%')
+                ->orWhere('country', 'like', '%' . $this->destinationQuery . '%')
+                ->orWhere('city', 'like', '%' . $this->destinationQuery . '%')
+                ->take(5)
+                ->get()
+                ->toArray();
+
+            $this->showDestinationDropdown = true;
+        } else {
+            $this->resetDestinationResults();
+        }
+    }
+
+    public function resetDestinationResults()
+    {
+        $this->destinationResults = [];
+        $this->showDestinationDropdown = false;
+    }
+    
+    public function selectDestination($name)
+    {
+        $destination = Destination::where('name', $name)->first();
+        
+        if ($destination) {
+            // Store destination in session for persistence
+            Session::put('selected_destination', $destination->toArray());
+            
+            // Add to recent searches if authenticated
+            $this->saveRecentSearch($destination);
+            
+            // Dispatch event to parent component
+            $this->dispatch('destinationSelected', destination: $destination->toArray());
+        }
+        
+        $this->resetDestinationResults();
+    }
+
+    private function loadPopularDestinations()
+    {
+        // In a real implementation, you might load trending or featured destinations
+        // For now, we'll just get a random selection
+        $this->popularDestinations = Destination::inRandomOrder()->take(6)->get();
+    }
+
+    private function loadRecentSearches()
+    {
+        // Get recent searches from session if authenticated
+        if (Auth::check()) {
+            $this->recentSearches = Session::get('recent_searches', []);
+        } else {
+            $this->recentSearches = []; // Ensure it's always an array
+        }
+    }
+
+    private function saveRecentSearch($destination)
+    {
+        if (Auth::check()) {
+            $recentSearches = Session::get('recent_searches', []);
+            
+            // Check if already in recent searches
+            $exists = false;
+            foreach ($recentSearches as $search) {
+                if (isset($search['id']) && $search['id'] == $destination->id) {
+                    $exists = true;
+                    break;
+                }
+            }
+            
+            // Add to recent searches if not already present
+            if (!$exists) {
+                array_unshift($recentSearches, $destination->toArray());
+                // Keep only last 4 searches
+                $recentSearches = array_slice($recentSearches, 0, 4);
+                Session::put('recent_searches', $recentSearches);
+                $this->recentSearches = $recentSearches;
+            }
+        }
+    }
+}
+
+=== File: ItineraryPlanning.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+
+class ItineraryPlanning extends Component
+{
+    public $destination;
+    public $tripTitle;
+    public $startDate;
+    public $endDate;
+    public $budget;
+    public $travelers;
+    public $activeDay = 1;
+    public $dayActivities = [];
+    public $totalDays;
+    
+    // For new activities
+    public $newActivity = [
+        'title' => '',
+        'description' => '',
+        'location' => '',
+        'start_time' => '09:00',
+        'end_time' => '12:00',
+        'cost' => '',
+        'category' => '',
+        'time_of_day' => 'morning'
+    ];
+    
+    // Invited friends
+    public $inviteEmails = [];
+    
+    // Suggested activities
+    public $suggestedActivities = [];
+    
+    public function mount()
+    {
+        // Get trip details from session
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        $tripInvites = session('trip_invites');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+        }
+        
+        if ($tripDetails) {
+            $this->tripTitle = $tripDetails['title'] ?? '';
+            $this->startDate = $tripDetails['start_date'] ?? '';
+            $this->endDate = $tripDetails['end_date'] ?? '';
+            $this->budget = $tripDetails['budget'] ?? '';
+            $this->travelers = $tripDetails['travelers'] ?? 4;
+            
+            // Calculate total days
+            if ($this->startDate && $this->endDate) {
+                $start = Carbon::parse($this->startDate);
+                $end = Carbon::parse($this->endDate);
+                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+            }
+        }
+        
+        if ($tripInvites) {
+            $this->inviteEmails = $tripInvites;
+        }
+        
+        // Load saved activities if available
+        $savedActivities = session('trip_activities');
+        if ($savedActivities) {
+            $this->dayActivities = $savedActivities;
+        } else {
+            // Initialize empty activities for each day
+            for ($i = 1; $i <= $this->totalDays; $i++) {
+                $this->dayActivities[$i] = [];
+            }
+        }
+        
+        // Load some suggested activities
+        $this->loadSuggestedActivities();
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.itinerary-planning');
+    }
+    
+    public function changeActiveDay($day)
+    {
+        if ($day >= 1 && $day <= $this->totalDays) {
+            $this->activeDay = $day;
+        }
+    }
+    
+    public function addActivity()
+    {
+        $this->validate([
+            'newActivity.title' => 'required|string|max:255',
+            'newActivity.time_of_day' => 'required|in:morning,afternoon,evening',
+            'newActivity.start_time' => 'required',
+            'newActivity.end_time' => 'required',
+            'newActivity.location' => 'required|string',
+            'newActivity.cost' => 'nullable|numeric|min:0',
+            'newActivity.category' => 'required|string',
+        ]);
+        
+        // Generate a unique ID for the activity
+        $id = uniqid();
+        
+        // Add to current day's activities
+        $this->dayActivities[$this->activeDay][] = array_merge($this->newActivity, ['id' => $id]);
+        
+        // Save to session
+        session(['trip_activities' => $this->dayActivities]);
+        
+        // Reset form
+        $this->resetNewActivity();
+        
+        // Close modal
+        $this->dispatch('closeAddActivityModal');
+    }
+    
+    public function resetNewActivity()
+    {
+        $this->newActivity = [
+            'title' => '',
+            'description' => '',
+            'location' => '',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'cost' => '',
+            'category' => '',
+            'time_of_day' => 'morning'
+        ];
+    }
+    
+    public function removeActivity($day, $activityId)
+    {
+        if (isset($this->dayActivities[$day])) {
+            $this->dayActivities[$day] = array_filter($this->dayActivities[$day], function($activity) use ($activityId) {
+                return $activity['id'] !== $activityId;
+            });
+            
+            // Re-index array
+            $this->dayActivities[$day] = array_values($this->dayActivities[$day]);
+            
+            // Save to session
+            session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    public function addSuggestedActivity($index)
+    {
+        $suggestion = $this->suggestedActivities[$index] ?? null;
+        
+        if ($suggestion) {
+            // Determine time of day based on activity type
+            $timeOfDay = 'afternoon'; // Default
+            if (stripos($suggestion['title'], 'breakfast') !== false || 
+                stripos($suggestion['title'], 'morning') !== false) {
+                $timeOfDay = 'morning';
+            } elseif (stripos($suggestion['title'], 'dinner') !== false || 
+                      stripos($suggestion['title'], 'sunset') !== false || 
+                      stripos($suggestion['title'], 'night') !== false || 
+                      stripos($suggestion['title'], 'evening') !== false) {
+                $timeOfDay = 'evening';
+            }
+            
+            // Set appropriate times based on time of day
+            $startTime = $timeOfDay === 'morning' ? '09:00' : ($timeOfDay === 'afternoon' ? '14:00' : '19:00');
+            $endTime = $timeOfDay === 'morning' ? '12:00' : ($timeOfDay === 'afternoon' ? '17:00' : '21:00');
+            
+            // Add to current day's activities
+            $this->dayActivities[$this->activeDay][] = [
+                'id' => uniqid(),
+                'title' => $suggestion['title'],
+                'description' => $suggestion['description'],
+                'location' => $suggestion['location'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'cost' => $suggestion['cost'],
+                'category' => $suggestion['category'],
+                'time_of_day' => $timeOfDay
+            ];
+            
+            // Save to session
+            session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    private function loadSuggestedActivities()
+    {
+        // In a real app, these would come from a database based on the destination
+        $this->suggestedActivities = [
+            [
+                'id' => 'sugg1',
+                'title' => 'Local City Tour',
+                'location' => $this->destination,
+                'description' => 'Explore the highlights of ' . $this->destination . ' with a knowledgeable local guide.',
+                'cost' => 45,
+                'category' => 'cultural'
+            ],
+            [
+                'id' => 'sugg2',
+                'title' => 'Beach Day',
+                'location' => 'Popular Beach in ' . $this->destination,
+                'description' => 'Relax by the ocean, swim, and enjoy beach activities.',
+                'cost' => 10,
+                'category' => 'relaxation'
+            ],
+            [
+                'id' => 'sugg3',
+                'title' => 'Local Food Tour',
+                'location' => 'Market District in ' . $this->destination,
+                'description' => 'Taste the local cuisine and discover hidden food gems.',
+                'cost' => 55,
+                'category' => 'food'
+            ],
+            [
+                'id' => 'sugg4',
+                'title' => 'Sunset Cruise',
+                'location' => 'Harbor area in ' . $this->destination,
+                'description' => 'Enjoy a beautiful sunset from the water with drinks and snacks.',
+                'cost' => 75,
+                'category' => 'adventure'
+            ]
+        ];
+    }
+    
+    public function continueToNextStep()
+    {
+        // Save activities to session
+        session(['trip_activities' => $this->dayActivities]);
+        
+        // Log for debugging
+        Log::info("Itinerary planning saved, dispatching specific event to move to invites");
+        
+        // Use a specific named event
+        $this->dispatch('completeItineraryStep');
+    }
+}
+
+=== File: InviteFriends.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+
+class InviteFriends extends Component
+{
+    public $destination;
+    public $tripTitle;
+    public $startDate;
+    public $endDate;
+    public $travelers;
+    
+    public $friendName = '';
+    public $friendContact = '';
+    public $personalMessage = '';
+    public $inviteEmails = [];
+    public $showBudget = true;  // For toggling budget visibility
+    public $showBulkInvite = false;
+    public $bulkEmails = '';
+    public $bulkMessage = '';
+    
+    public function mount()
+    {
+        // Get trip details from session
+        $selectedDestination = session('selected_destination');
+        $tripDetails = session('trip_details');
+        
+        if ($selectedDestination) {
+            $this->destination = $selectedDestination['name'] ?? '';
+        }
+        
+        if ($tripDetails) {
+            $this->tripTitle = $tripDetails['title'] ?? '';
+            $this->startDate = $tripDetails['start_date'] ?? '';
+            $this->endDate = $tripDetails['end_date'] ?? '';
+            $this->travelers = $tripDetails['travelers'] ?? 4;
+        }
+        
+        // Load saved invites if available
+        $savedInvites = session('trip_invites');
+        if ($savedInvites) {
+            $this->inviteEmails = $savedInvites;
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.invite-friends');
+    }
+    
+    public function addInvite()
+    {
+        $this->validate([
+            'friendName' => 'required|string|max:255',
+            'friendContact' => 'required|email',
+        ]);
+        
+        // Add to invite list
+        $this->inviteEmails[] = [
+            'name' => $this->friendName,
+            'email' => $this->friendContact,
+            'message' => $this->personalMessage,
+            'status' => 'pending'
+        ];
+        
+        // Reset form fields
+        $this->reset(['friendName', 'friendContact', 'personalMessage']);
+        
+        // Save to session
+        session(['trip_invites' => $this->inviteEmails]);
+    }
+    
+    public function removeInvite($index)
+    {
+        if (isset($this->inviteEmails[$index])) {
+            // Remove the invite at the specified index
+            unset($this->inviteEmails[$index]);
+            
+            // Re-index array
+            $this->inviteEmails = array_values($this->inviteEmails);
+            
+            // Save to session
+            session(['trip_invites' => $this->inviteEmails]);
+        }
+    }
+    
+    public function processBulkInvite()
+    {
+        $this->validate([
+            'bulkEmails' => 'required|string',
+        ]);
+        
+        // Split by comma, semicolon, or new line
+        $emails = preg_split('/[\s,;]+/', $this->bulkEmails);
+        $validEmails = [];
+        
+        foreach ($emails as $email) {
+            $email = trim($email);
+            
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $validEmails[] = [
+                    'name' => '',  // No name for bulk invites
+                    'email' => $email,
+                    'message' => $this->bulkMessage,
+                    'status' => 'pending'
+                ];
+            }
+        }
+        
+        // Add to invite list
+        $this->inviteEmails = array_merge($this->inviteEmails, $validEmails);
+        
+        // Reset form fields
+        $this->reset(['bulkEmails', 'bulkMessage', 'showBulkInvite']);
+        
+        // Save to session
+        session(['trip_invites' => $this->inviteEmails]);
+        
+        $this->dispatch('closeBulkInviteModal');
+    }
+    
+    public function continueToNextStep()
+    {
+        // Save invites to session
+        session(['trip_invites' => $this->inviteEmails]);
+        
+        // Log for debugging
+        Log::info("Invites saved, dispatching specific event to move to review");
+        
+        // Use a specific named event
+        $this->dispatch('completeInvitesStep');
+    }
+}
+
+=== File: TripList.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use App\Models\Trip;
+use Illuminate\Support\Facades\Auth;
+
+class TripList extends Component
+{
+    public $trips;
+
+    public function mount()
+    {
+        $this->loadTrips();
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.index');
+    }
+
+    private function loadTrips()
+    {
+        $user = Auth::user();
+        
+        // Get trips where the user is the creator or a member
+        $this->trips = Trip::where('creator_id', $user->id)
+            ->orWhereHas('members', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+}

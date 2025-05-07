@@ -1,5 +1,3 @@
-<!-- bootstrap/providers.php -->
-
 <?php
 
 return [

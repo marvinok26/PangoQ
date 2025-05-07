@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Translatable\HasTranslations;
 
 class Destination extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory;
 
-    public array $translatable = ['name', 'description'];
-
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
         'name',
         'country',
@@ -19,4 +21,12 @@ class Destination extends Model
         'description',
         'image_url',
     ];
+
+    /**
+     * Get the trips associated with the destination.
+     */
+    public function trips()
+    {
+        return $this->hasMany(Trip::class);
+    }
 }

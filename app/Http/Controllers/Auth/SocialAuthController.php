@@ -49,24 +49,30 @@ class SocialAuthController extends Controller
             // Get user data from provider
             $socialUser = Socialite::driver($provider)->user();
             
-            // Find or create user
-            $user = User::firstOrCreate(
-                ['email' => $socialUser->getEmail()],
-                [
+            // Find existing user by email
+            $existingUser = User::where('email', $socialUser->getEmail())->first();
+            
+            if ($existingUser) {
+                // Login existing user
+                Auth::login($existingUser, true);
+                
+                return redirect()->intended(route('dashboard'))
+                    ->with('success', 'Welcome back to PangoQ!');
+            } else {
+                // Create new user
+                $newUser = User::create([
                     'name' => $socialUser->getName() ?: 'User',
+                    'email' => $socialUser->getEmail(),
                     'password' => Hash::make(Str::random(24)),
-                    'email_verified_at' => now(), // Social logins are considered verified
-                ]
-            );
-            
-            // Login the user
-            Auth::login($user, true);
-            
-            // Get intended URL from session
-            $redirectTo = Session::pull('url.intended', route('dashboard'));
-            
-            return redirect()->to($redirectTo)
-                ->with('success', 'Welcome to PangoQ!');
+                    'email_verified_at' => now() // Social logins are considered verified
+                ]);
+                
+                // Login the new user
+                Auth::login($newUser, true);
+                
+                return redirect()->intended(route('dashboard'))
+                    ->with('success', 'Welcome to PangoQ!');
+            }
                 
         } catch (\Exception $e) {
             Log::error('Social login failed: ' . $e->getMessage());

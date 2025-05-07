@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -25,12 +26,18 @@ class AuthenticatedSessionController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
+            // Log successful login
+            Log::info('User logged in successfully', ['email' => $request->email]);
+            
             return redirect()->intended(route('dashboard'));
         }
 
+        // Log failed login attempt
+        Log::info('Failed login attempt', ['email' => $request->email]);
+
         return back()->withErrors([
             'email' => __('auth.failed'),
-        ])->onlyInput('email');
+        ])->withInput($request->only('email'));
     }
 
     /**

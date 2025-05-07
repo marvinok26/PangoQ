@@ -1,0 +1,2705 @@
+
+
+=== File: index.blade.php ===
+
+{{-- @extends('layouts.app')
+
+@section('content')
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-2xl font-semibold text-gray-900">My Trips</h1>
+            
+            <div class="mt-6">
+                @livewire('trips.trip-list')
+            </div>
+        </div>
+    </div>
+@endsection --}}
+
+=== File: destination-selection.blade.php ===
+
+{{-- resources/views/livewire/trips/destination-selection.blade.php --}}
+<div>
+    <div>
+        <h2 class="text-xl font-bold text-gray-800 mb-6">Where would you like to travel?</h2>
+        
+        <!-- Search Box -->
+        <div class="mb-8 relative"> <!-- Added relative positioning to the container -->
+            <div class="relative">
+                <input 
+                    type="text" 
+                    wire:model.live="destinationQuery" 
+                    wire:keyup="searchDestinations"
+                    placeholder="Search destinations..." 
+                    class="w-full p-4 pl-12 pr-4 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-4 text-gray-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            
+            <!-- Destination Results Dropdown -->
+            @if($showDestinationDropdown && count($destinationResults) > 0)
+                <div class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    @foreach($destinationResults as $result)
+                        <div wire:click="selectDestination('{{ $result['name'] }}')"
+                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                            <div>
+                                <div class="font-medium">{{ $result['name'] }}</div>
+                                <div class="text-sm text-gray-500">
+                                    @if(isset($result['city']) && isset($result['country']))
+                                        {{ $result['city'] }}, {{ $result['country'] }}
+                                    @elseif(isset($result['country']))
+                                        {{ $result['country'] }}
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <!-- Popular Destinations -->
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Popular Destinations</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            @foreach($popularDestinations as $destination)
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                     wire:click="selectDestination('{{ $destination->name }}')">
+                    <div class="relative h-40 bg-gray-200">
+                        <!-- Using a placeholder image that works with Laravel -->
+                        @if(isset($destination->image_url) && $destination->image_url)
+                            <img src="{{ asset('images/' . $destination->image_url) }}" alt="{{ $destination->name }}" class="w-full h-full object-cover">
+                        @else
+                            <!-- Fallback to a placeholder image with the destination name -->
+                            <div class="w-full h-full flex items-center justify-center bg-blue-100">
+                                <span class="text-blue-600 font-medium text-lg">{{ $destination->name }}</span>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900">{{ $destination->name }}</h3>
+                                <div class="flex items-center mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-sm text-gray-500">{{ $destination->country ?? 'International' }}</span>
+                                </div>
+                            </div>
+                            <button class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- Recent Searches -->
+        @if(count($recentSearches) > 0)
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Recent Searches</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach($recentSearches as $search)
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
+                         wire:click="selectDestination('{{ $search['name'] }}')">
+                        <div class="flex items-start">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2 mt-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8c0 .853-.7 1.5-1.5 1.5-.743 0-1.329-.488-1.448-1.088a1.5 1.5 0 00-1.016-1.224 1.5 1.5 0 00-1.704.842zm7.668 0C11.42 5.88 9.653 5 8 5c-1.5 0-2.8.714-3.5 1.816C4.163 5.753 3.296 5 2.5 5a2.5 2.5 0 00-2.495 2.633c.23.067.055.13.091.191A.5.5 0 000 8c0 .953.47 1.754 1.164 2.378.168.22.355.426.555.619.837.804 1.975 1.384 3.281 1.384.246 0 .49-.021.73-.063C5.883 13.773 7.057 14 8 14V8.027z" />
+                            </svg>
+                            <div>
+                                <h3 class="font-medium text-gray-900">{{ $search['name'] }}</h3>
+                                <div class="flex items-center mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-sm text-gray-500">{{ $search['country'] ?? 'International' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        <!-- Error Message -->
+        @error('destination')
+            <div class="mt-4 text-red-600">{{ $message }}</div>
+        @enderror
+    </div>
+</div>
+
+=== File: trip-details.blade.php ===
+
+{{-- resources/views/livewire/trips/trip-details.blade.php --}}
+<div>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-800">Tell us about your trip to {{ $destination }}</h2>
+        <div class="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+            Destination: {{ $destination }}
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Left Column - Trip Details -->
+        <div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Name</label>
+                <input 
+                    type="text" 
+                    wire:model="title"
+                    placeholder="e.g., Summer Escape to {{ $destination }}" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                @error('title')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Dates</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="relative">
+                        <input 
+                            type="date" 
+                            wire:model="start_date"
+                            class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        @error('start_date')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="relative">
+                        <input 
+                            type="date" 
+                            wire:model="end_date"
+                            class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        @error('end_date')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+                @if(isset($start_date) && isset($end_date))
+                    <div class="mt-2 text-sm text-blue-600">
+                        {{ \Carbon\Carbon::parse($start_date)->diffInDays(\Carbon\Carbon::parse($end_date)) + 1 }} days, 
+                        {{ \Carbon\Carbon::parse($start_date)->diffInDays(\Carbon\Carbon::parse($end_date)) }} nights
+                    </div>
+                @endif
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Number of Travelers</label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        wire:model="travelers"
+                        class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="1"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    @error('travelers')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="mt-2 text-sm text-gray-500">You can invite specific people later</div>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Budget (per person)</label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        wire:model="budget"
+                        class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        step="0.01"
+                        min="0"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    @error('budget')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="mt-2 text-sm text-gray-500">Approximate amount for planning purposes</div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Trip Preferences -->
+        <div class="bg-gray-50 p-6 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Trip Preferences</h2>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">What type of trip is this?</label>
+                <div class="grid grid-cols-2 gap-3">
+                    @php
+                        $tripTypes = ['Beach Vacation', 'Adventure', 'Cultural Experience', 'Relaxation', 'Shopping & Dining', 'Sightseeing'];
+                    @endphp
+                    
+                    @foreach($tripTypes as $index => $type)
+                        <div 
+                            wire:click="$set('tripType', '{{ $type }}')" 
+                            class="p-3 border rounded-lg text-center cursor-pointer transition-colors {{ $tripType == $type ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-700 hover:border-blue-200 hover:bg-blue-50' }}"
+                        >
+                            {{ $type }}
+                        </div>
+                    @endforeach
+                </div>
+                @error('tripType')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Pace</label>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-500 w-24">Relaxed</span>
+                    <div class="flex-1 mx-4">
+                        <input
+                            type="range"
+                            wire:model="tripPace"
+                            min="1"
+                            max="10"
+                            step="1"
+                            class="w-full h-2 bg-gray-200 rounded-full appearance-none focus:outline-none focus:ring-0"
+                        >
+                    </div>
+                    <span class="text-sm text-gray-500 w-24 text-right">Action-packed</span>
+                </div>
+                @error('tripPace')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Interests (select all that apply)</label>
+                <div class="space-y-2">
+                    @foreach([
+                        'Beach & Water Activities', 
+                        'Cultural Sites & Museums',  
+                        'Hiking & Nature',
+                        'Food & Culinary Experiences',
+                        'Nightlife & Entertainment',
+                        'Shopping'
+                    ] as $index => $activity)
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="activity-{{ $index }}" 
+                                wire:model="activityInterests" 
+                                value="{{ $activity }}"
+                                class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            >
+                            <label for="activity-{{ $index }}" class="ml-2 text-sm text-gray-700">{{ $activity }}</label>
+                        </div>
+                    @endforeach
+                </div>
+                @error('activityInterests')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation Preference</label>
+                <select 
+                    wire:model="accommodationType"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="">Select an option</option>
+                    <option value="Resort">Resort</option>
+                    <option value="Hotel">Hotel</option>
+                    <option value="Villa">Villa</option>
+                    <option value="Hostel">Hostel</option>
+                    <option value="Apartment">Apartment</option>
+                </select>
+                @error('accommodationType')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-8">
+        <button wire:click="$dispatch('goToPreviousStep')" 
+            class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            Back to Destination
+        </button>
+        <button wire:click="saveTripDetails" 
+    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+    Continue to Plan Itinerary
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+    </svg>
+</button>
+    </div>
+</div>
+
+=== File: bundle_code.py ===
+
+import os
+
+EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
+OUTPUT_FILE = "bundled_code.txt"
+
+def is_hidden(path):
+    return any(part.startswith('.') for part in path.split(os.sep))
+
+def should_skip_file(filepath, root):
+    filename = os.path.basename(filepath)
+    ext = os.path.splitext(filename)[1].lower()
+
+    # Skip hidden files
+    if is_hidden(os.path.relpath(filepath)):
+        return True
+
+    # Skip excluded files and extensions
+    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
+        return True
+
+    # Skip files in excluded dirs
+    for part in os.path.relpath(root).split(os.sep):
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Skip empty files
+    if os.path.getsize(filepath) == 0:
+        return True
+
+    return False
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for root, dirs, files in os.walk("."):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
+
+        for file in files:
+            filepath = os.path.join(root, file)
+            if should_skip_file(filepath, root):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
+                    output.write(f.read())
+            except Exception as e:
+                print(f"Skipped {filepath} due to error: {e}")
+
+
+=== File: bundled_code.txt ===
+
+
+
+=== File: index.blade.php ===
+
+{{-- @extends('layouts.app')
+
+@section('content')
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-2xl font-semibold text-gray-900">My Trips</h1>
+            
+            <div class="mt-6">
+                @livewire('trips.trip-list')
+            </div>
+        </div>
+    </div>
+@endsection --}}
+
+=== File: destination-selection.blade.php ===
+
+{{-- resources/views/livewire/trips/destination-selection.blade.php --}}
+<div>
+    <div>
+        <h2 class="text-xl font-bold text-gray-800 mb-6">Where would you like to travel?</h2>
+        
+        <!-- Search Box -->
+        <div class="mb-8 relative"> <!-- Added relative positioning to the container -->
+            <div class="relative">
+                <input 
+                    type="text" 
+                    wire:model.live="destinationQuery" 
+                    wire:keyup="searchDestinations"
+                    placeholder="Search destinations..." 
+                    class="w-full p-4 pl-12 pr-4 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-4 text-gray-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            
+            <!-- Destination Results Dropdown -->
+            @if($showDestinationDropdown && count($destinationResults) > 0)
+                <div class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    @foreach($destinationResults as $result)
+                        <div wire:click="selectDestination('{{ $result['name'] }}')"
+                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                            <div>
+                                <div class="font-medium">{{ $result['name'] }}</div>
+                                <div class="text-sm text-gray-500">
+                                    @if(isset($result['city']) && isset($result['country']))
+                                        {{ $result['city'] }}, {{ $result['country'] }}
+                                    @elseif(isset($result['country']))
+                                        {{ $result['country'] }}
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <!-- Popular Destinations -->
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Popular Destinations</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            @foreach($popularDestinations as $destination)
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                     wire:click="selectDestination('{{ $destination->name }}')">
+                    <div class="relative h-40 bg-gray-200">
+                        <!-- Using a placeholder image that works with Laravel -->
+                        @if(isset($destination->image_url) && $destination->image_url)
+                            <img src="{{ asset('images/' . $destination->image_url) }}" alt="{{ $destination->name }}" class="w-full h-full object-cover">
+                        @else
+                            <!-- Fallback to a placeholder image with the destination name -->
+                            <div class="w-full h-full flex items-center justify-center bg-blue-100">
+                                <span class="text-blue-600 font-medium text-lg">{{ $destination->name }}</span>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900">{{ $destination->name }}</h3>
+                                <div class="flex items-center mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-sm text-gray-500">{{ $destination->country ?? 'International' }}</span>
+                                </div>
+                            </div>
+                            <button class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- Recent Searches -->
+        @if(count($recentSearches) > 0)
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Your Recent Searches</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach($recentSearches as $search)
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
+                         wire:click="selectDestination('{{ $search['name'] }}')">
+                        <div class="flex items-start">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2 mt-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8c0 .853-.7 1.5-1.5 1.5-.743 0-1.329-.488-1.448-1.088a1.5 1.5 0 00-1.016-1.224 1.5 1.5 0 00-1.704.842zm7.668 0C11.42 5.88 9.653 5 8 5c-1.5 0-2.8.714-3.5 1.816C4.163 5.753 3.296 5 2.5 5a2.5 2.5 0 00-2.495 2.633c.23.067.055.13.091.191A.5.5 0 000 8c0 .953.47 1.754 1.164 2.378.168.22.355.426.555.619.837.804 1.975 1.384 3.281 1.384.246 0 .49-.021.73-.063C5.883 13.773 7.057 14 8 14V8.027z" />
+                            </svg>
+                            <div>
+                                <h3 class="font-medium text-gray-900">{{ $search['name'] }}</h3>
+                                <div class="flex items-center mt-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-sm text-gray-500">{{ $search['country'] ?? 'International' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        <!-- Error Message -->
+        @error('destination')
+            <div class="mt-4 text-red-600">{{ $message }}</div>
+        @enderror
+    </div>
+</div>
+
+=== File: trip-details.blade.php ===
+
+{{-- resources/views/livewire/trips/trip-details.blade.php --}}
+<div>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-800">Tell us about your trip to {{ $destination }}</h2>
+        <div class="px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+            Destination: {{ $destination }}
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Left Column - Trip Details -->
+        <div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Name</label>
+                <input 
+                    type="text" 
+                    wire:model="title"
+                    placeholder="e.g., Summer Escape to {{ $destination }}" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                @error('title')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Dates</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="relative">
+                        <input 
+                            type="date" 
+                            wire:model="start_date"
+                            class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        @error('start_date')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div class="relative">
+                        <input 
+                            type="date" 
+                            wire:model="end_date"
+                            class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        @error('end_date')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+                @if(isset($start_date) && isset($end_date))
+                    <div class="mt-2 text-sm text-blue-600">
+                        {{ \Carbon\Carbon::parse($start_date)->diffInDays(\Carbon\Carbon::parse($end_date)) + 1 }} days, 
+                        {{ \Carbon\Carbon::parse($start_date)->diffInDays(\Carbon\Carbon::parse($end_date)) }} nights
+                    </div>
+                @endif
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Number of Travelers</label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        wire:model="travelers"
+                        class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="1"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    @error('travelers')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="mt-2 text-sm text-gray-500">You can invite specific people later</div>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Budget (per person)</label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        wire:model="budget"
+                        class="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        step="0.01"
+                        min="0"
+                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-3.5 text-gray-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    @error('budget')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="mt-2 text-sm text-gray-500">Approximate amount for planning purposes</div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Trip Preferences -->
+        <div class="bg-gray-50 p-6 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Trip Preferences</h2>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">What type of trip is this?</label>
+                <div class="grid grid-cols-2 gap-3">
+                    @php
+                        $tripTypes = ['Beach Vacation', 'Adventure', 'Cultural Experience', 'Relaxation', 'Shopping & Dining', 'Sightseeing'];
+                    @endphp
+                    
+                    @foreach($tripTypes as $index => $type)
+                        <div 
+                            wire:click="$set('tripType', '{{ $type }}')" 
+                            class="p-3 border rounded-lg text-center cursor-pointer transition-colors {{ $tripType == $type ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-700 hover:border-blue-200 hover:bg-blue-50' }}"
+                        >
+                            {{ $type }}
+                        </div>
+                    @endforeach
+                </div>
+                @error('tripType')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Trip Pace</label>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-500 w-24">Relaxed</span>
+                    <div class="flex-1 mx-4">
+                        <input
+                            type="range"
+                            wire:model="tripPace"
+                            min="1"
+                            max="10"
+                            step="1"
+                            class="w-full h-2 bg-gray-200 rounded-full appearance-none focus:outline-none focus:ring-0"
+                        >
+                    </div>
+                    <span class="text-sm text-gray-500 w-24 text-right">Action-packed</span>
+                </div>
+                @error('tripPace')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Activity Interests (select all that apply)</label>
+                <div class="space-y-2">
+                    @foreach([
+                        'Beach & Water Activities', 
+                        'Cultural Sites & Museums',  
+                        'Hiking & Nature',
+                        'Food & Culinary Experiences',
+                        'Nightlife & Entertainment',
+                        'Shopping'
+                    ] as $index => $activity)
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="activity-{{ $index }}" 
+                                wire:model="activityInterests" 
+                                value="{{ $activity }}"
+                                class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                            >
+                            <label for="activity-{{ $index }}" class="ml-2 text-sm text-gray-700">{{ $activity }}</label>
+                        </div>
+                    @endforeach
+                </div>
+                @error('activityInterests')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Accommodation Preference</label>
+                <select 
+                    wire:model="accommodationType"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="">Select an option</option>
+                    <option value="Resort">Resort</option>
+                    <option value="Hotel">Hotel</option>
+                    <option value="Villa">Villa</option>
+                    <option value="Hostel">Hostel</option>
+                    <option value="Apartment">Apartment</option>
+                </select>
+                @error('accommodationType')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-8">
+        <button wire:click="$dispatch('goToPreviousStep')" 
+            class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            Back to Destination
+        </button>
+        <button wire:click="saveTripDetails" 
+    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+    Continue to Plan Itinerary
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+    </svg>
+</button>
+    </div>
+</div>
+
+=== File: invite-friends.blade.php ===
+
+{{-- resources/views/livewire/trips/invite-friends.blade.php --}}
+<div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Who's joining your {{ $destination }} adventure?</h2>
+    <p class="text-gray-600 mb-6">Invite friends and family to collaborate on your trip planning</p>
+    
+    <!-- Trip Info Bar -->
+    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg mb-6">
+        <div class="flex flex-wrap items-center justify-between">
+            <div class="flex items-center mb-2 sm:mb-0">
+                <span class="font-medium text-gray-700">{{ $tripTitle ?? 'Summer Getaway 2023' }}</span>
+                <span class="mx-2 text-gray-400">•</span>
+                <span class="text-gray-600">{{ $destination }}</span>
+                <span class="mx-2 text-gray-400">•</span>
+                <span class="text-gray-600">{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</span>
+            </div>
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                </svg>
+                <span class="text-gray-600">{{ $travelers ?? '4' }} travelers planned</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Left Column - Invite Forms -->
+        <div>
+            <!-- Share Link -->
+            <div class="bg-blue-50 rounded-lg p-5 border border-blue-100 mb-6">
+                <div class="flex items-start">
+                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-medium text-gray-900 mb-2">Share invite link</h3>
+                        <div class="relative rounded-md shadow-sm">
+                            <input
+                                type="text"
+                                class="block w-full pr-24 py-3 pl-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                value="https://pangoq.com/trip/BL4587"
+                                readonly
+                            >
+                            <div class="absolute inset-y-0 right-0 flex items-center">
+                                <button onclick="copyToClipboard('https://pangoq.com/trip/BL4587')" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 text-sm font-medium rounded-r-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-blue-700">
+                            Anyone with this link can join. Expires in 7 days.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+                        </svg>
+                        Message
+                    </button>
+                    <button class="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                        </svg>
+                        Email
+                    </button>
+                    <button class="inline-flex items-center px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                        </svg>
+                        More Options
+                    </button>
+                </div>
+            </div>
+
+            <!-- Email Invite -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Invite Directly</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            wire:model="friendName"
+                            class="block w-full py-3 px-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Friend's name"
+                        >
+                        @error('friendName')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email or Phone</label>
+                        <input
+                            type="text"
+                            id="email"
+                            wire:model="friendContact"
+                            class="block w-full py-3 px-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="email@example.com"
+                        >
+                        @error('friendContact')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Personal Message (optional)</label>
+                        <textarea
+                            id="message"
+                            wire:model="personalMessage"
+                            rows="3"
+                            class="block w-full py-3 px-3 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Hey! Join me for this amazing trip to {{ $destination }}..."
+                        ></textarea>
+                    </div>
+                    <button wire:click="addInvite" class="w-full inline-flex justify-center items-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+                        Send Invite
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Invite -->
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                    </svg>
+                    Invite Multiple People
+                </h3>
+                <p class="text-sm text-gray-600 mb-3">
+                    Add multiple emails separated by commas
+                </p>
+                <button wire:click="$toggle('showBulkInvite')" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Bulk Invite
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column - Trip Members -->
+        <div>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Trip Members</h3>
+            
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
+                <div class="bg-blue-50 px-4 py-3 border-b border-blue-100 flex items-center justify-between">
+                    <div class="font-medium text-blue-700">Organizer</div>
+                    <div class="text-xs text-gray-500">You have full trip control</div>
+                </div>
+                <div class="p-4 flex items-center">
+                    <div class="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-medium">{{ isset(auth()->user()->name) ? substr(auth()->user()->name, 0, 1) : 'Y' }}</span>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <div class="font-medium text-gray-900">{{ auth()->user()->name ?? 'You' }} (You)</div>
+                        <div class="text-sm text-gray-500">{{ auth()->user()->email ?? 'your.email@example.com' }}</div>
+                    </div>
+                    <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                        Active
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                    <div class="font-medium text-gray-700">Travelers</div>
+                    <div class="text-xs text-gray-500">
+                        @if(isset($inviteEmails) && count($inviteEmails) > 0)
+                            {{ count($inviteEmails) }} invited
+                        @else
+                            0 of {{ $travelers ?? 3 }} confirmed
+                        @endif
+                    </div>
+                </div>
+                
+                @if(isset($inviteEmails) && count($inviteEmails) > 0)
+                    @foreach($inviteEmails as $index => $invite)
+                        <div class="p-4 flex items-center border-b border-gray-100">
+                            <div class="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="text-gray-600 font-medium">{{ substr($invite['name'] ?? $invite['email'], 0, 1) }}</span>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <div class="font-medium text-gray-900">{{ $invite['name'] ?? $invite['email'] }}</div>
+                                <div class="text-sm text-gray-500">Invited just now</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium">
+                                    Pending
+                                </div>
+                                <button wire:click="removeInvite({{ $index }})" class="text-red-500 hover:text-red-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    @endforeach
+                @endif
+                
+                <!-- Empty Slots -->
+                @php
+                    $emptySlots = ($travelers ?? 3) - (isset($inviteEmails) ? count($inviteEmails) : 0);
+                    $emptySlots = max(0, $emptySlots);
+                @endphp
+                
+                @for($i = 0; $i < $emptySlots; $i++)
+                    <div class="p-4 flex items-center {{ $i < $emptySlots - 1 ? 'border-b border-gray-100' : '' }}">
+                        <div class="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <div class="font-medium text-gray-400">Empty slot</div>
+                            <div class="text-sm text-gray-400">One more traveler needed</div>
+                        </div>
+                        <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            + Add
+                        </button>
+                    </div>
+                @endfor
+            </div>
+            
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h3 class="font-medium text-yellow-800 mb-2">Why invite friends now?</h3>
+                <ul class="text-sm text-yellow-700 space-y-2">
+                    <li class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Collaborative planning makes for better trips</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Friends can suggest activities and contribute ideas</span>
+                    </li>
+                    <li class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Track who's confirmed to better plan accommodations</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-8">
+        <button wire:click="$dispatch('goToPreviousStep')" 
+            class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            Back to Plan Itinerary
+        </button>
+        <button wire:click="continueToNextStep" 
+            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            Continue to Review
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Bulk Invite Modal -->
+    <div x-data="{ open: false }" 
+         x-show="open"
+         @close-bulk-invite-modal.window="open = false"
+         @show-bulk-invite.window="open = true"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="open" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 transition-opacity" 
+                 aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div x-show="open" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Invite Multiple People
+                            </h3>
+                            <div class="mt-4 space-y-4">
+                                <div>
+                                    <label for="bulkEmails" class="block text-sm font-medium text-gray-700 mb-1">Email Addresses</label>
+                                    <textarea 
+                                        id="bulkEmails" 
+                                        wire:model.defer="bulkEmails" 
+                                        rows="5" 
+                                        class="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Enter multiple email addresses separated by commas: example1@gmail.com, example2@gmail.com"
+                                    ></textarea>
+                                    <p class="mt-1 text-sm text-gray-500">Enter multiple email addresses separated by commas</p>
+                                    @error('bulkEmails')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                
+                                <div>
+                                    <label for="bulkMessage" class="block text-sm font-medium text-gray-700 mb-1">Message (optional)</label>
+                                    <textarea 
+                                        id="bulkMessage" 
+                                        wire:model.defer="bulkMessage" 
+                                        rows="3" 
+                                        class="block w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Hey everyone! Join me for this amazing trip to {{ $destination }}..."
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button 
+                        wire:click="processBulkInvite"
+                        type="button" 
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Send Invites
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="open = false"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('livewire:initialized', function () {
+            window.addEventListener('showBulkInvite', () => {
+                window.dispatchEvent(new CustomEvent('show-bulk-invite'));
+            });
+            
+            window.addEventListener('closeBulkInviteModal', () => {
+                window.dispatchEvent(new CustomEvent('close-bulk-invite-modal'));
+            });
+        });
+        
+        function copyToClipboard(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            // Display a notification (you can improve this with a proper toast later)
+            alert('Link copied to clipboard!');
+        }
+    </script>
+</div>
+
+=== File: review.blade.php ===
+
+{{-- resources/views/livewire/trips/review.blade.php --}}
+<div>
+    <!-- Trip Header -->
+    <div class="bg-blue-700 text-white py-6 -mx-6 px-6 mb-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold">{{ $tripTitle ?? 'Summer Getaway 2023' }}</h1>
+                    <div class="flex items-center mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{{ $destination ?? 'Bali, Indonesia' }}</span>
+                        <span class="mx-2">•</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</span>
+                        <span class="mx-2">•</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span>{{ $travelers ?? '4' }} travelers</span>
+                    </div>
+                </div>
+                <div class="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
+                    <div class="text-sm font-medium">Trip Budget</div>
+                    <div class="text-xl font-bold">${{ isset($budget) && isset($travelers) ? number_format($budget * $travelers, 0) : '6,000' }}</div>
+                    <div class="text-xs">${{ isset($budget) ? number_format($budget, 0) : '1,500' }} / person</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-8 flex flex-wrap gap-4 justify-center">
+        <button class="inline-flex items-center px-5 py-3 bg-white shadow-md rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit Trip
+        </button>
+        <button class="inline-flex items-center px-5 py-3 bg-white shadow-md rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download PDF
+        </button>
+        <button class="inline-flex items-center px-5 py-3 bg-white shadow-md rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print
+        </button>
+        <button class="inline-flex items-center px-5 py-3 bg-white shadow-md rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share
+        </button>
+        <button class="inline-flex items-center px-5 py-3 bg-white shadow-md rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Email to All
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left Column - Trip Summary -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                <div class="h-48 bg-gray-200 relative">
+                    <img 
+                        src="/api/placeholder/800/400" 
+                        alt="{{ $destination ?? 'Bali, Indonesia' }}" 
+                        class="h-full w-full object-cover"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
+                        <div class="p-4 text-white">
+                            <h2 class="text-xl font-bold">{{ $tripTitle ?? 'Summer Getaway 2023' }}</h2>
+                            <div class="flex items-center mt-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span class="text-sm">{{ $destination ?? 'Bali, Indonesia' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</div>
+                                <div class="text-xs text-gray-500">
+                                    {{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate)) + 1 : '8' }} days, 
+                                    {{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate)) : '7' }} nights
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                            Confirmed
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ $travelers ?? '4' }} Travelers</div>
+                                <div class="text-xs text-gray-500">
+                                    @if(isset($invitedFriends) && count($invitedFriends) > 0)
+                                        {{ count($invitedFriends) }} {{ count($invitedFriends) === 1 ? 'person' : 'people' }} invited
+                                    @else
+                                        2 confirmed, 1 pending
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <button class="text-blue-600 text-xs font-medium hover:text-blue-800">
+                            Manage
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">Trip Type</div>
+                                <div class="text-xs text-gray-500">{{ $tripType ?? 'Beach Vacation' }}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 rounded-full bg-blue-600 mr-1"></div>
+                            <span class="text-xs text-gray-700">
+                                @php
+                                    $pace = $tripPace ?? 5;
+                                    if ($pace <= 3) {
+                                        $paceText = 'Relaxed pace';
+                                    } elseif ($pace <= 7) {
+                                        $paceText = 'Moderate pace';
+                                    } else {
+                                        $paceText = 'Action-packed';
+                                    }
+                                @endphp
+                                {{ $paceText }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-100 pt-4 mt-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm font-medium text-gray-900">Total Trip Budget</div>
+                            <button 
+                                wire:click="$toggle('showBudget')" 
+                                class="text-gray-400 hover:text-gray-600" 
+                            >
+                                @if(isset($showBudget) && $showBudget)
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                    </svg>
+                                @else
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                @endif
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="text-2xl font-bold text-gray-900">
+                                @if(isset($showBudget) && $showBudget) 
+                                    ${{ isset($budget) && isset($travelers) ? number_format($budget * $travelers, 0) : '6,000' }}
+                                @else 
+                                    ••••••
+                                @endif
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                @if(isset($showBudget) && $showBudget) 
+                                    ${{ isset($budget) ? number_format($budget, 0) : '1,500' }} per person
+                                @else 
+                                    ••••••
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trip Actions -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-5">
+                    <button wire:click="saveTrip" class="w-full mb-3 inline-flex justify-center items-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+                        Finalize & Save Trip
+                    </button>
+                    <button wire:click="$dispatch('goToPreviousStep')" class="w-full inline-flex justify-center items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Make Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Itinerary Preview -->
+        <div class="lg:col-span-2">
+            <!-- Map Overview -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                <div class="flex items-center justify-between bg-gray-50 px-5 py-4 border-b border-gray-200">
+                    <h3 class="font-medium text-gray-800">Trip Overview</h3>
+                    <button class="text-blue-600 text-sm font-medium">View Full Map</button>
+                </div>
+                <div class="p-4">
+                    <div class="bg-gray-200 rounded-lg overflow-hidden h-64 relative">
+                        <!-- This would be your map component -->
+                        <img src="/api/placeholder/800/400" alt="Map of {{ $destination ?? 'Bali' }} showing all activities" class="w-full h-full object-cover" />
+                        
+                        <!-- Map Pins -->
+                        <div class="absolute top-1/4 left-1/4">
+                            <div class="bg-blue-500 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">1</div>
+                        </div>
+                        <div class="absolute top-1/3 right-1/3">
+                            <div class="bg-green-500 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">2</div>
+                        </div>
+                        <div class="absolute bottom-1/3 left-1/2">
+                            <div class="bg-purple-500 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">3</div>
+                        </div>
+                        <div class="absolute bottom-1/4 right-1/4">
+                            <div class="bg-yellow-500 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">4</div>
+                        </div>
+                        
+                        <!-- Map Controls -->
+                        <div class="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 flex flex-col space-y-2">
+                            <button class="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded">+</button>
+                            <button class="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded">−</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 mt-3">
+                        <div class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                            4 beaches
+                        </div>
+                        <div class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                            3 cultural sites
+                        </div>
+                        <div class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                            2 adventure activities
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+            <!-- Daily Schedule -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between bg-blue-50 px-5 py-4 border-b border-blue-100">
+                    <h3 class="font-medium text-blue-800">Daily Itinerary</h3>
+                    <button class="text-blue-600 text-sm font-medium">View Detail</button>
+                </div>
+                
+                <div class="divide-y divide-gray-100">
+                    @php
+                        $days = [];
+                        $startDate = isset($startDate) ? \Carbon\Carbon::parse($startDate) : \Carbon\Carbon::parse('2023-08-15');
+                        $endDate = isset($endDate) ? \Carbon\Carbon::parse($endDate) : \Carbon\Carbon::parse('2023-08-22');
+                        
+                        $diff = $startDate->diffInDays($endDate);
+                        for ($i = 0; $i <= $diff; $i++) {
+                            $currentDate = $startDate->copy()->addDays($i);
+                            $days[] = [
+                                'day' => $i + 1,
+                                'date' => $currentDate->format('M d'),
+                                'activities' => isset($dayActivities[$i + 1]) ? count($dayActivities[$i + 1]) : 0
+                            ];
+                        }
+                    @endphp
+                    
+                    @foreach($days as $index => $day)
+                        @if($index < 3) {{-- Display first 3 days only --}}
+                            <div class="p-5">
+                                <div class="flex items-start">
+                                    <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                        <span class="text-blue-800 font-medium">{{ $day['day'] }}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <h4 class="text-base font-medium text-gray-900">
+                                                Day {{ $day['day'] }}: 
+                                                @if($day['day'] === 1)
+                                                    Arrival & Relaxation
+                                                @elseif($day['day'] === 2)
+                                                    Sacred Temples
+                                                @elseif($day['day'] === 3)
+                                                    Ubud Cultural Tour
+                                                @else
+                                                    Exploration Day
+                                                @endif
+                                            </h4>
+                                            <div class="text-sm text-gray-500">{{ $day['date'] }}</div>
+                                        </div>
+                                        
+                                        <div class="space-y-3">
+                                            @if(isset($dayActivities[$day['day']]) && count($dayActivities[$day['day']]) > 0)
+                                                @foreach($dayActivities[$day['day']] as $actIndex => $activity)
+                                                    @if($actIndex < 2) {{-- Display only first two activities per day --}}
+                                                        <div class="flex items-start">
+                                                            <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                            <div class="flex-1">
+                                                                <div class="flex items-center justify-between">
+                                                                    <div class="text-sm font-medium text-gray-900">{{ $activity['title'] }}</div>
+                                                                    <div class="text-xs text-gray-500">{{ $activity['start_time'] }} - {{ $activity['end_time'] }}</div>
+                                                                </div>
+                                                                <div class="text-xs text-gray-500 mt-0.5">{{ $activity['location'] }}</div>
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                                
+                                                @if(count($dayActivities[$day['day']]) > 2)
+                                                    <div class="text-xs text-blue-600 italic">
+                                                        +{{ count($dayActivities[$day['day']]) - 2 }} more activities
+                                                    </div>
+                                                @endif
+                                            @else
+                                                {{-- Default activities when there are no saved ones --}}
+                                                @if($day['day'] === 1)
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Airport Pickup & Hotel Check-in</div>
+                                                                <div class="text-xs text-gray-500">2:00 PM - 4:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Ngurah Rai International Airport → Kuta Resort</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Welcome Dinner</div>
+                                                                <div class="text-xs text-gray-500">7:00 PM - 9:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Beachfront Restaurant (reservation confirmed)</div>
+                                                        </div>
+                                                    </div>
+                                                @elseif($day['day'] === 2)
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Uluwatu Temple Visit</div>
+                                                                <div class="text-xs text-gray-500">9:00 AM - 12:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Guided tour, traditional Kecak dance</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Padang Padang Beach</div>
+                                                                <div class="text-xs text-gray-500">1:00 PM - 4:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Swimming, sunbathing, local food</div>
+                                                        </div>
+                                                    </div>
+                                                @elseif($day['day'] === 3)
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Sacred Monkey Forest</div>
+                                                                <div class="text-xs text-gray-500">10:00 AM - 12:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Nature walk, monkey interaction</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="flex items-start">
+                                                        <div class="mt-1 mr-3 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                                                        <div class="flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="text-sm font-medium text-gray-900">Ubud Art Market & Rice Terraces</div>
+                                                                <div class="text-xs text-gray-500">2:00 PM - 6:00 PM</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">Shopping, photography, traditional crafts</div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+                
+                <div class="px-5 py-4 bg-gray-50 border-t border-gray-200 text-center">
+                    <button class="text-blue-600 text-sm font-medium">
+                        View All {{ count($days) }} Days
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Budget Summary -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-6">
+                <div class="flex items-center justify-between bg-blue-50 px-5 py-4 border-b border-blue-100">
+                    <h3 class="font-medium text-blue-800">Budget Breakdown</h3>
+                </div>
+                
+                <div class="p-5">
+                    @php
+                        $activitiesCost = 0;
+                        if (isset($dayActivities) && is_array($dayActivities)) {
+                            foreach ($dayActivities as $day => $activities) {
+                                foreach ($activities as $activity) {
+                                    $activitiesCost += $activity['cost'] ?? 0;
+                                }
+                            }
+                        }
+                        
+                        $totalCost = $activitiesCost * ($travelers ?? 4);
+                        $perPersonCost = $activitiesCost;
+                        $estimatedOtherCosts = 1000; // Example value
+                        $totalBudget = isset($budget) ? $budget * ($travelers ?? 4) : 6000;
+                        $remainingBudget = $totalBudget - $totalCost;
+                    @endphp
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <div class="text-gray-600">Activities Cost</div>
+                                <div class="font-medium">${{ number_format($activitiesCost, 2) }} / person</div>
+                            </div>
+                            <div class="text-sm text-gray-500">Based on your planned activities</div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <div class="text-gray-600">Estimated Other Costs</div>
+                                <div class="font-medium">${{ number_format($estimatedOtherCosts, 2) }} / person</div>
+                            </div>
+                            <div class="text-sm text-gray-500">Accommodation, transportation, meals, etc.</div>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium text-gray-900">Total Per Person</div>
+                                <div class="font-bold text-gray-900">${{ number_format($perPersonCost + $estimatedOtherCosts, 2) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium text-gray-900">Total for {{ $travelers ?? '4' }} travelers</div>
+                                <div class="font-bold text-gray-900">${{ number_format(($perPersonCost + $estimatedOtherCosts) * ($travelers ?? 4), 2) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium text-gray-900">Your Budget</div>
+                                <div class="font-bold text-blue-600">${{ number_format($totalBudget, 2) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center">
+                                <div class="font-medium text-gray-900">Remaining Budget</div>
+                                <div class="font-bold {{ $remainingBudget >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                    ${{ number_format($remainingBudget, 2) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="mt-8 flex justify-between items-center">
+        <button wire:click="$dispatch('goToPreviousStep')" 
+            class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            Back to Invite Friends
+        </button>
+        <div class="flex items-center space-x-4">
+            <button wire:click="saveTrip" 
+                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Finalize Trip
+            </button>
+            <button 
+                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                Start Saving Now
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript for toggling day details -->
+    <script>
+        document.addEventListener('livewire:initialized', function () {
+            window.addEventListener('toggleDayDetails', (event) => {
+                const day = event.detail.day;
+                const details = document.getElementById(`day-${day}-details`);
+                const toggleText = document.getElementById(`day-${day}-toggle-text`);
+                const toggleIcon = document.getElementById(`day-${day}-toggle-icon`);
+                
+                if (details.classList.contains('hidden')) {
+                    details.classList.remove('hidden');
+                    toggleText.textContent = 'Hide Details';
+                    toggleIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />';
+                } else {
+                    details.classList.add('hidden');
+                    toggleText.textContent = 'Show Details';
+                    toggleIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />';
+                }
+            });
+        });
+        
+        function toggleDayDetails(day) {
+            window.dispatchEvent(new CustomEvent('toggleDayDetails', { 
+                detail: { day: day } 
+            }));
+        }
+    </script>
+</div>
+
+=== File: itinerary-planning.blade.php ===
+
+{{-- resources/views/livewire/trips/itinerary-planning.blade.php --}}
+<div>
+    <!-- Trip Header -->
+    <div class="bg-blue-700 text-white py-6 -mx-6 px-6 mb-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold">{{ $tripTitle ?? 'Summer Getaway 2023' }}</h1>
+                    <div class="flex items-center mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{{ $destination ?? 'Bali, Indonesia' }}</span>
+                        <span class="mx-2">•</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</span>
+                        <span class="mx-2">•</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span>{{ $travelers ?? '4' }} travelers</span>
+                    </div>
+                </div>
+                <div class="bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
+                    <div class="text-sm font-medium">Trip Budget</div>
+                    <div class="text-xl font-bold">
+                        @php
+                            $budgetValue = isset($budget) ? floatval($budget) : 0;
+                            $travelersCount = isset($travelers) ? intval($travelers) : 4;
+                            $totalBudget = $budgetValue * $travelersCount;
+                        @endphp
+                        ${{ $totalBudget > 0 ? number_format($totalBudget, 0) : '6,000' }}
+                    </div>
+                    <div class="text-xs">${{ isset($budget) && floatval($budget) > 0 ? number_format(floatval($budget), 0) : '1,500' }} / person</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Column - Day Selection -->
+        <div class="lg:w-1/4">
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Trip Days</h2>
+                <div class="space-y-2">
+                    @php
+                        $days = [];
+                        $startDate = isset($startDate) ? \Carbon\Carbon::parse($startDate) : \Carbon\Carbon::parse('2023-08-15');
+                        $endDate = isset($endDate) ? \Carbon\Carbon::parse($endDate) : \Carbon\Carbon::parse('2023-08-22');
+                        
+                        $diff = $startDate->diffInDays($endDate);
+                        for ($i = 0; $i <= $diff; $i++) {
+                            $currentDate = $startDate->copy()->addDays($i);
+                            $days[] = [
+                                'day' => $i + 1,
+                                'date' => $currentDate->format('M d'),
+                                'activities' => isset($dayActivities[$i + 1]) ? count($dayActivities[$i + 1]) : 0
+                            ];
+                        }
+                    @endphp
+                    
+                    @foreach($days as $day)
+                        <button
+                            wire:click="changeActiveDay({{ $day['day'] }})"
+                            class="w-full flex items-center justify-between p-3 rounded-lg border transition-colors {{ $activeDay == $day['day'] ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50' }}"
+                        >
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 rounded-lg flex items-center justify-center mr-3 {{ $activeDay == $day['day'] ? 'bg-blue-100' : 'bg-gray-100' }}">
+                                    <span class="{{ $activeDay == $day['day'] ? 'text-blue-600' : 'text-gray-600' }}">
+                                        {{ $day['day'] }}
+                                    </span>
+                                </div>
+                                <div class="text-left">
+                                    <div class="font-medium {{ $activeDay == $day['day'] ? 'text-blue-700' : 'text-gray-700' }}">
+                                        Day {{ $day['day'] }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ $day['date'] }}</div>
+                                </div>
+                            </div>
+                            <div class="text-sm {{ $day['activities'] === 0 ? 'text-gray-400' : ($activeDay == $day['day'] ? 'text-blue-600' : 'text-gray-600') }}">
+                                {{ $day['activities'] }} {{ $day['activities'] === 1 ? 'activity' : 'activities' }}
+                            </div>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Collaborative Planning</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                            <span class="text-blue-600 font-medium">{{ isset(auth()->user()->name) ? substr(auth()->user()->name, 0, 1) : 'Y' }}</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="font-medium text-gray-900">{{ auth()->user()->name ?? 'You' }}</span>
+                            <span class="text-gray-500"> added Uluwatu Temple 2h ago</span>
+                        </div>
+                    </div>
+                    
+                    @if(isset($inviteEmails) && count($inviteEmails) > 0)
+                        @foreach($inviteEmails as $index => $invite)
+                            @if($index < 2) {{-- Only show 2 collaborators for simplicity --}}
+                                <div class="flex items-center">
+                                    <div class="h-8 w-8 bg-{{ $index == 0 ? 'green' : 'yellow' }}-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                                        <span class="text-{{ $index == 0 ? 'green' : 'yellow' }}-600 font-medium">{{ substr($invite['name'] ?? $invite['email'], 0, 1) }}</span>
+                                    </div>
+                                    <div class="text-sm">
+                                        <span class="font-medium text-gray-900">{{ $invite['name'] ?? $invite['email'] }}</span>
+                                        <span class="text-gray-500"> {{ $index == 0 ? 'suggested Kuta Beach yesterday' : 'liked Sacred Monkey Forest' }}</span>
+                                    </div>
+                                </div>
+                            @endif
+                        @endforeach
+                    @else
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                                <span class="text-green-600 font-medium">M</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-900">Michael</span>
+                                <span class="text-gray-500"> suggested Kuta Beach yesterday</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
+                                <span class="text-yellow-600 font-medium">J</span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-900">Jessica</span>
+                                <span class="text-gray-500"> liked Sacred Monkey Forest</span>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <button class="w-full py-2 text-blue-600 text-sm font-medium flex items-center justify-center">
+                        View All Activity 
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Daily Itinerary -->
+        <div class="lg:w-3/4">
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                <!-- Day Header -->
+                <div class="bg-blue-50 p-6 flex justify-between items-center border-b border-blue-100">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Day {{ $activeDay }}: {{ $days[$activeDay-1]['date'] ?? 'Aug 15' }}</h2>
+                        <div class="text-sm text-gray-600 mt-1">Plan your activities for this day</div>
+                    </div>
+                    <button 
+                        wire:click="$dispatch('showAddActivityModal')"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        Add Activity
+                    </button>
+                </div>
+                
+                <!-- Map Section -->
+                <div class="p-6 border-b border-gray-200">
+                    <div class="bg-gray-200 rounded-lg overflow-hidden h-64 relative">
+                        <!-- This would be your map component -->
+                        <img src="/api/placeholder/800/400" alt="Map of Bali showing day's activities" class="w-full h-full object-cover" />
+                        
+                        <!-- Map Pins -->
+                        @if(isset($dayActivities[$activeDay]) && count($dayActivities[$activeDay]) > 0)
+                            @foreach($dayActivities[$activeDay] as $index => $activity)
+                                <div class="absolute 
+                                    {{ $index % 3 == 0 ? 'top-1/3 left-1/4' : ($index % 3 == 1 ? 'top-1/2 left-1/2' : 'bottom-1/3 right-1/3') }}">
+                                    <div class="bg-blue-500 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white">{{ $index + 1 }}</div>
+                                </div>
+                            @endforeach
+                        @endif
+                        
+                         <!-- Map Controls -->
+                         <div class="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 flex flex-col space-y-2">
+                            <button class="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded">+</button>
+                            <button class="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded">−</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Activities List -->
+                <div class="p-6">
+                    @if(isset($dayActivities[$activeDay]) && count($dayActivities[$activeDay]) > 0)
+                        <!-- Morning Activities -->
+                        @php
+                            $morningActivities = collect($dayActivities[$activeDay])->where('time_of_day', 'morning')->all();
+                        @endphp
+                        
+                        @if(count($morningActivities) > 0)
+                            <div class="mb-8">
+                                <div class="flex items-center mb-4">
+                                    <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-medium text-gray-800">Morning</h3>
+                                </div>
+                                
+                                @foreach($morningActivities as $activity)
+                                    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-4">
+                                        <div class="flex flex-col md:flex-row">
+                                            <div class="md:w-1/4 h-48 md:h-auto bg-gray-200 flex-shrink-0">
+                                                <img 
+                                                    src="/api/placeholder/300/400" 
+                                                    alt="{{ $activity['title'] }}" 
+                                                    class="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                            <div class="flex-1 p-6">
+                                                <div class="flex items-start justify-between">
+                                                    <div>
+                                                        <h4 class="text-lg font-medium text-gray-900">{{ $activity['title'] }}</h4>
+                                                        <div class="flex items-center mt-1">
+                                                            <div class="flex items-center mr-3">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                </svg>
+                                                                <span class="text-sm text-gray-500">{{ $activity['location'] }}</span>
+                                                            </div>
+                                                            <div class="flex items-center text-yellow-500">
+                                                                @for ($i = 0; $i < 4; $i++)
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                    </svg>
+                                                                @endfor
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
+                                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                </svg>
+                                                                <span class="ml-1 text-xs text-gray-500">({{ mt_rand(100, 1500) }})</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button class="text-blue-600 hover:text-blue-800">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="mt-4 flex items-center flex-wrap gap-2">
+                                                    <div class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        {{ $activity['start_time'] }} - {{ $activity['end_time'] }}
+                                                    </div>
+                                                    @if(isset($activity['cost']))
+                                                        @php
+                                                            $cost = is_numeric($activity['cost']) ? floatval($activity['cost']) : 0;
+                                                        @endphp
+                                                        @if($cost > 0)
+                                                            <div class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                ${{ number_format($cost, 2) }} / person
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                    <div class="flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                                                        {{ ucfirst($activity['category'] ?? 'Activity') }}
+                                                    </div>
+                                                </div>
+                                                
+                                                @if(isset($activity['description']) && $activity['description'])
+                                                    <p class="mt-4 text-sm text-gray-600">
+                                                        {{ $activity['description'] }}
+                                                    </p>
+                                                @endif
+                                                
+                                                <div class="mt-4 flex items-center justify-between">
+                                                    <div class="flex -space-x-2">
+                                                        <div class="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 ring-2 ring-white">
+                                                            {{ isset(auth()->user()->name) ? substr(auth()->user()->name, 0, 1) : 'Y' }}
+                                                        </div>
+                                                        <div class="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center text-xs text-green-600 ring-2 ring-white">M</div>
+                                                        <div class="h-6 w-6 rounded-full bg-yellow-100 flex items-center justify-center text-xs text-yellow-600 ring-2 ring-white">J</div>
+                                                    </div>
+                                                    <div class="flex space-x-2">
+                                                        <button class="px-3 py-1 text-xs text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Edit</button>
+                                                        <button wire:click="removeActivity({{ $activeDay }}, '{{ $activity['id'] }}')" class="px-3 py-1 text-xs text-red-700 bg-red-50 rounded-md hover:bg-red-100">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                        
+                        <!-- Afternoon Activities -->
+                        @php
+                            $afternoonActivities = collect($dayActivities[$activeDay])->where('time_of_day', 'afternoon')->all();
+                        @endphp
+                        
+                        @if(count($afternoonActivities) > 0)
+                            <div class="mb-8">
+                                <div class="flex items-center mb-4">
+                                    <div class="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-medium text-gray-800">Afternoon</h3>
+                                </div>
+                                
+                                @foreach($afternoonActivities as $activity)
+                                    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-4">
+                                        <div class="flex flex-col md:flex-row">
+                                            <div class="md:w-1/4 h-48 md:h-auto bg-gray-200 flex-shrink-0">
+                                                <img 
+                                                    src="/api/placeholder/300/400" 
+                                                    alt="{{ $activity['title'] }}" 
+                                                    class="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                            <div class="flex-1 p-6">
+                                                <div class="flex items-start justify-between">
+                                                    <div>
+                                                        <h4 class="text-lg font-medium text-gray-900">{{ $activity['title'] }}</h4>
+                                                        <div class="flex items-center mt-1">
+                                                            <div class="flex items-center mr-3">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                </svg>
+                                                                <span class="text-sm text-gray-500">{{ $activity['location'] }}</span>
+                                                            </div>
+                                                            <div class="flex items-center text-yellow-500">
+                                                                @for ($i = 0; $i < 5; $i++)
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                                    </svg>
+                                                                @endfor
+                                                                <span class="ml-1 text-xs text-gray-500">({{ mt_rand(100, 1500) }})</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button class="text-blue-600 hover:text-blue-800">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="mt-4 flex items-center flex-wrap gap-2">
+                                                    <div class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        {{ $activity['start_time'] }} - {{ $activity['end_time'] }}
+                                                    </div>
+                                                    @if(isset($activity['cost']))
+                                                        @php
+                                                            $cost = is_numeric($activity['cost']) ? floatval($activity['cost']) : 0;
+                                                        @endphp
+                                                        @if($cost > 0)
+                                                            <div class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                ${{ number_format($cost, 2) }} / person
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                    <div class="flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                                                        {{ ucfirst($activity['category'] ?? 'Activity') }}
+                                                    </div>
+                                                </div>
+                                                
+                                                @if(isset($activity['description']) && $activity['description'])
+                                                    <p class="mt-4 text-sm text-gray-600">
+                                                        {{ $activity['description'] }}
+                                                    </p>
+                                                @endif
+                                                
+                                                <div class="mt-4 flex items-center justify-between">
+                                                    <div class="flex -space-x-2">
+                                                        <div class="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 ring-2 ring-white">
+                                                            {{ isset(auth()->user()->name) ? substr(auth()->user()->name, 0, 1) : 'Y' }}
+                                                        </div>
+                                                        <div class="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center text-xs text-green-600 ring-2 ring-white">M</div>
+                                                    </div>
+                                                    <div class="flex space-x-2">
+                                                        <button class="px-3 py-1 text-xs text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Edit</button>
+                                                        <button wire:click="removeActivity({{ $activeDay }}, '{{ $activity['id'] }}')" class="px-3 py-1 text-xs text-red-700 bg-red-50 rounded-md hover:bg-red-100">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                        
+                        <!-- Evening Activities -->
+                        @php
+                            $eveningActivities = collect($dayActivities[$activeDay])->where('time_of_day', 'evening')->all();
+                        @endphp
+                        
+                        @if(count($eveningActivities) > 0)
+                            <div class="mb-8">
+                                <div class="flex items-center mb-4">
+                                    <div class="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-medium text-gray-800">Evening</h3>
+                                </div>
+                                
+                                @foreach($eveningActivities as $activity)
+                                    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-4">
+                                        <div class="flex flex-col md:flex-row">
+                                            <div class="md:w-1/4 h-48 md:h-auto bg-gray-200 flex-shrink-0">
+                                                <img 
+                                                    src="/api/placeholder/300/400" 
+                                                    alt="{{ $activity['title'] }}" 
+                                                    class="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                            <div class="flex-1 p-6">
+                                                <div class="flex items-start justify-between">
+                                                    <div>
+                                                        <h4 class="text-lg font-medium text-gray-900">{{ $activity['title'] }}</h4>
+                                                        <div class="flex items-center mt-1">
+                                                            <div class="flex items-center mr-3">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                </svg>
+                                                                <span class="text-sm text-gray-500">{{ $activity['location'] }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button class="text-blue-600 hover:text-blue-800">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="mt-4 flex items-center flex-wrap gap-2">
+                                                    <div class="flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        {{ $activity['start_time'] }} - {{ $activity['end_time'] }}
+                                                    </div>
+                                                    @if(isset($activity['cost']))
+                                                        @php
+                                                            $cost = is_numeric($activity['cost']) ? floatval($activity['cost']) : 0;
+                                                        @endphp
+                                                        @if($cost > 0)
+                                                            <div class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                </svg>
+                                                                ${{ number_format($cost, 2) }} / person
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                    <div class="flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                                                        {{ ucfirst($activity['category'] ?? 'Activity') }}
+                                                    </div>
+                                                </div>
+                                                
+                                                @if(isset($activity['description']) && $activity['description'])
+                                                    <p class="mt-4 text-sm text-gray-600">
+                                                        {{ $activity['description'] }}
+                                                    </p>
+                                                @endif
+                                                
+                                                <div class="mt-4 flex items-center justify-between">
+                                                    <div class="flex -space-x-2">
+                                                        <div class="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 ring-2 ring-white">
+                                                            {{ isset(auth()->user()->name) ? substr(auth()->user()->name, 0, 1) : 'Y' }}
+                                                        </div>
+                                                        <div class="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center text-xs text-green-600 ring-2 ring-white">M</div>
+                                                    </div>
+                                                    <div class="flex space-x-2">
+                                                        <button class="px-3 py-1 text-xs text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Edit</button>
+                                                        <button wire:click="removeActivity({{ $activeDay }}, '{{ $activity['id'] }}')" class="px-3 py-1 text-xs text-red-700 bg-red-50 rounded-md hover:bg-red-100">Remove</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                    <!-- Add Empty Time Block if needed -->
+                    @php
+                        $hasMorning = count($morningActivities) > 0;
+                        $hasAfternoon = count($afternoonActivities) > 0;
+                        $hasEvening = count($eveningActivities) > 0;
+                    @endphp
+
+                    @if(!$hasMorning)
+                        <div class="mb-8">
+                            <div class="flex items-center mb-4">
+                                <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-800">Morning</h3>
+                            </div>
+                            
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-700">Add Morning Activity</h4>
+                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                                    Start your day with sightseeing, a relaxing breakfast, or a cool morning swim
+                                </p>
+                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'morning' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Browse Suggestions
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(!$hasAfternoon)
+                        <div class="mb-8">
+                            <div class="flex items-center mb-4">
+                                <div class="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-800">Afternoon</h3>
+                            </div>
+                            
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-700">Add Afternoon Activity</h4>
+                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                                    Explore beaches, visit temples, or enjoy a local food experience
+                                </p>
+                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'afternoon' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Browse Suggestions
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(!$hasEvening)
+                        <div>
+                            <div class="flex items-center mb-4">
+                                <div class="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-800">Evening</h3>
+                            </div>
+                            
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-700">Add Evening Activity</h4>
+                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                                    Explore local restaurants, traditional performances, or nightlife options for your evening
+                                </p>
+                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'evening' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Browse Suggestions
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+                @else
+                    <div class="text-center p-8">
+                        <div class="inline-flex items-center justify-center h-16 w-16 bg-blue-50 rounded-full mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-medium text-gray-900 mb-2">No activities yet!</h3>
+                        <p class="text-gray-500 mb-4">Plan your day by adding some exciting activities</p>
+                        <button 
+                            wire:click="$dispatch('showAddActivityModal')"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add First Activity
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+        
+        <!-- Suggested Activities -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="bg-blue-50 p-6 flex justify-between items-center border-b border-blue-100">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Suggested Activities</h2>
+                    <div class="text-sm text-gray-600 mt-1">Popular in {{ $destination ?? 'Bali, Indonesia' }}</div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @forelse($suggestedActivities ?? [] as $index => $suggestion)
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" wire:click="addSuggestedActivity({{ $index }})">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-900">{{ $suggestion['title'] }}</h4>
+                                    <div class="flex items-center mt-1">
+                                        <div class="flex items-center mr-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span class="text-sm text-gray-500">{{ $suggestion['location'] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                                    {{ ucfirst($suggestion['category']) }}
+                                </div>
+                            </div>
+                            
+                            @if(isset($suggestion['description']) && $suggestion['description'])
+                                <p class="mt-2 text-sm text-gray-600">
+                                    {{ $suggestion['description'] }}
+                                </p>
+                            @endif
+                            
+                            <div class="mt-4 flex items-center justify-between">
+                                @if(isset($suggestion['cost']))
+                                    @php
+                                        $cost = is_numeric($suggestion['cost']) ? floatval($suggestion['cost']) : 0;
+                                    @endphp
+                                    @if($cost > 0)
+                                        <div class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            ${{ number_format($cost, 2) }} / person
+                                        </div>
+                                    @endif
+                                @endif
+                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    Add to Day {{ $activeDay }}
+                                </button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-2 text-center py-8">
+                            <div class="text-gray-500">No suggestions available for this destination.</div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between mt-8">
+            <button wire:click="$dispatch('goToPreviousStep')" 
+                class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+                Back to Trip Details
+            </button>
+            <button wire:click="continueToNextStep" 
+                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                Continue to Invite Friends
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Activity Modal -->
+<div x-data="{ open: false, timeOfDay: 'morning' }" 
+     x-show="open"
+     @show-add-activity-modal.window="open = true; timeOfDay = $event.detail?.timeOfDay || 'morning'"
+     @close-add-activity-modal.window="open = false"
+     x-cloak
+     class="fixed inset-0 z-50 overflow-y-auto" 
+     style="display: none;"
+     role="dialog" 
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div x-show="open" 
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 transition-opacity" 
+             aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+        </div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div x-show="open" 
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            Add Activity to Day {{ $activeDay }}
+                        </h3>
+                        <div class="mt-6 space-y-4">
+                            <div>
+                                <label for="activity-title" class="block text-sm font-medium text-gray-700">Activity Title</label>
+                                <input type="text" name="activity-title" id="activity-title" wire:model="newActivity.title" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                @error('newActivity.title') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            
+                            <div>
+                                <label for="activity-time" class="block text-sm font-medium text-gray-700">Time of Day</label>
+                                <select id="activity-time" name="activity-time" wire:model="newActivity.time_of_day" x-model="timeOfDay" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                    <option value="morning">Morning</option>
+                                    <option value="afternoon">Afternoon</option>
+                                    <option value="evening">Evening</option>
+                                </select>
+                                @error('newActivity.time_of_day') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="activity-start-time" class="block text-sm font-medium text-gray-700">Start Time</label>
+                                    <input type="time" name="activity-start-time" id="activity-start-time" wire:model="newActivity.start_time" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                    @error('newActivity.start_time') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                                
+                                <div>
+                                    <label for="activity-end-time" class="block text-sm font-medium text-gray-700">End Time</label>
+                                    <input type="time" name="activity-end-time" id="activity-end-time" wire:model="newActivity.end_time" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                    @error('newActivity.end_time') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="activity-location" class="block text-sm font-medium text-gray-700">Location</label>
+                                <input type="text" name="activity-location" id="activity-location" wire:model="newActivity.location" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                @error('newActivity.location') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            
+                            <div>
+                                <label for="activity-cost" class="block text-sm font-medium text-gray-700">Cost per Person ($)</label>
+                                <input type="number" min="0" step="0.01" name="activity-cost" id="activity-cost" wire:model="newActivity.cost" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                @error('newActivity.cost') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            
+                            <div>
+                                <label for="activity-category" class="block text-sm font-medium text-gray-700">Category</label>
+                                <select id="activity-category" name="activity-category" wire:model="newActivity.category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                                    <option value="">Select a category</option>
+                                    <option value="cultural">Cultural</option>
+                                    <option value="adventure">Adventure</option>
+                                    <option value="relaxation">Relaxation</option>
+                                    <option value="food">Food & Dining</option>
+                                    <option value="nightlife">Nightlife</option>
+                                    <option value="shopping">Shopping</option>
+                                    <option value="nature">Nature</option>
+                                    <option value="sightseeing">Sightseeing</option>
+                                </select>
+                                @error('newActivity.category') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                            
+                            <div>
+                                <label for="activity-description" class="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea id="activity-description" name="activity-description" rows="3" wire:model="newActivity.description" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+                                @error('newActivity.description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button wire:click="addActivity" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Add Activity
+                </button>
+                <button @click="open = false" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('livewire:initialized', function () {
+        window.addEventListener('showAddActivityModal', (event) => {
+            const timeOfDay = event.detail?.timeOfDay || 'morning';
+            window.dispatchEvent(new CustomEvent('show-add-activity-modal', { 
+                detail: { timeOfDay: timeOfDay } 
+            }));
+        });
+        
+        window.addEventListener('closeAddActivityModal', () => {
+            window.dispatchEvent(new CustomEvent('close-add-activity-modal'));
+        });
+    });
+</script>
+</div>
+
+=== File: create-trip.blade.php ===
+
+{{-- resources/views/livewire/trips/create-trip.blade.php --}}
+<div>
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-sm p-6">
+        <h1 class="text-2xl font-bold mb-6">Plan a new trip</h1>
+
+        <!-- Progress Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-2">
+                <div class="text-sm text-gray-600">
+                    Step {{ $currentStep }} of {{ $totalSteps }}
+                </div>
+                @if($currentStep < $totalSteps)
+                    <button wire:click="skipToSummary" type="button"
+                        class="text-sm text-blue-600 hover:text-blue-800">
+                        Skip to summary
+                    </button>
+                @endif
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-blue-600 h-2 rounded-full" style="width: {{ ($currentStep / $totalSteps) * 100 }}%"></div>
+            </div>
+            
+            
+        </div>
+
+        <!-- Progress Tabs -->
+        <div class="mb-8">
+            <div class="flex border-b overflow-x-auto">
+                {{-- Step 1: Choose Destination --}}
+                <button wire:click="goToStep(1)" type="button" 
+                    class="px-6 py-3 {{ $currentStep === 1 ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-500' }} flex items-center whitespace-nowrap">
+                    @if($currentStep > 1)
+                        <div class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs mr-2">✓</div>
+                    @endif
+                    1. Choose Destination
+                </button>
+
+                {{-- Step 2: Trip Details --}}
+                @if ($currentStep > 1)
+                    <button wire:click="goToStep(2)" type="button"
+                        class="px-6 py-3 {{ $currentStep === 2 ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-500' }} flex items-center whitespace-nowrap">
+                @else
+                    <button type="button"
+                        class="px-6 py-3 text-gray-500 flex items-center whitespace-nowrap cursor-not-allowed opacity-50" disabled>
+                @endif
+                    @if($currentStep > 2)
+                        <div class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs mr-2">✓</div>
+                    @endif
+                    2. Trip Details
+                </button>
+
+                {{-- Step 3: Plan Itinerary --}}
+                @if ($currentStep > 2)
+                    <button wire:click="goToStep(3)" type="button"
+                        class="px-6 py-3 {{ $currentStep === 3 ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-500' }} flex items-center whitespace-nowrap">
+                @else
+                    <button type="button"
+                        class="px-6 py-3 text-gray-500 flex items-center whitespace-nowrap cursor-not-allowed opacity-50" disabled>
+                @endif
+                    @if($currentStep > 3)
+                        <div class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs mr-2">✓</div>
+                    @endif
+                    3. Plan Itinerary
+                </button>
+
+                {{-- Step 4: Invite Friends --}}
+                @if ($currentStep > 3)
+                    <button wire:click="goToStep(4)" type="button"
+                        class="px-6 py-3 {{ $currentStep === 4 ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-500' }} flex items-center whitespace-nowrap">
+                @else
+                    <button type="button"
+                        class="px-6 py-3 text-gray-500 flex items-center whitespace-nowrap cursor-not-allowed opacity-50" disabled>
+                @endif
+                    @if($currentStep > 4)
+                        <div class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs mr-2">✓</div>
+                    @endif
+                    4. Invite Friends
+                </button>
+
+                {{-- Step 5: Review --}}
+                @if ($currentStep > 4)
+                    <button wire:click="goToStep(5)" type="button"
+                        class="px-6 py-3 {{ $currentStep === 5 ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-500' }} whitespace-nowrap">
+                @else
+                    <button type="button"
+                        class="px-6 py-3 text-gray-500 whitespace-nowrap cursor-not-allowed opacity-50" disabled>
+                @endif
+                    5. Review & Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Step Content -->
+        <div>
+            @if($currentStep === 1)
+                @livewire('trips.destination-selection')
+            @elseif($currentStep === 2)
+                @livewire('trips.trip-details')
+            @elseif($currentStep === 3)
+                @livewire('trips.itinerary-planning')
+            @elseif($currentStep === 4)
+                @livewire('trips.invite-friends')
+            @elseif($currentStep === 5)
+                @livewire('trips.review')
+            @endif
+        </div>
+
+        <!-- Navigation Buttons (only if not shown in sub-components) -->
+        @if($showNavButtons)
+            <div class="mt-8 flex justify-between">
+                @if($currentStep > 1)
+                    <button type="button" wire:click="previousStep"
+                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Back
+                    </button>
+                @else
+                    <div></div>
+                @endif
+
+                @if($currentStep < $totalSteps)
+                    <button type="button" wire:click="nextStep"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Next
+                    </button>
+                @else
+                    <button type="button" wire:click="createTrip"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Start planning
+                    </button>
+                @endif
+            </div>
+        @endif
+    </div>
+
+    <script>
+        document.addEventListener('livewire:initialized', function () {
+            Livewire.on('destinationSelected', (data) => {
+                @this.selectDestination(data.destination);
+            });
+
+            Livewire.on('goToNextStep', () => {
+                @this.nextStep();
+            });
+
+            Livewire.on('goToPreviousStep', () => {
+                @this.previousStep();
+            });
+        });
+    </script>
+</div>
