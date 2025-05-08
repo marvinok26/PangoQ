@@ -9,6 +9,7 @@ use App\Http\Controllers\TripController;
 use App\Http\Controllers\ProfileController;
 use App\Services\LanguageService;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Session;
 
 /*
 |--------------------------------------------------------------------------
@@ -117,39 +118,73 @@ Route::prefix('api')->name('api.')->group(function () {
     })->name('suggestions.get');
 });
 
-// Dashboard - Now accessible without authentication
+// Dashboard
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-// Profile routes - Now accessible without authentication 
+// Profile routes
 Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
 Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
 Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-// Trip routes - Now accessible without authentication
+// Trip routes
 Route::get('/trips', [TripController::class, 'index'])->name('trips.index');
 Route::post('/trips', [TripController::class, 'store'])->name('trips.store');
 
-// Trip detail routes - Now accessible without authentication
+// Trip detail routes
 Route::get('/trips/{trip}', [TripController::class, 'show'])->name('trips.show');
 Route::get('/trips/{trip}/edit', [TripController::class, 'edit'])->name('trips.edit');
 Route::put('/trips/{trip}', [TripController::class, 'update'])->name('trips.update');
 Route::delete('/trips/{trip}', [TripController::class, 'destroy'])->name('trips.destroy');
 Route::post('/trips/{trip}/invite', [TripController::class, 'invite'])->name('trips.invite');
 
-// Trip Planning Routes
+// Trip Planning Routes (Main entry point)
 Route::get('/plan', function() {
+    // Force clear any previous trip planning session data to start fresh
+    Session::forget([
+        'selected_trip_type',
+        'selected_trip_template',
+        'selected_destination',
+        'trip_details',
+        'trip_activities',
+        'trip_invites'
+    ]);
+    
+    // Use the view that exists in your project
     return view('livewire.pages.trips.create');
 })->name('trips.plan');
 
-// Make sure this route properly references the CreateTrip Livewire component
+// Make sure create route also clears session
 Route::get('/plan/create', function() {
+    // Force clear any previous trip planning session data to start fresh
+    Session::forget([
+        'selected_trip_type',
+        'selected_trip_template',
+        'selected_destination',
+        'trip_details',
+        'trip_activities',
+        'trip_invites'
+    ]);
+    
+    // Use the view that exists in your project
     return view('livewire.pages.trips.create');
 })->name('trips.create');
 
+// Pre-planned trip templates - NEW ROUTES FOR DUAL PATH
+Route::get('/trip-templates', [TripController::class, 'browseTemplates'])->name('trips.templates');
+Route::get('/trip-templates/{template}', [TripController::class, 'showTemplate'])->name('trips.templates.show');
+
 // Trip Planning Steps - Direct access routes for debugging if needed
+Route::get('/plan/type-selection', function () {
+    return view('livewire.trips.trip-type-selection');
+})->name('trips.type-selection');
+
 Route::get('/plan/destination', function () {
     return view('livewire.trips.destination-selection');
 })->name('trips.destination');
+
+Route::get('/plan/pre-planned', function () {
+    return view('livewire.trips.pre-planned-trip-selection');
+})->name('trips.pre-planned');
 
 Route::get('/plan/details', function () {
     return view('livewire.trips.trip-details');

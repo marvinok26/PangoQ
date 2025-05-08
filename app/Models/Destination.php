@@ -9,11 +9,6 @@ class Destination extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
         'name',
         'country',
@@ -23,10 +18,10 @@ class Destination extends Model
     ];
 
     /**
-     * Get the trips associated with the destination.
+     * Get the trip templates for the destination.
      */
-    public function trips()
+    public function tripTemplates()
     {
-        return $this->hasMany(Trip::class);
+        return $this->hasMany(TripTemplate::class);
     }
 }

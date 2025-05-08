@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Trip extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'creator_id',
+        'trip_template_id',
+        'planning_type',
         'title',
         'description',
         'destination',
@@ -19,81 +21,73 @@ class Trip extends Model
         'budget',
         'status'
     ];
-    
+
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'budget' => 'decimal:2',
     ];
-    
-    // Relationships
-    
-    // A trip belongs to a creator (user)
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'creator_id');
     }
-    
-    // A trip has many members
+
     public function members()
     {
         return $this->hasMany(TripMember::class);
     }
-    
-    // A trip has many itineraries (days)
+
     public function itineraries()
     {
         return $this->hasMany(Itinerary::class);
     }
-    
-    // A trip has a savings wallet
+
     public function savingsWallet()
     {
         return $this->hasOne(SavingsWallet::class);
     }
     
-    // Get all users associated with the trip
-    public function users()
+    public function tripTemplate()
     {
-        return $this->belongsToMany(User::class, 'trip_members', 'trip_id', 'user_id')
-            ->withPivot('role', 'invitation_status')
-            ->withTimestamps();
+        return $this->belongsTo(TripTemplate::class);
     }
     
-    // Helpers
-    
-    // Calculate duration in days
-    public function getDurationAttribute()
+    // Helper method to create itineraries from a trip template
+    public function createItinerariesFromTemplate()
     {
-        return $this->start_date->diffInDays($this->end_date) + 1; // +1 to include the end day
-    }
-    
-    // Check if user is a member of the trip
-    public function isMember($userId)
-    {
-        return $this->members()->where('user_id', $userId)->exists();
-    }
-    
-    // Check if user is the organizer of the trip
-    public function isOrganizer($userId)
-    {
-        return $this->creator_id === $userId || 
-               $this->members()->where('user_id', $userId)
-                   ->where('role', 'organizer')
-                   ->exists();
-    }
-    
-    // Scope for upcoming trips
-    public function scopeUpcoming($query)
-    {
-        return $query->where('start_date', '>=', now())
-            ->orderBy('start_date', 'asc');
-    }
-    
-    // Scope for past trips
-    public function scopePast($query)
-    {
-        return $query->where('end_date', '<', now())
-            ->orderBy('end_date', 'desc');
+        if (!$this->tripTemplate) {
+            return false;
+        }
+        
+        // Get the trip template
+        $template = $this->tripTemplate;
+        
+        // Clear any existing itineraries for this trip
+        $this->itineraries()->delete();
+        
+        // Create an itinerary for each day in the template
+        for ($day = 1; $day <= $template->duration_days; $day++) {
+            $date = clone $this->start_date;
+            $date->addDays($day - 1);
+            
+            // Create the itinerary for this day
+            $itinerary = $this->itineraries()->create([
+                'title' => "Day $day: " . $this->destination,
+                'description' => "Itinerary for day $day in " . $this->destination,
+                'day_number' => $day,
+                'date' => $date,
+            ]);
+            
+            // Get template activities for this day
+            $activities = $template->getDayActivities($day);
+            
+            // Create activities for this itinerary
+            foreach ($activities as $templateActivity) {
+                $itinerary->activities()->create($templateActivity->toActivity($itinerary->id));
+            }
+        }
+        
+        return true;
     }
 }
