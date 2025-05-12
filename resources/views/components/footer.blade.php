@@ -2,10 +2,9 @@
     <div class="container mx-auto px-4 lg:px-8">
         <div class="grid grid-cols-2 md:grid-cols-6 gap-8 mb-16">
             <div class="col-span-2">
-                <div class="flex items-center mb-4">
-                    <a href="{{ route('home') }}" class="flex items-center">
-                        <div class="h-8 w-8 bg-blue-600 rounded-full"></div>
-                        <span class="ml-2 text-xl font-bold text-blue-600">pangoQ</span>
+                <div class="mb-4">
+                    <a href="{{ route('home') }}">
+                        <img src="{{ asset('images/logo.png') }}" alt="PangoQ Logo" class="h-10 w-auto">
                     </a>
                 </div>
                 <p class="text-gray-600 mb-4">Making group travel planning simple, collaborative, and enjoyable.</p>

@@ -24,6 +24,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'auth_provider',
+        'auth_provider_id',
         'profile_photo_path',
         'language',
     ];
@@ -88,10 +90,20 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getPhotoUrlAttribute(): string
     {
+        // Check for both possible column names
         if ($this->profile_photo_path) {
-            return asset('storage/' . $this->profile_photo_path);
+            return filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
+                ? $this->profile_photo_path
+                : asset('storage/' . $this->profile_photo_path);
         }
 
+        if ($this->profile_photo) {
+            return filter_var($this->profile_photo, FILTER_VALIDATE_URL)
+                ? $this->profile_photo
+                : asset('storage/' . $this->profile_photo);
+        }
+
+        // Fallback to Gravatar
         $hash = md5(strtolower(trim($this->email)));
         return "https://www.gravatar.com/avatar/{$hash}?d=mp";
     }
@@ -102,11 +114,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getInitialsAttribute(): string
     {
         $parts = explode(' ', $this->name);
-        
+
         if (count($parts) >= 2) {
             return mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1);
         }
-        
+
         return mb_substr($this->name, 0, 2);
     }
 }

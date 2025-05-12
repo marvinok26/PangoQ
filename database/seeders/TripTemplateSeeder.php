@@ -11,6 +11,17 @@ class TripTemplateSeeder extends Seeder
 {
     public function run(): void
     {
+        // Create an array of available image filenames for activities
+        $activityImages = [
+            'image14.jpeg', 'image15.jpg', 'image16.jpg', 
+            'image17.jpg', 'image18.jpg', 'image19.jpg'
+        ];
+        
+        // Helper function to get a random image from our pool
+        $getRandomImage = function() use ($activityImages) {
+            return $activityImages[array_rand($activityImages)];
+        };
+
         // Kenya Safari Template - based on 7 DAY BEST OF KENYA SOPA CIRCUIT
         $kenya = Destination::firstOrCreate(
             ['name' => 'Kenya'],
@@ -18,7 +29,7 @@ class TripTemplateSeeder extends Seeder
                 'country' => 'Kenya',
                 'city' => 'Nairobi',
                 'description' => 'Kenya is renowned for its classic savanna safaris, deserts, dramatic mountain ranges, cultures and beautiful beaches.',
-                'image_url' => null,
+                'image_url' => 'image13.jpg',
             ]
         );
 
@@ -34,31 +45,31 @@ class TripTemplateSeeder extends Seeder
         ]);
 
         // Day 1 - Amboseli National Park
-        $this->createKenyaDay1Activities($kenyaSafari);
+        $this->createKenyaDay1Activities($kenyaSafari, $getRandomImage);
         
         // Day 2 - Amboseli National Park
-        $this->createKenyaDay2Activities($kenyaSafari);
+        $this->createKenyaDay2Activities($kenyaSafari, $getRandomImage);
         
         // Day 3 - Lake Naivasha
-        $this->createKenyaDay3Activities($kenyaSafari);
+        $this->createKenyaDay3Activities($kenyaSafari, $getRandomImage);
         
         // Day 4 - Lake Nakuru National Park
-        $this->createKenyaDay4Activities($kenyaSafari);
+        $this->createKenyaDay4Activities($kenyaSafari, $getRandomImage);
         
         // Day 5 - Masai Mara National Reserve
-        $this->createKenyaDay5Activities($kenyaSafari);
+        $this->createKenyaDay5Activities($kenyaSafari, $getRandomImage);
         
         // Day 6 - Masai Mara National Reserve
-        $this->createKenyaDay6Activities($kenyaSafari);
+        $this->createKenyaDay6Activities($kenyaSafari, $getRandomImage);
         
         // Day 7 - Nairobi
-        $this->createKenyaDay7Activities($kenyaSafari);
+        $this->createKenyaDay7Activities($kenyaSafari, $getRandomImage);
         
         // Create Bali template
-        $this->createBaliTemplate();
+        $this->createBaliTemplate($getRandomImage);
     }
     
-    private function createKenyaDay1Activities($template)
+    private function createKenyaDay1Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -71,6 +82,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '12:00',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -84,6 +96,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '14:00',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -97,10 +110,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:30',
             'cost' => 45,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay2Activities($template)
+    private function createKenyaDay2Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -113,6 +127,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:00',
             'cost' => 65,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -126,10 +141,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:30',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay3Activities($template)
+    private function createKenyaDay3Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -142,6 +158,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '12:30',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -155,6 +172,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '14:00',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -168,6 +186,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '17:00',
             'cost' => 35,
             'category' => 'water activity',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -181,10 +200,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:30',
             'cost' => 25,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay4Activities($template)
+    private function createKenyaDay4Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -197,6 +217,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '09:00',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -210,6 +231,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '11:30',
             'cost' => 30,
             'category' => 'adventure',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -223,6 +245,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:00',
             'cost' => 15,
             'category' => 'adventure',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -236,6 +259,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '15:00',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -249,10 +273,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:30',
             'cost' => 45,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay5Activities($template)
+    private function createKenyaDay5Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -265,6 +290,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '12:30',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -278,6 +304,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '14:00',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -291,6 +318,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '16:30',
             'cost' => 25,
             'category' => 'cultural',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -304,10 +332,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '19:00',
             'cost' => 45,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay6Activities($template)
+    private function createKenyaDay6Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -320,6 +349,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:00',
             'cost' => 85,
             'category' => 'safari',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -333,6 +363,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:30',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -346,10 +377,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '09:00',
             'cost' => 500,
             'category' => 'adventure',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createKenyaDay7Activities($template)
+    private function createKenyaDay7Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -362,6 +394,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '08:00',
             'cost' => 0,
             'category' => 'meal',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -375,6 +408,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:30',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -388,6 +422,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '16:00',
             'cost' => 20,
             'category' => 'sightseeing',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -401,10 +436,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '17:30',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createBaliTemplate()
+    private function createBaliTemplate($getRandomImage)
     {
         $bali = Destination::firstOrCreate(
             ['name' => 'Bali'],
@@ -412,7 +448,7 @@ class TripTemplateSeeder extends Seeder
                 'country' => 'Indonesia',
                 'city' => 'Denpasar',
                 'description' => 'A beautiful island paradise known for its stunning beaches, vibrant culture, and picturesque landscapes.',
-                'image_url' => null,
+                'image_url' => 'image1.jpg',
             ]
         );
 
@@ -428,22 +464,22 @@ class TripTemplateSeeder extends Seeder
         ]);
 
         // Day 1 Activities
-        $this->createBaliDay1Activities($baliTrip);
+        $this->createBaliDay1Activities($baliTrip, $getRandomImage);
         
         // Day 2 Activities
-        $this->createBaliDay2Activities($baliTrip);
+        $this->createBaliDay2Activities($baliTrip, $getRandomImage);
         
         // Day 3 Activities
-        $this->createBaliDay3Activities($baliTrip);
+        $this->createBaliDay3Activities($baliTrip, $getRandomImage);
         
         // Day 4 Activities
-        $this->createBaliDay4Activities($baliTrip);
+        $this->createBaliDay4Activities($baliTrip, $getRandomImage);
         
         // Day 5 Activities
-        $this->createBaliDay5Activities($baliTrip);
+        $this->createBaliDay5Activities($baliTrip, $getRandomImage);
     }
     
-    private function createBaliDay1Activities($template)
+    private function createBaliDay1Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -456,6 +492,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '18:00',
             'cost' => 0,
             'category' => 'relaxation',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -469,10 +506,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '21:00',
             'cost' => 45,
             'category' => 'food',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createBaliDay2Activities($template)
+    private function createBaliDay2Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -485,6 +523,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:00',
             'cost' => 65,
             'category' => 'cultural',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -498,10 +537,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '17:00',
             'cost' => 30,
             'category' => 'nature',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createBaliDay3Activities($template)
+    private function createBaliDay3Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -514,6 +554,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '10:00',
             'cost' => 85,
             'category' => 'adventure',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -527,10 +568,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '16:00',
             'cost' => 55,
             'category' => 'relaxation',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createBaliDay4Activities($template)
+    private function createBaliDay4Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -543,6 +585,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '19:00',
             'cost' => 40,
             'category' => 'cultural',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -556,10 +599,11 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '21:30',
             'cost' => 60,
             'category' => 'food',
+            'image_url' => $getRandomImage(),
         ]);
     }
     
-    private function createBaliDay5Activities($template)
+    private function createBaliDay5Activities($template, $getRandomImage)
     {
         TemplateActivity::create([
             'trip_template_id' => $template->id,
@@ -572,6 +616,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '13:00',
             'cost' => 120,
             'category' => 'adventure',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -585,6 +630,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '21:00',
             'cost' => 50,
             'category' => 'food',
+            'image_url' => $getRandomImage(),
         ]);
         
         TemplateActivity::create([
@@ -598,6 +644,7 @@ class TripTemplateSeeder extends Seeder
             'end_time' => '15:00',
             'cost' => 0,
             'category' => 'transfer',
+            'image_url' => $getRandomImage(),
         ]);
     }
 }

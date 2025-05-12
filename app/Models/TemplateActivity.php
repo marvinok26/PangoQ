@@ -39,7 +39,8 @@ class TemplateActivity extends Model
             'start_time' => $this->start_time,
             'end_time' => $this->end_time,
             'cost' => $this->cost,
-            'category' => $this->category
+            'category' => $this->category,
+            
         ];
     }
 }

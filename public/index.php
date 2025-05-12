@@ -17,4 +17,25 @@ require __DIR__.'/../vendor/autoload.php';
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+// For Laravel 12, try to use handleRequest if it exists
+if (method_exists($app, 'handleRequest')) {
+    try {
+        $app->handleRequest(Request::capture());
+    } catch (\Throwable $e) {
+        // Fallback to traditional method if handleRequest fails
+        $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+        $response = $kernel->handle(
+            $request = Request::capture()
+        );
+        $response->send();
+        $kernel->terminate($request, $response);
+    }
+} else {
+    // Traditional Laravel approach for earlier versions
+    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $response = $kernel->handle(
+        $request = Request::capture()
+    );
+    $response->send();
+    $kernel->terminate($request, $response);
+}

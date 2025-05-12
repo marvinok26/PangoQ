@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Default Queue Connection Name
@@ -29,7 +28,6 @@ return [
     */
 
     'connections' => [
-
         'sync' => [
             'driver' => 'sync',
         ],
@@ -65,13 +63,13 @@ return [
 
         'redis' => [
             'driver' => 'redis',
-            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'connection' => 'default', // Force 'default' connection to avoid potential issues
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => 90, // Use a fixed value to avoid type conversion issues
             'block_for' => null,
             'after_commit' => false,
+            'client' => env('REDIS_CLIENT', 'phpredis'), // Explicitly set the client
         ],
-
     ],
 
     /*
@@ -86,7 +84,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_CONNECTION', 'mysql'), // Changed to mysql to match your DB_CONNECTION
         'table' => 'job_batches',
     ],
 
@@ -105,8 +103,7 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_CONNECTION', 'mysql'), // Changed to mysql to match your DB_CONNECTION
         'table' => 'failed_jobs',
     ],
-
 ];

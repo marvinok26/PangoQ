@@ -113,6 +113,34 @@ class TripDetails extends Component
     }
 }
 
+=== File: TripTypeSelection.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+
+class TripTypeSelection extends Component
+{
+    public function render()
+    {
+        return view('livewire.trips.trip-type-selection');
+    }
+    
+    public function selectTripType($type)
+    {
+        if ($type === 'pre_planned' || $type === 'self_planned') {
+            // Store the selected trip type in session
+            Session::put('selected_trip_type', $type);
+            
+            // Dispatch event to parent component
+            $this->dispatch('tripTypeSelected', tripType: $type);
+        }
+    }
+}
+
 === File: CreateTrip.php ===
 
 <?php
@@ -120,18 +148,21 @@ class TripDetails extends Component
 namespace App\Livewire\Trips;
 
 use Livewire\Component;
-use App\Models\Destination;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
 
 class CreateTrip extends Component
 {
-    public $currentStep = 1;
+    public $currentStep = 0; // Start at step 0 for trip type selection
     public $totalSteps = 5;
     public $showNavButtons = false;
+    public $tripType = null;
+    public $tripTemplateId = null;
     
     // Use specific events for each step transition
     protected $listeners = [
+        'tripTypeSelected' => 'selectTripType',
+        'tripTemplateSelected' => 'selectTripTemplate',
         'destinationSelected' => 'selectDestination',
         'completeDetailsStep' => 'moveToItinerary',
         'completeItineraryStep' => 'moveToInvites',
@@ -141,15 +172,60 @@ class CreateTrip extends Component
     
     public function mount()
     {
-        Log::info("CreateTrip component mounted with step: {$this->currentStep}");
+        // Reset step to 0 for the trip type selection
+        $this->currentStep = 0;
+        
+        // Check if we already have a trip type selected in session
+        $this->tripType = session('selected_trip_type');
+        $this->tripTemplateId = session('selected_trip_template');
+        
+        // If trip type is already selected, start at step 1 (destination or template selection)
+        if ($this->tripType) {
+            $this->currentStep = 1;
+        }
+        
+        Log::info("CreateTrip component mounted with step: {$this->currentStep}, trip type: {$this->tripType}");
     }
     
     public function render()
     {
         // Debug info
-        session(['debug_info' => "Current step: {$this->currentStep}"]);
+        session(['debug_info' => "Current step: {$this->currentStep}, Trip type: {$this->tripType}"]);
         
         return view('livewire.trips.create-trip');
+    }
+    
+    public function selectTripType($tripType)
+    {
+        $this->tripType = $tripType;
+        Session::put('selected_trip_type', $tripType);
+        
+        $this->currentStep = 1; // Move to either destination selection or template selection
+        
+        Log::info("Trip type selected: {$tripType}, moved to step 1");
+    }
+    
+    public function selectTripTemplate($tripTemplateId)
+    {
+        $this->tripTemplateId = $tripTemplateId;
+        Session::put('selected_trip_template', $tripTemplateId);
+        
+        // Pre-planned trips skip steps 1-3 since the template already has them
+        // Move directly to invites (step 4)
+        $this->currentStep = 4;
+        
+        Log::info("Trip template selected: {$tripTemplateId}, moved to step 4 (invites)");
+    }
+    
+    public function selectDestination($destination)
+    {
+        // Store destination (for self-planned trips)
+        Session::put('selected_destination', $destination);
+        
+        // Go to Trip Details
+        $oldStep = $this->currentStep;
+        $this->currentStep = 2;
+        Log::info("Selected destination, moved from step {$oldStep} to 2");
     }
     
     // Specific transition methods for each step
@@ -174,61 +250,55 @@ class CreateTrip extends Component
     public function previousStep()
     {
         $oldStep = $this->currentStep;
-        if ($this->currentStep > 1) {
+        
+        // Special handling for pre-planned trips
+        if ($this->tripType === 'pre_planned' && $this->currentStep === 4) {
+            // Go back to template selection
+            $this->currentStep = 1;
+        } else if ($this->currentStep > 0) {
+            // Normal step backwards
             $this->currentStep--;
         }
+        
         Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
     }
     
     public function goToStep($step)
     {
         $oldStep = $this->currentStep;
-        // Only allow valid steps
-        if ($step >= 1 && $step <= $this->totalSteps) {
-            // Only allow backward navigation or one step forward
-            if ($step < $this->currentStep || $step == $this->currentStep + 1) {
-                $this->currentStep = $step;
-                Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+        
+        // Only allow valid steps and consider trip type
+        if ($step >= 0 && $step <= $this->totalSteps) {
+            // For pre-planned trips, only allow steps 0, 1, 4 and 5
+            if ($this->tripType === 'pre_planned') {
+                if ($step == 0 || $step == 1 || $step == 4 || $step == 5) {
+                    $this->currentStep = $step;
+                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+                }
+            } 
+            // For self-planned trips or initial selection, allow normal flow
+            else {
+                // Only allow backward navigation or one step forward
+                if ($step < $this->currentStep || $step == $this->currentStep + 1) {
+                    $this->currentStep = $step;
+                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+                }
             }
         }
     }
     
     public function skipToSummary()
     {
-        if (session('selected_destination') && session('trip_details')) {
-            $oldStep = $this->currentStep;
-            $this->currentStep = $this->totalSteps;
-            Log::info("Skipped from step {$oldStep} to summary (step 5)");
-        }
-    }
-    
-    public function selectDestination($destination)
-    {
-        // Store destination
-        Session::put('selected_destination', $destination);
-        
-        // Go to Trip Details
         $oldStep = $this->currentStep;
-        $this->currentStep = 2;
-        Log::info("Selected destination, moved from step {$oldStep} to 2");
-    }
-    
-    public function createTrip()
-    {
-        // Get trip data
-        $selectedDestination = session('selected_destination');
-        $tripDetails = session('trip_details');
         
-        if (!$selectedDestination || !$tripDetails) {
-            $oldStep = $this->currentStep;
-            $this->currentStep = !$selectedDestination ? 1 : 2;
-            Log::info("Missing data, moved from step {$oldStep} to {$this->currentStep}");
-            return;
+        if ($this->tripType === 'pre_planned' && $this->tripTemplateId) {
+            $this->currentStep = $this->totalSteps; // Go to review
+            Log::info("Skipped from step {$oldStep} to summary (step 5) for pre-planned trip");
+        } 
+        else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
+            $this->currentStep = $this->totalSteps; // Go to review
+            Log::info("Skipped from step {$oldStep} to summary (step 5) for self-planned trip");
         }
-        
-        // Success!
-        session()->flash('message', 'Trip created successfully!');
-        return redirect()->route('dashboard');
     }
 }
 
@@ -238,107 +308,86 @@ class CreateTrip extends Component
 
 namespace App\Livewire\Trips;
 
-use Livewire\Component;
+use App\Models\TripTemplate;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Trip;
-use App\Models\Itinerary;
-use App\Models\Activity;
-use App\Models\TripMember;
-use Carbon\Carbon;
+use Livewire\Component;
 
 class Review extends Component
 {
-    public $destination;
-    public $destinationInfo;
-    public $tripTitle;
-    public $startDate;
-    public $endDate;
-    public $budget;
-    public $travelers;
     public $tripType;
-    public $tripPace;
-    public $activityInterests = [];
-    public $accommodationType;
-    public $dayActivities = [];
-    public $invitedFriends = [];
-    public $totalDays;
-    public $showBudget = true; // For toggling budget visibility
+    public $destination;
+    public $tripDetails;
+    public $tripActivities;
+    public $invites;
+    public $tripTemplate;
+    public $templateActivities;
     
     public function mount()
     {
-        // Get all trip data from session
-        $selectedDestination = session('selected_destination');
-        $tripDetails = session('trip_details');
-        $tripActivities = session('trip_activities');
-        $tripInvites = session('trip_invites');
+        $this->tripType = session('selected_trip_type');
+        $this->destination = session('selected_destination');
+        $this->tripDetails = session('trip_details', []);
+        $this->tripActivities = session('trip_activities', []);
+        $this->invites = session('trip_invites', []);
         
-        if ($selectedDestination) {
-            $this->destination = $selectedDestination['name'] ?? '';
-            $this->destinationInfo = $selectedDestination;
-        }
-        
-        if ($tripDetails) {
-            $this->tripTitle = $tripDetails['title'] ?? '';
-            $this->startDate = $tripDetails['start_date'] ?? '';
-            $this->endDate = $tripDetails['end_date'] ?? '';
-            $this->budget = $tripDetails['budget'] ?? '';
-            $this->travelers = $tripDetails['travelers'] ?? 4;
-            $this->tripType = $tripDetails['trip_type'] ?? '';
-            $this->tripPace = $tripDetails['trip_pace'] ?? 5;
-            $this->activityInterests = $tripDetails['activity_interests'] ?? [];
-            $this->accommodationType = $tripDetails['accommodation_type'] ?? '';
-            
-            // Calculate total days
-            if ($this->startDate && $this->endDate) {
-                $start = Carbon::parse($this->startDate);
-                $end = Carbon::parse($this->endDate);
-                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+        // If pre-planned trip, get template details
+        if ($this->tripType === 'pre_planned') {
+            $templateId = session('selected_trip_template');
+            if ($templateId) {
+                $this->tripTemplate = TripTemplate::with('destination')->find($templateId);
+                
+                if ($this->tripTemplate) {
+                    // Group activities by day
+                    $activities = $this->tripTemplate->activities;
+                    $groupedActivities = [];
+                    
+                    foreach ($activities as $activity) {
+                        $groupedActivities[$activity->day_number][] = $activity;
+                    }
+                    
+                    // Sort activities by start_time for each day
+                    foreach ($groupedActivities as $day => $dayActivities) {
+                        usort($dayActivities, function($a, $b) {
+                            return $a->start_time <=> $b->start_time;
+                        });
+                        
+                        $groupedActivities[$day] = $dayActivities;
+                    }
+                    
+                    $this->templateActivities = $groupedActivities;
+                }
             }
         }
-        
-        if ($tripActivities) {
-            $this->dayActivities = $tripActivities;
-        }
-        
-        if ($tripInvites) {
-            $this->invitedFriends = $tripInvites;
-        }
     }
-
+    
     public function render()
     {
         return view('livewire.trips.review');
     }
     
-    public function saveTrip()
+    public function editTripType()
     {
-        // In a real application, you would save the trip to the database
-        // For now, we'll just simulate successful creation
-        
-        // Gather all trip data
-        $tripData = [
-            'destination' => $this->destination,
-            'title' => $this->tripTitle,
-            'start_date' => $this->startDate,
-            'end_date' => $this->endDate,
-            'budget' => $this->budget,
-            'travelers' => $this->travelers,
-            'trip_type' => $this->tripType,
-            'trip_pace' => $this->tripPace,
-            'activity_interests' => $this->activityInterests,
-            'accommodation_type' => $this->accommodationType,
-            'activities' => $this->dayActivities,
-            'invites' => $this->invitedFriends
-        ];
-        
-        // Save the trip data to session (for demo purposes)
-        session(['saved_trip' => $tripData]);
-        
-        // In a real app, you would typically redirect to the trip view page
-        // For now, redirect to dashboard with success message
-        session()->flash('message', 'Trip created successfully!');
-        return redirect()->route('dashboard');
+        $this->dispatch('goToStep', step: 0);
+    }
+    
+    public function editDestination()
+    {
+        $this->dispatch('goToStep', step: 1);
+    }
+    
+    public function editDetails()
+    {
+        $this->dispatch('goToStep', step: 2);
+    }
+    
+    public function editItinerary()
+    {
+        $this->dispatch('goToStep', step: 3);
+    }
+    
+    public function editInvites()
+    {
+        $this->dispatch('goToStep', step: 4);
     }
 }
 
@@ -873,6 +922,34 @@ class TripDetails extends Component
     }
 }
 
+=== File: TripTypeSelection.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Session;
+
+class TripTypeSelection extends Component
+{
+    public function render()
+    {
+        return view('livewire.trips.trip-type-selection');
+    }
+    
+    public function selectTripType($type)
+    {
+        if ($type === 'pre_planned' || $type === 'self_planned') {
+            // Store the selected trip type in session
+            Session::put('selected_trip_type', $type);
+            
+            // Dispatch event to parent component
+            $this->dispatch('tripTypeSelected', tripType: $type);
+        }
+    }
+}
+
 === File: CreateTrip.php ===
 
 <?php
@@ -880,18 +957,21 @@ class TripDetails extends Component
 namespace App\Livewire\Trips;
 
 use Livewire\Component;
-use App\Models\Destination;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
 
 class CreateTrip extends Component
 {
-    public $currentStep = 1;
+    public $currentStep = 0; // Start at step 0 for trip type selection
     public $totalSteps = 5;
     public $showNavButtons = false;
+    public $tripType = null;
+    public $tripTemplateId = null;
     
     // Use specific events for each step transition
     protected $listeners = [
+        'tripTypeSelected' => 'selectTripType',
+        'tripTemplateSelected' => 'selectTripTemplate',
         'destinationSelected' => 'selectDestination',
         'completeDetailsStep' => 'moveToItinerary',
         'completeItineraryStep' => 'moveToInvites',
@@ -901,15 +981,60 @@ class CreateTrip extends Component
     
     public function mount()
     {
-        Log::info("CreateTrip component mounted with step: {$this->currentStep}");
+        // Reset step to 0 for the trip type selection
+        $this->currentStep = 0;
+        
+        // Check if we already have a trip type selected in session
+        $this->tripType = session('selected_trip_type');
+        $this->tripTemplateId = session('selected_trip_template');
+        
+        // If trip type is already selected, start at step 1 (destination or template selection)
+        if ($this->tripType) {
+            $this->currentStep = 1;
+        }
+        
+        Log::info("CreateTrip component mounted with step: {$this->currentStep}, trip type: {$this->tripType}");
     }
     
     public function render()
     {
         // Debug info
-        session(['debug_info' => "Current step: {$this->currentStep}"]);
+        session(['debug_info' => "Current step: {$this->currentStep}, Trip type: {$this->tripType}"]);
         
         return view('livewire.trips.create-trip');
+    }
+    
+    public function selectTripType($tripType)
+    {
+        $this->tripType = $tripType;
+        Session::put('selected_trip_type', $tripType);
+        
+        $this->currentStep = 1; // Move to either destination selection or template selection
+        
+        Log::info("Trip type selected: {$tripType}, moved to step 1");
+    }
+    
+    public function selectTripTemplate($tripTemplateId)
+    {
+        $this->tripTemplateId = $tripTemplateId;
+        Session::put('selected_trip_template', $tripTemplateId);
+        
+        // Pre-planned trips skip steps 1-3 since the template already has them
+        // Move directly to invites (step 4)
+        $this->currentStep = 4;
+        
+        Log::info("Trip template selected: {$tripTemplateId}, moved to step 4 (invites)");
+    }
+    
+    public function selectDestination($destination)
+    {
+        // Store destination (for self-planned trips)
+        Session::put('selected_destination', $destination);
+        
+        // Go to Trip Details
+        $oldStep = $this->currentStep;
+        $this->currentStep = 2;
+        Log::info("Selected destination, moved from step {$oldStep} to 2");
     }
     
     // Specific transition methods for each step
@@ -934,61 +1059,55 @@ class CreateTrip extends Component
     public function previousStep()
     {
         $oldStep = $this->currentStep;
-        if ($this->currentStep > 1) {
+        
+        // Special handling for pre-planned trips
+        if ($this->tripType === 'pre_planned' && $this->currentStep === 4) {
+            // Go back to template selection
+            $this->currentStep = 1;
+        } else if ($this->currentStep > 0) {
+            // Normal step backwards
             $this->currentStep--;
         }
+        
         Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
     }
     
     public function goToStep($step)
     {
         $oldStep = $this->currentStep;
-        // Only allow valid steps
-        if ($step >= 1 && $step <= $this->totalSteps) {
-            // Only allow backward navigation or one step forward
-            if ($step < $this->currentStep || $step == $this->currentStep + 1) {
-                $this->currentStep = $step;
-                Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+        
+        // Only allow valid steps and consider trip type
+        if ($step >= 0 && $step <= $this->totalSteps) {
+            // For pre-planned trips, only allow steps 0, 1, 4 and 5
+            if ($this->tripType === 'pre_planned') {
+                if ($step == 0 || $step == 1 || $step == 4 || $step == 5) {
+                    $this->currentStep = $step;
+                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+                }
+            } 
+            // For self-planned trips or initial selection, allow normal flow
+            else {
+                // Only allow backward navigation or one step forward
+                if ($step < $this->currentStep || $step == $this->currentStep + 1) {
+                    $this->currentStep = $step;
+                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
+                }
             }
         }
     }
     
     public function skipToSummary()
     {
-        if (session('selected_destination') && session('trip_details')) {
-            $oldStep = $this->currentStep;
-            $this->currentStep = $this->totalSteps;
-            Log::info("Skipped from step {$oldStep} to summary (step 5)");
-        }
-    }
-    
-    public function selectDestination($destination)
-    {
-        // Store destination
-        Session::put('selected_destination', $destination);
-        
-        // Go to Trip Details
         $oldStep = $this->currentStep;
-        $this->currentStep = 2;
-        Log::info("Selected destination, moved from step {$oldStep} to 2");
-    }
-    
-    public function createTrip()
-    {
-        // Get trip data
-        $selectedDestination = session('selected_destination');
-        $tripDetails = session('trip_details');
         
-        if (!$selectedDestination || !$tripDetails) {
-            $oldStep = $this->currentStep;
-            $this->currentStep = !$selectedDestination ? 1 : 2;
-            Log::info("Missing data, moved from step {$oldStep} to {$this->currentStep}");
-            return;
+        if ($this->tripType === 'pre_planned' && $this->tripTemplateId) {
+            $this->currentStep = $this->totalSteps; // Go to review
+            Log::info("Skipped from step {$oldStep} to summary (step 5) for pre-planned trip");
+        } 
+        else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
+            $this->currentStep = $this->totalSteps; // Go to review
+            Log::info("Skipped from step {$oldStep} to summary (step 5) for self-planned trip");
         }
-        
-        // Success!
-        session()->flash('message', 'Trip created successfully!');
-        return redirect()->route('dashboard');
     }
 }
 
@@ -998,107 +1117,86 @@ class CreateTrip extends Component
 
 namespace App\Livewire\Trips;
 
-use Livewire\Component;
+use App\Models\TripTemplate;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Trip;
-use App\Models\Itinerary;
-use App\Models\Activity;
-use App\Models\TripMember;
-use Carbon\Carbon;
+use Livewire\Component;
 
 class Review extends Component
 {
-    public $destination;
-    public $destinationInfo;
-    public $tripTitle;
-    public $startDate;
-    public $endDate;
-    public $budget;
-    public $travelers;
     public $tripType;
-    public $tripPace;
-    public $activityInterests = [];
-    public $accommodationType;
-    public $dayActivities = [];
-    public $invitedFriends = [];
-    public $totalDays;
-    public $showBudget = true; // For toggling budget visibility
+    public $destination;
+    public $tripDetails;
+    public $tripActivities;
+    public $invites;
+    public $tripTemplate;
+    public $templateActivities;
     
     public function mount()
     {
-        // Get all trip data from session
-        $selectedDestination = session('selected_destination');
-        $tripDetails = session('trip_details');
-        $tripActivities = session('trip_activities');
-        $tripInvites = session('trip_invites');
+        $this->tripType = session('selected_trip_type');
+        $this->destination = session('selected_destination');
+        $this->tripDetails = session('trip_details', []);
+        $this->tripActivities = session('trip_activities', []);
+        $this->invites = session('trip_invites', []);
         
-        if ($selectedDestination) {
-            $this->destination = $selectedDestination['name'] ?? '';
-            $this->destinationInfo = $selectedDestination;
-        }
-        
-        if ($tripDetails) {
-            $this->tripTitle = $tripDetails['title'] ?? '';
-            $this->startDate = $tripDetails['start_date'] ?? '';
-            $this->endDate = $tripDetails['end_date'] ?? '';
-            $this->budget = $tripDetails['budget'] ?? '';
-            $this->travelers = $tripDetails['travelers'] ?? 4;
-            $this->tripType = $tripDetails['trip_type'] ?? '';
-            $this->tripPace = $tripDetails['trip_pace'] ?? 5;
-            $this->activityInterests = $tripDetails['activity_interests'] ?? [];
-            $this->accommodationType = $tripDetails['accommodation_type'] ?? '';
-            
-            // Calculate total days
-            if ($this->startDate && $this->endDate) {
-                $start = Carbon::parse($this->startDate);
-                $end = Carbon::parse($this->endDate);
-                $this->totalDays = $start->diffInDays($end) + 1; // Include start & end days
+        // If pre-planned trip, get template details
+        if ($this->tripType === 'pre_planned') {
+            $templateId = session('selected_trip_template');
+            if ($templateId) {
+                $this->tripTemplate = TripTemplate::with('destination')->find($templateId);
+                
+                if ($this->tripTemplate) {
+                    // Group activities by day
+                    $activities = $this->tripTemplate->activities;
+                    $groupedActivities = [];
+                    
+                    foreach ($activities as $activity) {
+                        $groupedActivities[$activity->day_number][] = $activity;
+                    }
+                    
+                    // Sort activities by start_time for each day
+                    foreach ($groupedActivities as $day => $dayActivities) {
+                        usort($dayActivities, function($a, $b) {
+                            return $a->start_time <=> $b->start_time;
+                        });
+                        
+                        $groupedActivities[$day] = $dayActivities;
+                    }
+                    
+                    $this->templateActivities = $groupedActivities;
+                }
             }
         }
-        
-        if ($tripActivities) {
-            $this->dayActivities = $tripActivities;
-        }
-        
-        if ($tripInvites) {
-            $this->invitedFriends = $tripInvites;
-        }
     }
-
+    
     public function render()
     {
         return view('livewire.trips.review');
     }
     
-    public function saveTrip()
+    public function editTripType()
     {
-        // In a real application, you would save the trip to the database
-        // For now, we'll just simulate successful creation
-        
-        // Gather all trip data
-        $tripData = [
-            'destination' => $this->destination,
-            'title' => $this->tripTitle,
-            'start_date' => $this->startDate,
-            'end_date' => $this->endDate,
-            'budget' => $this->budget,
-            'travelers' => $this->travelers,
-            'trip_type' => $this->tripType,
-            'trip_pace' => $this->tripPace,
-            'activity_interests' => $this->activityInterests,
-            'accommodation_type' => $this->accommodationType,
-            'activities' => $this->dayActivities,
-            'invites' => $this->invitedFriends
-        ];
-        
-        // Save the trip data to session (for demo purposes)
-        session(['saved_trip' => $tripData]);
-        
-        // In a real app, you would typically redirect to the trip view page
-        // For now, redirect to dashboard with success message
-        session()->flash('message', 'Trip created successfully!');
-        return redirect()->route('dashboard');
+        $this->dispatch('goToStep', step: 0);
+    }
+    
+    public function editDestination()
+    {
+        $this->dispatch('goToStep', step: 1);
+    }
+    
+    public function editDetails()
+    {
+        $this->dispatch('goToStep', step: 2);
+    }
+    
+    public function editItinerary()
+    {
+        $this->dispatch('goToStep', step: 3);
+    }
+    
+    public function editInvites()
+    {
+        $this->dispatch('goToStep', step: 4);
     }
 }
 
@@ -1601,6 +1699,105 @@ class InviteFriends extends Component
         
         // Use a specific named event
         $this->dispatch('completeInvitesStep');
+    }
+}
+
+=== File: PrePlannedTripSelection.php ===
+
+<?php
+
+namespace App\Livewire\Trips;
+
+use App\Models\Destination;
+use App\Models\TripTemplate;
+use Illuminate\Support\Facades\Session;
+use Livewire\Component;
+
+class PrePlannedTripSelection extends Component
+{
+    public $destinations = [];
+    public $selectedDestination = null;
+    public $tripTemplates = [];
+    public $selectedTemplate = null;
+    public $showTemplateDetails = false;
+    public $templateActivities = [];
+    
+    public function mount()
+    {
+        $this->destinations = Destination::has('tripTemplates')->get();
+    }
+    
+    public function render()
+    {
+        return view('livewire.trips.pre-planned-trip-selection');
+    }
+    
+    public function selectDestination($destinationId)
+    {
+        $this->selectedDestination = Destination::find($destinationId);
+        $this->tripTemplates = TripTemplate::where('destination_id', $destinationId)
+            ->with('destination')
+            ->get();
+        
+        // Reset template selection
+        $this->selectedTemplate = null;
+        $this->showTemplateDetails = false;
+        $this->templateActivities = [];
+    }
+    
+    public function viewTemplateDetails($templateId)
+    {
+        $this->selectedTemplate = TripTemplate::with('activities', 'destination')->find($templateId);
+        $this->showTemplateDetails = true;
+        
+        // Group activities by day
+        $activities = $this->selectedTemplate->activities;
+        $groupedActivities = [];
+        
+        foreach ($activities as $activity) {
+            $groupedActivities[$activity->day_number][] = $activity;
+        }
+        
+        // Sort activities by start_time for each day
+        foreach ($groupedActivities as $day => $dayActivities) {
+            usort($dayActivities, function($a, $b) {
+                return $a->start_time <=> $b->start_time;
+            });
+            
+            $groupedActivities[$day] = $dayActivities;
+        }
+        
+        $this->templateActivities = $groupedActivities;
+    }
+    
+    public function selectTripTemplate()
+    {
+        if (!$this->selectedTemplate) {
+            return;
+        }
+        
+        // Store template selection in session
+        Session::put('selected_trip_template', $this->selectedTemplate->id);
+        Session::put('selected_destination', [
+            'id' => $this->selectedDestination->id,
+            'name' => $this->selectedDestination->name,
+            'country' => $this->selectedDestination->country,
+            'city' => $this->selectedDestination->city,
+        ]);
+        
+        // Dispatch event to parent component
+        $this->dispatch('tripTemplateSelected', tripTemplateId: $this->selectedTemplate->id);
+    }
+    
+    public function backToTemplates()
+    {
+        $this->showTemplateDetails = false;
+    }
+    
+    public function backToDestinations()
+    {
+        $this->selectedDestination = null;
+        $this->tripTemplates = [];
     }
 }
 

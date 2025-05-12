@@ -1,7 +1,253 @@
+
+
+=== File: api.php ===
+
+<?php
+
+use App\Models\Trip;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+// API routes for MVP (protected by auth:sanctum middleware)
+Route::middleware('auth:sanctum')->group(function () {
+    // Trips
+    Route::get('/trips', function (Request $request) {
+        return $request->user()->trips()->latest()->get();
+    });
+    
+    Route::get('/trips/{trip}', function (Request $request, Trip $trip) {
+        // Check if user is member of the trip
+        if (!$trip->members()->where('users.id', $request->user()->id)->exists() && $trip->creator_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        return $trip->load(['creator', 'members', 'itineraries', 'savingsWallet']);
+    });
+    
+    // Trip members
+    Route::get('/trips/{trip}/members', function (Request $request, Trip $trip) {
+        // Check if user is member of the trip
+        if (!$trip->members()->where('users.id', $request->user()->id)->exists() && $trip->creator_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        return $trip->members;
+    });
+    
+    // Savings wallet
+    Route::get('/trips/{trip}/savings', function (Request $request, Trip $trip) {
+        // Check if user is member of the trip
+        if (!$trip->members()->where('users.id', $request->user()->id)->exists() && $trip->creator_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        return $trip->savingsWallet->load('transactions');
+    });
+    
+    // Notifications
+    Route::get('/notifications', function (Request $request) {
+        return $request->user()->notifications()->latest()->take(20)->get();
+    });
+});
+
+=== File: bundle_code.py ===
+
+import os
+
+EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
+OUTPUT_FILE = "bundled_code.txt"
+
+def is_hidden(path):
+    return any(part.startswith('.') for part in path.split(os.sep))
+
+def should_skip_file(filepath, root):
+    filename = os.path.basename(filepath)
+    ext = os.path.splitext(filename)[1].lower()
+
+    # Skip hidden files
+    if is_hidden(os.path.relpath(filepath)):
+        return True
+
+    # Skip excluded files and extensions
+    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
+        return True
+
+    # Skip files in excluded dirs
+    for part in os.path.relpath(root).split(os.sep):
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Skip empty files
+    if os.path.getsize(filepath) == 0:
+        return True
+
+    return False
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for root, dirs, files in os.walk("."):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
+
+        for file in files:
+            filepath = os.path.join(root, file)
+            if should_skip_file(filepath, root):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
+                    output.write(f.read())
+            except Exception as e:
+                print(f"Skipped {filepath} due to error: {e}")
+
+
+=== File: auth.php ===
+
+<?php
+
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Fixed Authentication Routes
+|--------------------------------------------------------------------------
+|
+| These routes are specifically designed to fix CSRF issues with auth.
+| They include middleware that ensures session availability for tokens.
+|
+*/
+
+// Define basic middleware for all routes
+$middleware = ['web', 'throttle:60,1'];
+
+// Guest middleware group with additional session handling
+Route::middleware($middleware)->group(function () {
+    Route::middleware('guest')->group(function () {
+        // Registration routes with explicit CSRF handling
+        Route::get('/register', function () {
+            return view('auth.register');
+        })->name('register');
+        
+        Route::post('/register', [RegisteredUserController::class, 'store'])
+            ->middleware(['csrf']);
+        
+        // Login routes with explicit CSRF handling
+        Route::get('/login', function () {
+            return view('auth.login');
+        })->name('login');
+        
+        Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+            ->middleware(['csrf']);
+            
+        // Social auth routes - excluded from CSRF verification
+        Route::get('/auth/{provider}', [SocialAuthController::class, 'redirectToProvider'])
+            ->name('auth.provider')
+            ->where('provider', 'google|facebook');
+        
+        Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback'])
+            ->name('auth.callback')
+            ->where('provider', 'google|facebook')
+            ->withoutMiddleware(['csrf']);
+            
+        // Direct named routes for social auth
+        Route::get('auth/google', [SocialAuthController::class, 'redirectToProvider'])
+            ->name('auth.google')
+            ->defaults('provider', 'google');
+            
+        Route::get('auth/facebook', [SocialAuthController::class, 'redirectToProvider'])
+            ->name('auth.facebook')
+            ->defaults('provider', 'facebook');
+    });
+
+    // Auth required routes
+    Route::middleware('auth')->group(function () {
+        Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+            ->name('logout')
+            ->middleware(['csrf']);
+    });
+});
+
+=== File: console.php ===
+
+<?php
+
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Artisan;
+
+Artisan::command('inspire', function () {
+    $this->comment(Inspiring::quote());
+})->purpose('Display an inspiring quote');
+
+
+=== File: csrf-debug.php ===
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+
+/*
+|--------------------------------------------------------------------------
+| CSRF Debug Routes
+|--------------------------------------------------------------------------
+|
+| These routes help diagnose CSRF token issues.
+|
+*/
+
+// Only enable in local environment
+if (app()->environment('local')) {
+    Route::get('/debug-csrf', function (Request $request) {
+        return response()->json([
+            'csrf_token' => csrf_token(),
+            'session_id' => session()->getId(),
+            'session_data' => [
+                'has_token' => session()->has('_token'),
+                'token_matches' => session()->token() === csrf_token(),
+            ],
+            'cookies' => $request->cookies->all(),
+            'session_config' => [
+                'driver' => config('session.driver'),
+                'lifetime' => config('session.lifetime'),
+                'cookie' => config('session.cookie'),
+                'path' => config('session.path'),
+                'domain' => config('session.domain'),
+                'secure' => config('session.secure'),
+                'same_site' => config('session.same_site'),
+            ],
+            'middleware_applied' => array_map(function ($middleware) {
+                return get_class($middleware);
+            }, app(\Illuminate\Contracts\Http\Kernel::class)->getMiddleware()),
+        ]);
+    });
+
+    // Test form submission
+    Route::view('/csrf-test-form', 'csrf-test-form');
+    Route::post('/csrf-test-submit', function () {
+        return ['success' => true, 'message' => 'Form submitted successfully!'];
+    })->name('csrf.test.submit');
+}
+
+=== File: web.php ===
+
 <?php
 
 use App\Http\Controllers\ActivityController;
-use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ItineraryController;
 use App\Http\Controllers\NotificationController;
@@ -36,7 +282,8 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// pages
+// Public pages
+// Product
 Route::get('/features', function () {
     return view('pages.features');
 })->name('features');

@@ -15,7 +15,7 @@
     
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <!-- Livewire Styles -->
     @livewireStyles
@@ -27,9 +27,10 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center">
-                        <div class="flex-shrink-0 flex items-center">
-                            <div class="h-8 w-8 bg-blue-600 rounded-full"></div>
-                            <span class="ml-2 text-xl font-bold text-blue-600">pangoQ</span>
+                        <div class="flex-shrink-0">
+                            <a href="{{ route('home') }}">
+                                <img src="{{ asset('images/logo.png') }}" alt="PangoQ Logo" class="h-8 w-auto">
+                            </a>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -46,8 +47,43 @@
                                 <polyline points="22,6 12,13 2,6"></polyline>
                             </svg>
                         </button>
-                        <div class="h-8 w-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700">
-                            JD
+                        <!-- User Dropdown -->
+                        <div class="relative ml-3" x-data="{ open: false }">
+                            <div>
+                                <button @click="open = !open" class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <div class="flex items-center">
+                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700">
+                                            {{ substr(Auth::user()->name, 0, 1) }}
+                                        </div>
+                                        <span class="ml-2 text-sm font-medium text-gray-700">{{ Auth::user()->name }}</span>
+                                        <svg class="ml-1 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <div x-show="open" 
+                                 @click.away="open = false"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute right-0 mt-2 w-48 py-2 bg-white rounded-md shadow-lg z-50"
+                                 style="display: none;">
+                                <a href="{{ route('dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
+                                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Profile</a>
+                                <a href="{{ route('trips.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Trips</a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Sign Out
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>

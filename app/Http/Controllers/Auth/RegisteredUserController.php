@@ -10,10 +10,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\View\View;
 use App\Models\User;
 
 class RegisteredUserController extends Controller
 {
+    /**
+     * Display the registration view.
+     */
+    public function create(): View
+    {
+        return view('auth.register');
+    }
+
     /**
      * Handle an incoming registration request.
      *
@@ -21,12 +30,18 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validationRules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'terms' => ['required', 'accepted'],
-        ]);
+        ];
+        
+        // Only add terms validation if it's in your form
+        if ($request->has('terms')) {
+            $validationRules['terms'] = ['required', 'accepted'];
+        }
+        
+        $request->validate($validationRules);
 
         $user = User::create([
             'name' => $request->name,
@@ -39,6 +54,9 @@ class RegisteredUserController extends Controller
         // Let's automatically log in the user after registration
         Auth::login($user);
 
+        // Add a success message
+        session()->flash('success', 'Registration successful! Welcome to PangoQ.');
+        
         // Direct to dashboard
         return redirect()->intended(route('dashboard'));
     }

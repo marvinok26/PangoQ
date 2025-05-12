@@ -6,7 +6,7 @@
         <!-- Pre-planned Trip Option -->
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div class="relative h-60 bg-blue-100">
-                <img src="/api/placeholder/600/400" alt="Pre-planned Trip" class="w-full h-full object-cover">
+                <img src="{{ asset('images/image17.jpg') }}" alt="Pre-planned Trip" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
                     <div class="p-6 text-white">
                         <h3 class="text-xl font-bold">Pre-planned Trip</h3>
@@ -50,7 +50,7 @@
         <!-- Self-planned Trip Option -->
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div class="relative h-60 bg-green-100">
-                <img src="/api/placeholder/600/400" alt="Self-planned Trip" class="w-full h-full object-cover">
+                <img src="{{ asset('images/image18.jpg') }}" alt="Self-planned Trip" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
                     <div class="p-6 text-white">
                         <h3 class="text-xl font-bold">Self-planned Trip</h3>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -15,69 +16,81 @@ use Laravel\Socialite\Facades\Socialite;
 class SocialAuthController extends Controller
 {
     /**
-     * Redirect the user to the provider authentication page.
+     * Redirect to the given provider's authentication page
      *
      * @param string $provider
-     * @return \Illuminate\Http\RedirectResponse
+     * @return mixed
      */
-    public function redirectToProvider(string $provider): RedirectResponse
+    public function authProviderRedirect($provider)
     {
-        // Store the previous URL in the session to redirect back after auth
-        if (!str_contains(url()->previous(), 'auth') && 
-            !str_contains(url()->previous(), 'login') && 
-            !str_contains(url()->previous(), 'register')) {
-            Session::put('url.intended', url()->previous());
-        }
-
         try {
-            return Socialite::driver($provider)->redirect();
-        } catch (\Exception $e) {
-            Log::error('Social login redirect failed: ' . $e->getMessage());
-            return redirect()->route('login')->with('error', 'Unable to connect to ' . ucfirst($provider) . '. Please try again later.');
+            if (in_array($provider, ['google', 'facebook'])) {
+                return Socialite::driver($provider)->redirect();
+            }
+            return redirect()->route('login')->with('error', 'Invalid authentication provider.');
+        } catch (Exception $e) {
+            Log::error('Social auth redirect error: ' . $e->getMessage());
+            return redirect()->route('login')->with('error', 'Could not connect to ' . ucfirst($provider) . '. Please try again.');
         }
     }
 
     /**
-     * Handle the provider callback and authenticate the user.
+     * Handle the callback from social authentication providers
      *
      * @param string $provider
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
-    public function handleProviderCallback(string $provider): RedirectResponse
+    public function socialAuthentication($provider)
     {
         try {
-            // Get user data from provider
+            if (!in_array($provider, ['google', 'facebook'])) {
+                return redirect()->route('login')->with('error', 'Invalid authentication provider.');
+            }
+            
             $socialUser = Socialite::driver($provider)->user();
             
-            // Find existing user by email
-            $existingUser = User::where('email', $socialUser->getEmail())->first();
+            // Find user by provider ID first
+            $user = User::where('auth_provider_id', $socialUser->id)
+                        ->where('auth_provider', $provider)
+                        ->first();
             
-            if ($existingUser) {
-                // Login existing user
-                Auth::login($existingUser, true);
+            // If user not found by provider ID, try to find by email
+            if (!$user) {
+                $user = User::where('email', $socialUser->email)->first();
                 
-                return redirect()->intended(route('dashboard'))
-                    ->with('success', 'Welcome back to PangoQ!');
-            } else {
-                // Create new user
-                $newUser = User::create([
-                    'name' => $socialUser->getName() ?: 'User',
-                    'email' => $socialUser->getEmail(),
-                    'password' => Hash::make(Str::random(24)),
-                    'email_verified_at' => now() // Social logins are considered verified
-                ]);
-                
-                // Login the new user
-                Auth::login($newUser, true);
-                
-                return redirect()->intended(route('dashboard'))
-                    ->with('success', 'Welcome to PangoQ!');
+                // If user exists with the same email, update their provider details
+                if ($user) {
+                    $user->update([
+                        'auth_provider' => $provider,
+                        'auth_provider_id' => $socialUser->id,
+                    ]);
+                } else {
+                    // Create a new user
+                    $user = User::create([
+                        'name' => $socialUser->name,
+                        'email' => $socialUser->email,
+                        'password' => Hash::make(Str::random(24)), // Generate a secure random password
+                        'auth_provider_id' => $socialUser->id,
+                        'auth_provider' => $provider,
+                        'email_verified_at' => now(), // Social logins are considered verified
+                    ]);
+                    
+                    // Save profile photo if available
+                    if ($socialUser->avatar) {
+                        $user->update([
+                            'profile_photo_path' => $socialUser->avatar
+                        ]);
+                    }
+                }
             }
-                
-        } catch (\Exception $e) {
-            Log::error('Social login failed: ' . $e->getMessage());
+            
+            Auth::login($user);
+            return redirect()->route('dashboard')->with('success', 'Successfully logged in!');
+            
+        } catch (Exception $e) {
+            Log::error('Social authentication error: ' . $e->getMessage());
             return redirect()->route('login')
-                ->with('error', 'Authentication with ' . ucfirst($provider) . ' failed. Please try again or use email login.');
+                ->with('error', 'Authentication failed. Please try again or use email login.');
         }
     }
 }

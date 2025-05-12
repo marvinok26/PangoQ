@@ -1,7 +1,7 @@
 import os
 
 EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
-EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml", ".py"}
 EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
 OUTPUT_FILE = "bundled_code.txt"
 
