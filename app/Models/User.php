@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -85,28 +87,28 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(WalletTransaction::class);
     }
 
-    /**
-     * Get the profile photo URL attribute.
-     */
-    public function getPhotoUrlAttribute(): string
-    {
-        // Check for both possible column names
-        if ($this->profile_photo_path) {
-            return filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
-                ? $this->profile_photo_path
-                : asset('storage/' . $this->profile_photo_path);
-        }
-
-        if ($this->profile_photo) {
-            return filter_var($this->profile_photo, FILTER_VALIDATE_URL)
-                ? $this->profile_photo
-                : asset('storage/' . $this->profile_photo);
-        }
-
-        // Fallback to Gravatar
-        $hash = md5(strtolower(trim($this->email)));
-        return "https://www.gravatar.com/avatar/{$hash}?d=mp";
+/**
+ * Get the user's profile photo URL.
+ *
+ * @return string
+ */
+public function getPhotoUrlAttribute(): string
+{
+    // If profile_photo_path is a complete URL (social media avatar)
+    if ($this->profile_photo_path && filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)) {
+        return $this->profile_photo_path;
     }
+    
+    // If it's a local path
+    if ($this->profile_photo_path) {
+        // Simple approach that assumes files are in public/storage
+        return url('storage/' . $this->profile_photo_path);
+    }
+    
+    // Fallback to Gravatar
+    $hash = md5(strtolower(trim($this->email)));
+    return "https://www.gravatar.com/avatar/{$hash}?d=mp&s=200";
+}
 
     /**
      * Get the user's initials (for avatar fallback).
