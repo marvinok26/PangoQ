@@ -7,6 +7,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
+use Illuminate\Support\Facades\Log;
 
 class VerifyCsrfToken extends Middleware
 {
@@ -16,10 +17,91 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        'register',
-        'login',
+        // Only exclude third-party callbacks that can't provide CSRF tokens
         'auth/*/callback'
     ];
+    
+    /**
+     * Add custom CSRF cookie and header name configuration
+     */
+    protected function tokensMatch($request)
+    {
+        $token = $this->getTokenFromRequest($request);
+        $sessionToken = $request->session()->token();
+        
+        // Log token data in debug mode only
+        if (config('app.debug')) {
+            Log::debug('CSRF check', [
+                'has_token' => $request->session()->has('_token'),
+                'session_id' => $request->session()->getId(),
+                'request_token' => $token,
+                'session_token' => $sessionToken,
+                'match' => hash_equals($sessionToken, $token)
+            ]);
+        }
+        
+        return is_string($request->session()->token()) &&
+               is_string($token) &&
+               hash_equals($request->session()->token(), $token);
+    }
+}
+
+=== File: SessionFixMiddleware.php ===
+
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
+
+class SessionFixMiddleware
+{
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        // Make sure we have a valid session ID
+        if (!$request->session()->isStarted()) {
+            $request->session()->start();
+        }
+        
+        // Debug session info in local environment
+        if (app()->environment('local') && config('app.debug')) {
+            Log::debug('Session info', [
+                'has_session' => $request->hasSession(),
+                'session_id' => $request->session()->getId(),
+                'has_token' => $request->session()->has('_token'),
+                'csrf_token' => $request->session()->token(),
+                'cookies' => $request->cookies->all(),
+            ]);
+        }
+        
+        $response = $next($request);
+        
+        // Ensure session cookie is present in response
+        if (!$response->headers->has('Set-Cookie') && $request->session()->isStarted()) {
+            $cookie = Cookie::make(
+                config('session.cookie'), 
+                $request->session()->getId(), 
+                config('session.lifetime'),
+                config('session.path'), 
+                config('session.domain'),
+                config('session.secure'), 
+                config('session.http_only'),
+                false, 
+                config('session.same_site')
+            );
+            
+            $response->headers->setCookie($cookie);
+        }
+        
+        return $response;
+    }
 }
 
 === File: SetLanguage.php ===
@@ -95,58 +177,6 @@ class CheckTripMembership
         return $next($request);
     }
 }
-
-=== File: bundle_code.py ===
-
-import os
-
-EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
-EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
-EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
-OUTPUT_FILE = "bundled_code.txt"
-
-def is_hidden(path):
-    return any(part.startswith('.') for part in path.split(os.sep))
-
-def should_skip_file(filepath, root):
-    filename = os.path.basename(filepath)
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Skip hidden files
-    if is_hidden(os.path.relpath(filepath)):
-        return True
-
-    # Skip excluded files and extensions
-    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
-        return True
-
-    # Skip files in excluded dirs
-    for part in os.path.relpath(root).split(os.sep):
-        if part in EXCLUDED_DIRS:
-            return True
-
-    # Skip empty files
-    if os.path.getsize(filepath) == 0:
-        return True
-
-    return False
-
-with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
-    for root, dirs, files in os.walk("."):
-        # Skip hidden directories
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
-
-        for file in files:
-            filepath = os.path.join(root, file)
-            if should_skip_file(filepath, root):
-                continue
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
-                    output.write(f.read())
-            except Exception as e:
-                print(f"Skipped {filepath} due to error: {e}")
-
 
 === File: CheckRedisConnection.php ===
 

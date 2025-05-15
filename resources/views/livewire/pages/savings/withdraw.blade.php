@@ -1,7 +1,7 @@
-<!-- resources/views/livewire/pages/savings/contribute.blade.php -->
+<!-- resources/views/livewire/pages/savings/withdraw.blade.php -->
 @extends('layouts.dashboard')
 
-@section('title', 'Add Funds - PangoQ')
+@section('title', 'Withdraw Funds - PangoQ')
 
 @section('content')
 <div class="py-6">
@@ -18,11 +18,11 @@
 
         <div class="bg-white shadow overflow-hidden sm:rounded-lg">
             <div class="px-4 py-5 sm:px-6">
-                <h1 class="text-xl font-semibold text-gray-900">Add Funds</h1>
-                <p class="mt-1 text-sm text-gray-500">Contribute to your trip savings wallet.</p>
+                <h1 class="text-xl font-semibold text-gray-900">Withdraw Funds</h1>
+                <p class="mt-1 text-sm text-gray-500">Withdraw from your trip savings wallet.</p>
             </div>
             <div class="border-t border-gray-200 p-6">
-                <form action="{{ route('wallet.contribute') }}" method="POST">
+                <form action="{{ route('wallet.withdraw') }}" method="POST">
                     @csrf
 
                     <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
@@ -32,7 +32,9 @@
                                 <select id="wallet_id" name="wallet_id" required class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
                                     <option value="">-- Select a wallet --</option>
                                     @foreach ($wallets as $wallet)
-                                        <option value="{{ $wallet->id }}">{{ $wallet->trip->title }} ({{ $wallet->trip->destination }})</option>
+                                        <option value="{{ $wallet->id }}">
+                                            {{ $wallet->trip->title }} (${{ number_format($wallet->current_amount, 2) }} available)
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -54,17 +56,13 @@
                             @enderror
                         </div>
 
-                        <div class="sm:col-span-4">
-                            <label for="payment_method" class="block text-sm font-medium text-gray-700">Payment Method</label>
+                        <div class="sm:col-span-6">
+                            <label for="reason" class="block text-sm font-medium text-gray-700">Reason for Withdrawal</label>
                             <div class="mt-1">
-                                <select id="payment_method" name="payment_method" required class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                    <option value="">-- Select payment method --</option>
-                                    @foreach ($paymentMethods as $key => $label)
-                                        <option value="{{ $key }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
+                                <textarea id="reason" name="reason" rows="3" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
                             </div>
-                            @error('payment_method')
+                            <p class="mt-2 text-sm text-gray-500">Optional - provide a reason for withdrawing funds.</p>
+                            @error('reason')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
@@ -75,7 +73,7 @@
                             Cancel
                         </a>
                         <button type="submit" class="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            Add Funds
+                            Withdraw Funds
                         </button>
                     </div>
                 </form>

@@ -1,0 +1,208 @@
+
+
+=== File: VoltServiceProvider.php ===
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Livewire\Volt\Volt;
+
+class VoltServiceProvider extends ServiceProvider
+{
+    /**
+     * Register services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap services.
+     */
+    public function boot(): void
+    {
+        Volt::mount([
+            resource_path('views/livewire'),
+            resource_path('views/pages'),
+        ]);
+        
+        // Instead of using the component method, we'll just mount the directories
+        // The data binding will be handled within the components themselves
+    }
+}
+
+=== File: AppServiceProvider.php ===
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Blade;
+use Livewire\Livewire;
+use App\Livewire\Trips\CreateTrip;
+use App\Livewire\Trips\DestinationSelection;
+use App\Livewire\Trips\TripDetails;
+use App\Livewire\Trips\InviteFriends;
+use App\Livewire\Trips\ItineraryPlanning;
+use App\Livewire\Trips\Review;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        // Add a blade directive to include CSRF meta tag
+        Blade::directive('csrfMeta', function () {
+            return '<?php echo \'<meta name="csrf-token" content="\' . csrf_token() . \'">\'; ?>';
+        });
+        
+        // Register Livewire components
+        if (class_exists(Livewire::class)) {
+            Livewire::component('trips.create-trip', CreateTrip::class);
+            Livewire::component('trips.destination-selection', DestinationSelection::class);
+            Livewire::component('trips.trip-details', TripDetails::class);
+            Livewire::component('trips.invite-friends', InviteFriends::class);
+            Livewire::component('trips.itinerary-planning', ItineraryPlanning::class);
+            Livewire::component('trips.review', Review::class);
+        }
+    }
+}
+
+=== File: RouteServiceProvider.php ===
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+
+class RouteServiceProvider extends ServiceProvider
+{
+    /**
+     * The path to your application's "home" route.
+     *
+     * Typically, users are redirected here after authentication.
+     */
+    public const HOME = '/dashboard';
+
+    /**
+     * Define your route model bindings, pattern filters, and other route configuration.
+     */
+    public function boot(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        $this->routes(function () {
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/api.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/web.php'));
+
+            // If you have a separate auth.php routes file
+            Route::middleware('web')
+                ->group(base_path('routes/auth.php'));
+        });
+    }
+}
+
+=== File: TripServiceProvider.php ===
+
+<?php
+
+namespace App\Providers;
+
+use App\Services\NotificationService;
+use App\Services\TripService;
+use Illuminate\Support\ServiceProvider;
+
+class TripServiceProvider extends ServiceProvider
+{
+    /**
+     * Register services.
+     */
+    public function register(): void
+    {
+        $this->app->singleton(TripService::class, function ($app) {
+            return new TripService($app->make(NotificationService::class));
+        });
+        
+        $this->app->singleton(NotificationService::class, function ($app) {
+            return new NotificationService();
+        });
+    }
+
+    /**
+     * Bootstrap services.
+     */
+    public function boot(): void
+    {
+        //
+    }
+}
+
+=== File: AuthServiceProvider.php ===
+
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+class AuthServiceProvider extends ServiceProvider
+{
+    /**
+     * The policy mappings for the application.
+     *
+     * @var array<class-string, class-string>
+     */
+    protected $policies = [
+        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+    ];
+
+    /**
+     * Register any authentication / authorization services.
+     */
+    public function boot(): void
+    {
+        $this->registerPolicies();
+
+        // Apply session middleware explicitly to auth routes to ensure 
+        // proper session handling for CSRF tokens
+        Route::pushMiddlewareToGroup('web', function ($middleware) {
+            return array_merge([
+                EncryptCookies::class,
+                AddQueuedCookiesToResponse::class,
+                StartSession::class,
+                ShareErrorsFromSession::class,
+            ], $middleware);
+        });
+    }
+}

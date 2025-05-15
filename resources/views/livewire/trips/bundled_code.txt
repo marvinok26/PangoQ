@@ -361,58 +361,6 @@
     </div>
 </div>
 
-=== File: bundle_code.py ===
-
-import os
-
-EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
-EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
-EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
-OUTPUT_FILE = "bundled_code.txt"
-
-def is_hidden(path):
-    return any(part.startswith('.') for part in path.split(os.sep))
-
-def should_skip_file(filepath, root):
-    filename = os.path.basename(filepath)
-    ext = os.path.splitext(filename)[1].lower()
-
-    # Skip hidden files
-    if is_hidden(os.path.relpath(filepath)):
-        return True
-
-    # Skip excluded files and extensions
-    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
-        return True
-
-    # Skip files in excluded dirs
-    for part in os.path.relpath(root).split(os.sep):
-        if part in EXCLUDED_DIRS:
-            return True
-
-    # Skip empty files
-    if os.path.getsize(filepath) == 0:
-        return True
-
-    return False
-
-with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
-    for root, dirs, files in os.walk("."):
-        # Skip hidden directories
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
-
-        for file in files:
-            filepath = os.path.join(root, file)
-            if should_skip_file(filepath, root):
-                continue
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
-                    output.write(f.read())
-            except Exception as e:
-                print(f"Skipped {filepath} due to error: {e}")
-
-
 === File: bundled_code.txt ===
 
 
@@ -1510,7 +1458,7 @@ with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
         <!-- Pre-planned Trip Option -->
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div class="relative h-60 bg-blue-100">
-                <img src="/api/placeholder/600/400" alt="Pre-planned Trip" class="w-full h-full object-cover">
+                <img src="{{ asset('images/image17.jpg') }}" alt="Pre-planned Trip" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
                     <div class="p-6 text-white">
                         <h3 class="text-xl font-bold">Pre-planned Trip</h3>
@@ -1554,7 +1502,7 @@ with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
         <!-- Self-planned Trip Option -->
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div class="relative h-60 bg-green-100">
-                <img src="/api/placeholder/600/400" alt="Self-planned Trip" class="w-full h-full object-cover">
+                <img src="{{ asset('images/image18.jpg') }}" alt="Self-planned Trip" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
                     <div class="p-6 text-white">
                         <h3 class="text-xl font-bold">Self-planned Trip</h3>

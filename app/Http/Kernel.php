@@ -70,5 +70,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'tripmember' => \App\Http\Middleware\CheckTripMembership::class,
         'csrf' => \App\Http\Middleware\VerifyCsrfToken::class,
+        'save.trip' => \App\Http\Middleware\SaveTripAfterLogin::class,
     ];
 }

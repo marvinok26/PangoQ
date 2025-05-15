@@ -25,6 +25,24 @@ class SocialAuthController extends Controller
     {
         try {
             if (in_array($provider, ['google', 'facebook'])) {
+                // Store trip data flag in the session before social redirection
+                if (session('trip_data_not_saved')) {
+                    // Save trip planning data in a specific key that won't be lost in redirections
+                    // Some providers like Facebook can lose session data during OAuth
+                    $tripData = [
+                        'trip_data_not_saved' => session('trip_data_not_saved'),
+                        'selected_trip_type' => session('selected_trip_type'),
+                        'selected_destination' => session('selected_destination'),
+                        'selected_trip_template' => session('selected_trip_template'),
+                        'trip_details' => session('trip_details'),
+                        'trip_activities' => session('trip_activities'),
+                        'trip_invites' => session('trip_invites'),
+                    ];
+                    
+                    // Store trip data in a persistent session variable
+                    session(['social_auth_trip_data' => $tripData]);
+                }
+                
                 return Socialite::driver($provider)->redirect();
             }
             return redirect()->route('login')->with('error', 'Invalid authentication provider.');
@@ -84,7 +102,27 @@ class SocialAuthController extends Controller
                 }
             }
             
+            // Log the user in
             Auth::login($user);
+            
+            // Restore trip planning data from social auth session if it exists
+            if (session()->has('social_auth_trip_data')) {
+                $tripData = session('social_auth_trip_data');
+                
+                // Restore all trip session variables
+                foreach ($tripData as $key => $value) {
+                    session([$key => $value]);
+                }
+                
+                // Clear the temporary storage
+                session()->forget('social_auth_trip_data');
+                
+                // If trip data was saved, redirect to trips page
+                if (session('trip_data_not_saved')) {
+                    return redirect()->route('dashboard')->with('success', 'Successfully logged in! Your trip plan has been saved.');
+                }
+            }
+            
             return redirect()->route('dashboard')->with('success', 'Successfully logged in!');
             
         } catch (Exception $e) {

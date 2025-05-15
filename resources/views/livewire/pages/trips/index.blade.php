@@ -1,87 +1,99 @@
-{{-- resources/views/livewire/pages/trips/index.blade.php --}}
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('My Trips') }}
-        </h2>
-    </x-slot>
+<!-- resources/views/livewire/pages/trips/index.blade.php -->
+@extends('layouts.dashboard')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    @if(isset($trips) && $trips->isEmpty())
-                        <div class="text-center py-8">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900">No trips found</h3>
-                            <p class="mt-1 text-sm text-gray-500">Get started by creating a new trip.</p>
-                            <div class="mt-6">
-                                <a href="{{ route('trips.plan') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-600 hover:bg-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
-                                    <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                                    </svg>
-                                    Plan a new trip
-                                </a>
+@section('title', 'My Trips - PangoQ')
+
+@section('content')
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-semibold text-gray-900">My Trips</h1>
+                <a href="{{ route('trips.plan') }}" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    Plan New Trip
+                </a>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                @forelse ($trips as $trip)
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-lg font-medium text-gray-900">{{ $trip->title }}</h3>
+                                <span
+                                    class="px-2 py-1 text-xs rounded-full {{ $trip->status === 'planning' ? 'bg-yellow-100 text-yellow-800' : ($trip->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800') }}">
+                                    {{ ucfirst($trip->status) }}
+                                </span>
                             </div>
-                        </div>
-                    @elseif(isset($trips))
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-medium text-gray-900">Your Trips</h3>
-                            <a href="{{ route('trips.plan') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-600 hover:bg-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
-                                <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                            <p class="mt-1 text-sm text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                                 </svg>
-                                Plan a new trip
-                            </a>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            @foreach($trips as $trip)
-                                <div class="relative bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                                    <div class="h-32 bg-gray-200 bg-cover bg-center" style="background-image: url('https://source.unsplash.com/featured/?{{ urlencode($trip->destination) }}')"></div>
-                                    <div class="p-4">
-                                        <div class="flex justify-between">
-                                            <h4 class="text-lg font-semibold text-gray-900">{{ $trip->title }}</h4>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{ $trip->status_color }}-100 text-{{ $trip->status_color }}-800 capitalize">
-                                                {{ $trip->status }}
-                                            </span>
-                                        </div>
-                                        <p class="mt-1 text-sm text-gray-600">{{ $trip->destination }}</p>
-                                        <p class="mt-2 text-sm text-gray-500">{{ $trip->trip_date_range }}</p>
-                                        
-                                        <div class="mt-4 flex justify-between items-center">
-                                            <div class="flex items-center text-sm text-gray-500">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                                </svg>
-                                                {{ $trip->acceptedMembers->count() }} {{ Str::plural('member', $trip->acceptedMembers->count()) }}
-                                            </div>
-                                            
-                                            <a href="{{ route('trips.show', $trip) }}" class="inline-flex items-center text-sm font-medium text-secondary-600 hover:text-secondary-700">
-                                                View details
-                                                <svg class="ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                                                </svg>
-                                            </a>
-                                        </div>
+                                {{ $trip->destination }}
+                            </p>
+                            <p class="mt-1 text-sm text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                {{ $trip->start_date->format('M j, Y') }} - {{ $trip->end_date->format('M j, Y') }}
+                            </p>
+                            <p class="mt-1 text-sm text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                {{ $trip->members->count() }} travelers
+                            </p>
+
+                            @if ($trip->savingsWallet)
+                                <div class="mt-4">
+                                    <div class="flex justify-between text-sm">
+                                        <span>Savings: ${{ number_format($trip->savingsWallet->current_amount, 2) }}</span>
+                                        <span>{{ $trip->savingsWallet->getProgressPercentageAttribute() }}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                                        <div class="bg-blue-600 h-2 rounded-full"
+                                            style="width: {{ $trip->savingsWallet->getProgressPercentageAttribute() }}%"></div>
                                     </div>
                                 </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="text-center py-8">
-                            <p>Please log in to view your trips.</p>
-                            <div class="mt-6">
-                                <a href="{{ route('login') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-600 hover:bg-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
-                                    Log in
+                            @endif
+
+                            <div class="mt-4 flex justify-between">
+                                <a href="{{ route('trips.show', $trip) }}"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                    View Details
+                                </a>
+                                <a href="{{ route('trips.edit', $trip) }}"
+                                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Edit
                                 </a>
                             </div>
                         </div>
-                    @endif
-                </div>
+                    </div>
+                @empty
+                    <div class="col-span-3">
+                        <div class="bg-white overflow-hidden shadow rounded-lg p-6 text-center">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">No trips yet</h3>
+                            <p class="text-gray-500 mb-4">Start planning your first adventure now!</p>
+                            <a href="{{ route('trips.plan') }}"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                Plan a Trip
+                            </a>
+                        </div>
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>
-</x-app-layout>
+@endsection

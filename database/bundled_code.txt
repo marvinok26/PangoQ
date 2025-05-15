@@ -1,0 +1,3469 @@
+
+
+=== File: database.sqlite ===
+
+
+
+=== File: seeders/DatabaseSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // Run destination seeder first
+        $this->call(DestinationSeeder::class);
+        
+        // Then run trip template seeder (which requires destinations)
+        $this->call(TripTemplateSeeder::class);
+    }
+}
+
+=== File: seeders/bundled_code.txt ===
+
+
+
+=== File: DatabaseSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // Run destination seeder first
+        $this->call(DestinationSeeder::class);
+        
+        // Then run trip template seeder (which requires destinations)
+        $this->call(TripTemplateSeeder::class);
+    }
+}
+
+=== File: bundle_code.py ===
+
+import os
+
+EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
+OUTPUT_FILE = "bundled_code.txt"
+
+def is_hidden(path):
+    return any(part.startswith('.') for part in path.split(os.sep))
+
+def should_skip_file(filepath, root):
+    filename = os.path.basename(filepath)
+    ext = os.path.splitext(filename)[1].lower()
+
+    # Skip hidden files
+    if is_hidden(os.path.relpath(filepath)):
+        return True
+
+    # Skip excluded files and extensions
+    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
+        return True
+
+    # Skip files in excluded dirs
+    for part in os.path.relpath(root).split(os.sep):
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Skip empty files
+    if os.path.getsize(filepath) == 0:
+        return True
+
+    return False
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for root, dirs, files in os.walk("."):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
+
+        for file in files:
+            filepath = os.path.join(root, file)
+            if should_skip_file(filepath, root):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
+                    output.write(f.read())
+            except Exception as e:
+                print(f"Skipped {filepath} due to error: {e}")
+
+
+=== File: TripTemplateSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\TripTemplate;
+use App\Models\TemplateActivity;
+use App\Models\Destination;
+
+class TripTemplateSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Kenya Safari Template - based on 7 DAY BEST OF KENYA SOPA CIRCUIT
+        $kenya = Destination::firstOrCreate(
+            ['name' => 'Kenya'],
+            [
+                'country' => 'Kenya',
+                'city' => 'Nairobi',
+                'description' => 'Kenya is renowned for its classic savanna safaris, deserts, dramatic mountain ranges, cultures and beautiful beaches.',
+                'image_url' => null,
+            ]
+        );
+
+        $kenyaSafari = TripTemplate::create([
+            'destination_id' => $kenya->id,
+            'title' => '7 DAY BEST OF KENYA SOPA CIRCUIT',
+            'description' => 'Experience the best of Kenya with visits to Amboseli National Park, Lake Naivasha, Lake Nakuru National Park, and Masai Mara National Reserve.',
+            'duration_days' => 7,
+            'base_price' => 1800.00,
+            'difficulty_level' => 'moderate',
+            'trip_style' => 'safari',
+            'is_featured' => true,
+        ]);
+
+        // Day 1 - Amboseli National Park
+        $this->createKenyaDay1Activities($kenyaSafari);
+        
+        // Day 2 - Amboseli National Park
+        $this->createKenyaDay2Activities($kenyaSafari);
+        
+        // Day 3 - Lake Naivasha
+        $this->createKenyaDay3Activities($kenyaSafari);
+        
+        // Day 4 - Lake Nakuru National Park
+        $this->createKenyaDay4Activities($kenyaSafari);
+        
+        // Day 5 - Masai Mara National Reserve
+        $this->createKenyaDay5Activities($kenyaSafari);
+        
+        // Day 6 - Masai Mara National Reserve
+        $this->createKenyaDay6Activities($kenyaSafari);
+        
+        // Day 7 - Nairobi
+        $this->createKenyaDay7Activities($kenyaSafari);
+        
+        // Create Bali template
+        $this->createBaliTemplate();
+    }
+    
+    private function createKenyaDay1Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Pickup & Transfer to Amboseli',
+            'description' => 'Arrival at Jomo Kenyatta International Airport and transfer to Amboseli National Park.',
+            'location' => 'Nairobi to Amboseli National Park',
+            'day_number' => 1,
+            'time_of_day' => 'morning',
+            'start_time' => '08:00',
+            'end_time' => '12:00',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Amboseli Sopa Lodge',
+            'description' => 'Enjoy a delicious lunch while taking in the views at Amboseli Sopa Lodge.',
+            'location' => 'Amboseli Sopa Lodge',
+            'day_number' => 1,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Evening Game Drive',
+            'description' => 'Your first game drive in Amboseli National Park with a chance to see elephants with Mt. Kilimanjaro in the background.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 1,
+            'time_of_day' => 'evening',
+            'start_time' => '16:00',
+            'end_time' => '18:30',
+            'cost' => 45,
+            'category' => 'safari',
+        ]);
+    }
+    
+    private function createKenyaDay2Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Full Day Game Drive',
+            'description' => 'Spend the whole day exploring Amboseli National Park, known for its large elephant herds and views of Mt. Kilimanjaro.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 2,
+            'time_of_day' => 'morning',
+            'start_time' => '06:30',
+            'end_time' => '18:00',
+            'cost' => 65,
+            'category' => 'safari',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Picnic Lunch',
+            'description' => 'Enjoy a picnic lunch in the wild surrounded by the beautiful landscapes of Amboseli.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 2,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+    }
+    
+    private function createKenyaDay3Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Lake Naivasha',
+            'description' => 'Scenic drive from Amboseli to Lake Naivasha.',
+            'location' => 'Amboseli to Lake Naivasha',
+            'day_number' => 3,
+            'time_of_day' => 'morning',
+            'start_time' => '07:30',
+            'end_time' => '12:30',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Lake Naivasha Sopa Resort',
+            'description' => 'Lunch at the beautiful lakeside resort.',
+            'location' => 'Lake Naivasha Sopa Resort',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Boat Trip on Lake Naivasha',
+            'description' => 'Enjoy a boat ride on Lake Naivasha to see hippos and numerous bird species.',
+            'location' => 'Lake Naivasha',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '17:00',
+            'cost' => 35,
+            'category' => 'water activity',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Walking Safari',
+            'description' => 'Take a guided walking safari to see wildlife up close in a safe environment.',
+            'location' => 'Animal Sanctuary',
+            'day_number' => 3,
+            'time_of_day' => 'evening',
+            'start_time' => '17:30',
+            'end_time' => '18:30',
+            'cost' => 25,
+            'category' => 'safari',
+        ]);
+    }
+    
+    private function createKenyaDay4Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Hell\'s Gate National Park',
+            'description' => 'Short drive to Hell\'s Gate National Park, known for its scenic landscape and geothermal activity.',
+            'location' => 'Lake Naivasha to Hell\'s Gate',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Cycling Safari',
+            'description' => 'Experience a unique safari on bicycles in Hell\'s Gate National Park.',
+            'location' => 'Hell\'s Gate National Park',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '09:30',
+            'end_time' => '11:30',
+            'cost' => 30,
+            'category' => 'adventure',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Gorge Hiking',
+            'description' => 'Hike through the impressive gorges of Hell\'s Gate.',
+            'location' => 'Hell\'s Gate National Park',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '11:45',
+            'end_time' => '13:00',
+            'cost' => 15,
+            'category' => 'adventure',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Lake Nakuru',
+            'description' => 'Drive to Lake Nakuru National Park.',
+            'location' => 'Hell\'s Gate to Lake Nakuru',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:30',
+            'end_time' => '15:00',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Afternoon Game Drive',
+            'description' => 'Game drive in Lake Nakuru National Park, known for rhinos, lions, and sometimes flamingos.',
+            'location' => 'Lake Nakuru National Park',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '16:00',
+            'end_time' => '18:30',
+            'cost' => 45,
+            'category' => 'safari',
+        ]);
+    }
+    
+    private function createKenyaDay5Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Masai Mara',
+            'description' => 'Scenic drive to the world-famous Masai Mara National Reserve.',
+            'location' => 'Lake Nakuru to Masai Mara',
+            'day_number' => 5,
+            'time_of_day' => 'morning',
+            'start_time' => '07:30',
+            'end_time' => '12:30',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Masai Mara Sopa Lodge',
+            'description' => 'Enjoy lunch at the lodge with panoramic views of the savannah.',
+            'location' => 'Masai Mara Sopa Lodge',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Maasai Village Visit',
+            'description' => 'Visit a traditional Maasai village to learn about their culture and way of life.',
+            'location' => 'Maasai Village',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '16:30',
+            'cost' => 25,
+            'category' => 'cultural',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Evening Game Drive',
+            'description' => 'Your first game drive in Masai Mara, home to the "Big Five" and many other wildlife species.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 5,
+            'time_of_day' => 'evening',
+            'start_time' => '17:00',
+            'end_time' => '19:00',
+            'cost' => 45,
+            'category' => 'safari',
+        ]);
+    }
+    
+    private function createKenyaDay6Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Full Day Game Drive',
+            'description' => 'Full day exploring the vast plains of Masai Mara with a chance to see lions, elephants, giraffes, and more.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'morning',
+            'start_time' => '06:30',
+            'end_time' => '18:00',
+            'cost' => 85,
+            'category' => 'safari',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Picnic Lunch',
+            'description' => 'Enjoy a picnic lunch in the midst of the African wilderness.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Optional Hot Air Balloon Safari',
+            'description' => 'Experience the Masai Mara from above in a hot air balloon followed by a champagne breakfast.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'morning',
+            'start_time' => '05:00',
+            'end_time' => '09:00',
+            'cost' => 500,
+            'category' => 'adventure',
+        ]);
+    }
+    
+    private function createKenyaDay7Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Breakfast at Masai Mara Sopa Lodge',
+            'description' => 'Enjoy your last morning in the Masai Mara with a delicious breakfast.',
+            'location' => 'Masai Mara Sopa Lodge',
+            'day_number' => 7,
+            'time_of_day' => 'morning',
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'cost' => 0,
+            'category' => 'meal',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Nairobi',
+            'description' => 'Return journey to Nairobi with a stop at a viewpoint over the Great Rift Valley.',
+            'location' => 'Masai Mara to Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'morning',
+            'start_time' => '08:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Nairobi City Tour',
+            'description' => 'Brief tour of Nairobi before heading to the airport.',
+            'location' => 'Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '16:00',
+            'cost' => 20,
+            'category' => 'sightseeing',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Transfer',
+            'description' => 'Transfer to Jomo Kenyatta International Airport for your departure.',
+            'location' => 'Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'afternoon',
+            'start_time' => '16:30',
+            'end_time' => '17:30',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+    }
+    
+    private function createBaliTemplate()
+    {
+        $bali = Destination::firstOrCreate(
+            ['name' => 'Bali'],
+            [
+                'country' => 'Indonesia',
+                'city' => 'Denpasar',
+                'description' => 'A beautiful island paradise known for its stunning beaches, vibrant culture, and picturesque landscapes.',
+                'image_url' => null,
+            ]
+        );
+
+        $baliTrip = TripTemplate::create([
+            'destination_id' => $bali->id,
+            'title' => 'Bali Island Paradise Explorer',
+            'description' => 'Experience the best of Bali with this carefully curated trip featuring pristine beaches, ancient temples, and cultural experiences.',
+            'duration_days' => 5,
+            'base_price' => 1200.00,
+            'difficulty_level' => 'easy',
+            'trip_style' => 'cultural',
+            'is_featured' => true,
+        ]);
+
+        // Day 1 Activities
+        $this->createBaliDay1Activities($baliTrip);
+        
+        // Day 2 Activities
+        $this->createBaliDay2Activities($baliTrip);
+        
+        // Day 3 Activities
+        $this->createBaliDay3Activities($baliTrip);
+        
+        // Day 4 Activities
+        $this->createBaliDay4Activities($baliTrip);
+        
+        // Day 5 Activities
+        $this->createBaliDay5Activities($baliTrip);
+    }
+    
+    private function createBaliDay1Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Pickup & Beach Relaxation',
+            'description' => 'Arrival at Ngurah Rai International Airport and transfer to your beachfront hotel in Kuta.',
+            'location' => 'Kuta Beach, Bali',
+            'day_number' => 1,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '18:00',
+            'cost' => 0,
+            'category' => 'relaxation',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Welcome Dinner',
+            'description' => 'Enjoy a traditional Balinese dinner with cultural performances.',
+            'location' => 'Jimbaran Bay, Bali',
+            'day_number' => 1,
+            'time_of_day' => 'evening',
+            'start_time' => '19:00',
+            'end_time' => '21:00',
+            'cost' => 45,
+            'category' => 'food',
+        ]);
+    }
+    
+    private function createBaliDay2Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Ubud Cultural Tour',
+            'description' => 'Visit the cultural heart of Bali, including the Sacred Monkey Forest and local craft villages.',
+            'location' => 'Ubud, Bali',
+            'day_number' => 2,
+            'time_of_day' => 'morning',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'cost' => 65,
+            'category' => 'cultural',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Rice Terrace Experience',
+            'description' => 'Explore the beautiful Tegallalang Rice Terraces with a local guide.',
+            'location' => 'Tegallalang, Bali',
+            'day_number' => 2,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '17:00',
+            'cost' => 30,
+            'category' => 'nature',
+        ]);
+    }
+    
+    private function createBaliDay3Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Sunrise Mount Batur Hike',
+            'description' => 'Early morning hike to witness the breathtaking sunrise from Mount Batur volcano.',
+            'location' => 'Mount Batur, Bali',
+            'day_number' => 3,
+            'time_of_day' => 'morning',
+            'start_time' => '04:00',
+            'end_time' => '10:00',
+            'cost' => 85,
+            'category' => 'adventure',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Hot Springs & Spa',
+            'description' => 'Relax in natural hot springs and enjoy a traditional Balinese massage.',
+            'location' => 'Kintamani, Bali',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:00',
+            'end_time' => '16:00',
+            'cost' => 55,
+            'category' => 'relaxation',
+        ]);
+    }
+    
+    private function createBaliDay4Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Uluwatu Temple & Kecak Dance',
+            'description' => 'Visit the clifftop Uluwatu Temple and watch the mesmerizing Kecak Fire Dance at sunset.',
+            'location' => 'Uluwatu, Bali',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '19:00',
+            'cost' => 40,
+            'category' => 'cultural',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Seafood Dinner on the Beach',
+            'description' => 'Enjoy fresh seafood at a romantic beachside dinner.',
+            'location' => 'Jimbaran Beach, Bali',
+            'day_number' => 4,
+            'time_of_day' => 'evening',
+            'start_time' => '19:30',
+            'end_time' => '21:30',
+            'cost' => 60,
+            'category' => 'food',
+        ]);
+    }
+    
+    private function createBaliDay5Activities($template)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Water Sports Adventure',
+            'description' => 'Experience thrilling water activities including jet skiing, parasailing and banana boat rides.',
+            'location' => 'Nusa Dua, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'morning',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'cost' => 120,
+            'category' => 'adventure',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Farewell Dinner & Shopping',
+            'description' => 'Enjoy a farewell dinner and shop for souvenirs at local markets.',
+            'location' => 'Seminyak, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'evening',
+            'start_time' => '18:00',
+            'end_time' => '21:00',
+            'cost' => 50,
+            'category' => 'food',
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Transfer',
+            'description' => 'Transfer to Ngurah Rai International Airport for your departure.',
+            'location' => 'Denpasar, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+            'cost' => 0,
+            'category' => 'transfer',
+        ]);
+    }
+}
+
+=== File: UserSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class UserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Create admin user
+        User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        
+        // Create regular user
+        User::create([
+            'name' => 'Test User',
+            'email' => 'user@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+    }
+}
+
+=== File: DestinationSeeder.php ===
+
+<?php
+namespace Database\Seeders;
+use Illuminate\Database\Seeder;
+use App\Models\Destination;
+
+class DestinationSeeder extends Seeder
+{
+    public function run()
+    {
+        // Instead of truncating, use firstOrCreate to avoid constraint violations
+        $destinations = [
+            [
+                'name' => 'Bali',
+                'country' => 'Indonesia',
+                'city' => 'Denpasar',
+                'description' => 'A beautiful island paradise known for its stunning beaches, vibrant culture, and picturesque landscapes.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Paris',
+                'country' => 'France',
+                'city' => 'Paris',
+                'description' => 'The City of Light, known for its art, fashion, gastronomy, and culture.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Tokyo',
+                'country' => 'Japan',
+                'city' => 'Tokyo',
+                'description' => 'A bustling metropolis that blends ultramodern and traditional, with neon-lit skyscrapers and historic temples.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'New York',
+                'country' => 'United States',
+                'city' => 'New York',
+                'description' => 'The Big Apple, a global center for business, art, fashion, food, and entertainment.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Barcelona',
+                'country' => 'Spain',
+                'city' => 'Barcelona',
+                'description' => 'A vibrant city known for its stunning architecture, Mediterranean beaches, and rich cultural heritage.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Cape Town',
+                'country' => 'South Africa',
+                'city' => 'Cape Town',
+                'description' => 'A coastal city with dramatic scenery, including Table Mountain and beautiful beaches.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Sydney',
+                'country' => 'Australia',
+                'city' => 'Sydney',
+                'description' => 'Famous for its stunning harbor, iconic Opera House, and beautiful beaches.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Rio de Janeiro',
+                'country' => 'Brazil',
+                'city' => 'Rio de Janeiro',
+                'description' => 'Known for its spectacular beaches, Carnival, and the Christ the Redeemer statue.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Marrakech',
+                'country' => 'Morocco',
+                'city' => 'Marrakech',
+                'description' => 'A historic city with vibrant markets, gardens, and traditional architecture.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Santorini',
+                'country' => 'Greece',
+                'city' => 'Thira',
+                'description' => 'A stunning island with white-washed buildings, blue domes, and breathtaking sunsets.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Kyoto',
+                'country' => 'Japan',
+                'city' => 'Kyoto',
+                'description' => 'Japan\'s cultural capital, known for its classical Buddhist temples, gardens, and traditional wooden houses.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Venice',
+                'country' => 'Italy',
+                'city' => 'Venice',
+                'description' => 'A unique city built on a lagoon, famous for its canals, gondolas, and historic architecture.',
+                'image_url' => null,
+            ],
+            [
+                'name' => 'Kenya',
+                'country' => 'Kenya',
+                'city' => 'Nairobi',
+                'description' => 'Kenya is renowned for its classic savanna safaris, deserts, dramatic mountain ranges, cultures and beautiful beaches.',
+                'image_url' => null,
+            ],
+        ];
+        
+        // Insert destinations using firstOrCreate
+        foreach ($destinations as $destination) {
+            Destination::firstOrCreate(
+                ['name' => $destination['name']],
+                $destination
+            );
+        }
+    }
+}
+
+=== File: seeders/TripTemplateSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\TripTemplate;
+use App\Models\TemplateActivity;
+use App\Models\Destination;
+
+class TripTemplateSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Create an array of available image filenames for activities
+        $activityImages = [
+            'image14.jpeg', 'image15.jpg', 'image16.jpg', 
+            'image17.jpg', 'image18.jpg', 'image19.jpg'
+        ];
+        
+        // Helper function to get a random image from our pool
+        $getRandomImage = function() use ($activityImages) {
+            return $activityImages[array_rand($activityImages)];
+        };
+
+        // Kenya Safari Template - based on 7 DAY BEST OF KENYA SOPA CIRCUIT
+        $kenya = Destination::firstOrCreate(
+            ['name' => 'Kenya'],
+            [
+                'country' => 'Kenya',
+                'city' => 'Nairobi',
+                'description' => 'Kenya is renowned for its classic savanna safaris, deserts, dramatic mountain ranges, cultures and beautiful beaches.',
+                'image_url' => 'image13.jpg',
+            ]
+        );
+
+        $kenyaSafari = TripTemplate::create([
+            'destination_id' => $kenya->id,
+            'title' => '7 DAY BEST OF KENYA SOPA CIRCUIT',
+            'description' => 'Experience the best of Kenya with visits to Amboseli National Park, Lake Naivasha, Lake Nakuru National Park, and Masai Mara National Reserve.',
+            'duration_days' => 7,
+            'base_price' => 1800.00,
+            'difficulty_level' => 'moderate',
+            'trip_style' => 'safari',
+            'is_featured' => true,
+        ]);
+
+        // Day 1 - Amboseli National Park
+        $this->createKenyaDay1Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 2 - Amboseli National Park
+        $this->createKenyaDay2Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 3 - Lake Naivasha
+        $this->createKenyaDay3Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 4 - Lake Nakuru National Park
+        $this->createKenyaDay4Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 5 - Masai Mara National Reserve
+        $this->createKenyaDay5Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 6 - Masai Mara National Reserve
+        $this->createKenyaDay6Activities($kenyaSafari, $getRandomImage);
+        
+        // Day 7 - Nairobi
+        $this->createKenyaDay7Activities($kenyaSafari, $getRandomImage);
+        
+        // Create Bali template
+        $this->createBaliTemplate($getRandomImage);
+    }
+    
+    private function createKenyaDay1Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Pickup & Transfer to Amboseli',
+            'description' => 'Arrival at Jomo Kenyatta International Airport and transfer to Amboseli National Park.',
+            'location' => 'Nairobi to Amboseli National Park',
+            'day_number' => 1,
+            'time_of_day' => 'morning',
+            'start_time' => '08:00',
+            'end_time' => '12:00',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Amboseli Sopa Lodge',
+            'description' => 'Enjoy a delicious lunch while taking in the views at Amboseli Sopa Lodge.',
+            'location' => 'Amboseli Sopa Lodge',
+            'day_number' => 1,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Evening Game Drive',
+            'description' => 'Your first game drive in Amboseli National Park with a chance to see elephants with Mt. Kilimanjaro in the background.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 1,
+            'time_of_day' => 'evening',
+            'start_time' => '16:00',
+            'end_time' => '18:30',
+            'cost' => 45,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay2Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Full Day Game Drive',
+            'description' => 'Spend the whole day exploring Amboseli National Park, known for its large elephant herds and views of Mt. Kilimanjaro.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 2,
+            'time_of_day' => 'morning',
+            'start_time' => '06:30',
+            'end_time' => '18:00',
+            'cost' => 65,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Picnic Lunch',
+            'description' => 'Enjoy a picnic lunch in the wild surrounded by the beautiful landscapes of Amboseli.',
+            'location' => 'Amboseli National Park',
+            'day_number' => 2,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay3Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Lake Naivasha',
+            'description' => 'Scenic drive from Amboseli to Lake Naivasha.',
+            'location' => 'Amboseli to Lake Naivasha',
+            'day_number' => 3,
+            'time_of_day' => 'morning',
+            'start_time' => '07:30',
+            'end_time' => '12:30',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Lake Naivasha Sopa Resort',
+            'description' => 'Lunch at the beautiful lakeside resort.',
+            'location' => 'Lake Naivasha Sopa Resort',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Boat Trip on Lake Naivasha',
+            'description' => 'Enjoy a boat ride on Lake Naivasha to see hippos and numerous bird species.',
+            'location' => 'Lake Naivasha',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '17:00',
+            'cost' => 35,
+            'category' => 'water activity',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Walking Safari',
+            'description' => 'Take a guided walking safari to see wildlife up close in a safe environment.',
+            'location' => 'Animal Sanctuary',
+            'day_number' => 3,
+            'time_of_day' => 'evening',
+            'start_time' => '17:30',
+            'end_time' => '18:30',
+            'cost' => 25,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay4Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Hell\'s Gate National Park',
+            'description' => 'Short drive to Hell\'s Gate National Park, known for its scenic landscape and geothermal activity.',
+            'location' => 'Lake Naivasha to Hell\'s Gate',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Cycling Safari',
+            'description' => 'Experience a unique safari on bicycles in Hell\'s Gate National Park.',
+            'location' => 'Hell\'s Gate National Park',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '09:30',
+            'end_time' => '11:30',
+            'cost' => 30,
+            'category' => 'adventure',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Gorge Hiking',
+            'description' => 'Hike through the impressive gorges of Hell\'s Gate.',
+            'location' => 'Hell\'s Gate National Park',
+            'day_number' => 4,
+            'time_of_day' => 'morning',
+            'start_time' => '11:45',
+            'end_time' => '13:00',
+            'cost' => 15,
+            'category' => 'adventure',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Lake Nakuru',
+            'description' => 'Drive to Lake Nakuru National Park.',
+            'location' => 'Hell\'s Gate to Lake Nakuru',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:30',
+            'end_time' => '15:00',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Afternoon Game Drive',
+            'description' => 'Game drive in Lake Nakuru National Park, known for rhinos, lions, and sometimes flamingos.',
+            'location' => 'Lake Nakuru National Park',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '16:00',
+            'end_time' => '18:30',
+            'cost' => 45,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay5Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Masai Mara',
+            'description' => 'Scenic drive to the world-famous Masai Mara National Reserve.',
+            'location' => 'Lake Nakuru to Masai Mara',
+            'day_number' => 5,
+            'time_of_day' => 'morning',
+            'start_time' => '07:30',
+            'end_time' => '12:30',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Lunch at Masai Mara Sopa Lodge',
+            'description' => 'Enjoy lunch at the lodge with panoramic views of the savannah.',
+            'location' => 'Masai Mara Sopa Lodge',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Maasai Village Visit',
+            'description' => 'Visit a traditional Maasai village to learn about their culture and way of life.',
+            'location' => 'Maasai Village',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '16:30',
+            'cost' => 25,
+            'category' => 'cultural',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Evening Game Drive',
+            'description' => 'Your first game drive in Masai Mara, home to the "Big Five" and many other wildlife species.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 5,
+            'time_of_day' => 'evening',
+            'start_time' => '17:00',
+            'end_time' => '19:00',
+            'cost' => 45,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay6Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Full Day Game Drive',
+            'description' => 'Full day exploring the vast plains of Masai Mara with a chance to see lions, elephants, giraffes, and more.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'morning',
+            'start_time' => '06:30',
+            'end_time' => '18:00',
+            'cost' => 85,
+            'category' => 'safari',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Picnic Lunch',
+            'description' => 'Enjoy a picnic lunch in the midst of the African wilderness.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Optional Hot Air Balloon Safari',
+            'description' => 'Experience the Masai Mara from above in a hot air balloon followed by a champagne breakfast.',
+            'location' => 'Masai Mara National Reserve',
+            'day_number' => 6,
+            'time_of_day' => 'morning',
+            'start_time' => '05:00',
+            'end_time' => '09:00',
+            'cost' => 500,
+            'category' => 'adventure',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createKenyaDay7Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Breakfast at Masai Mara Sopa Lodge',
+            'description' => 'Enjoy your last morning in the Masai Mara with a delicious breakfast.',
+            'location' => 'Masai Mara Sopa Lodge',
+            'day_number' => 7,
+            'time_of_day' => 'morning',
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'cost' => 0,
+            'category' => 'meal',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Transfer to Nairobi',
+            'description' => 'Return journey to Nairobi with a stop at a viewpoint over the Great Rift Valley.',
+            'location' => 'Masai Mara to Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'morning',
+            'start_time' => '08:30',
+            'end_time' => '13:30',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Nairobi City Tour',
+            'description' => 'Brief tour of Nairobi before heading to the airport.',
+            'location' => 'Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '16:00',
+            'cost' => 20,
+            'category' => 'sightseeing',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Transfer',
+            'description' => 'Transfer to Jomo Kenyatta International Airport for your departure.',
+            'location' => 'Nairobi',
+            'day_number' => 7,
+            'time_of_day' => 'afternoon',
+            'start_time' => '16:30',
+            'end_time' => '17:30',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createBaliTemplate($getRandomImage)
+    {
+        $bali = Destination::firstOrCreate(
+            ['name' => 'Bali'],
+            [
+                'country' => 'Indonesia',
+                'city' => 'Denpasar',
+                'description' => 'A beautiful island paradise known for its stunning beaches, vibrant culture, and picturesque landscapes.',
+                'image_url' => 'image1.jpg',
+            ]
+        );
+
+        $baliTrip = TripTemplate::create([
+            'destination_id' => $bali->id,
+            'title' => 'Bali Island Paradise Explorer',
+            'description' => 'Experience the best of Bali with this carefully curated trip featuring pristine beaches, ancient temples, and cultural experiences.',
+            'duration_days' => 5,
+            'base_price' => 1200.00,
+            'difficulty_level' => 'easy',
+            'trip_style' => 'cultural',
+            'is_featured' => true,
+        ]);
+
+        // Day 1 Activities
+        $this->createBaliDay1Activities($baliTrip, $getRandomImage);
+        
+        // Day 2 Activities
+        $this->createBaliDay2Activities($baliTrip, $getRandomImage);
+        
+        // Day 3 Activities
+        $this->createBaliDay3Activities($baliTrip, $getRandomImage);
+        
+        // Day 4 Activities
+        $this->createBaliDay4Activities($baliTrip, $getRandomImage);
+        
+        // Day 5 Activities
+        $this->createBaliDay5Activities($baliTrip, $getRandomImage);
+    }
+    
+    private function createBaliDay1Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Pickup & Beach Relaxation',
+            'description' => 'Arrival at Ngurah Rai International Airport and transfer to your beachfront hotel in Kuta.',
+            'location' => 'Kuta Beach, Bali',
+            'day_number' => 1,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '18:00',
+            'cost' => 0,
+            'category' => 'relaxation',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Welcome Dinner',
+            'description' => 'Enjoy a traditional Balinese dinner with cultural performances.',
+            'location' => 'Jimbaran Bay, Bali',
+            'day_number' => 1,
+            'time_of_day' => 'evening',
+            'start_time' => '19:00',
+            'end_time' => '21:00',
+            'cost' => 45,
+            'category' => 'food',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createBaliDay2Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Ubud Cultural Tour',
+            'description' => 'Visit the cultural heart of Bali, including the Sacred Monkey Forest and local craft villages.',
+            'location' => 'Ubud, Bali',
+            'day_number' => 2,
+            'time_of_day' => 'morning',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'cost' => 65,
+            'category' => 'cultural',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Rice Terrace Experience',
+            'description' => 'Explore the beautiful Tegallalang Rice Terraces with a local guide.',
+            'location' => 'Tegallalang, Bali',
+            'day_number' => 2,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '17:00',
+            'cost' => 30,
+            'category' => 'nature',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createBaliDay3Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Sunrise Mount Batur Hike',
+            'description' => 'Early morning hike to witness the breathtaking sunrise from Mount Batur volcano.',
+            'location' => 'Mount Batur, Bali',
+            'day_number' => 3,
+            'time_of_day' => 'morning',
+            'start_time' => '04:00',
+            'end_time' => '10:00',
+            'cost' => 85,
+            'category' => 'adventure',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Hot Springs & Spa',
+            'description' => 'Relax in natural hot springs and enjoy a traditional Balinese massage.',
+            'location' => 'Kintamani, Bali',
+            'day_number' => 3,
+            'time_of_day' => 'afternoon',
+            'start_time' => '12:00',
+            'end_time' => '16:00',
+            'cost' => 55,
+            'category' => 'relaxation',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createBaliDay4Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Uluwatu Temple & Kecak Dance',
+            'description' => 'Visit the clifftop Uluwatu Temple and watch the mesmerizing Kecak Fire Dance at sunset.',
+            'location' => 'Uluwatu, Bali',
+            'day_number' => 4,
+            'time_of_day' => 'afternoon',
+            'start_time' => '15:00',
+            'end_time' => '19:00',
+            'cost' => 40,
+            'category' => 'cultural',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Seafood Dinner on the Beach',
+            'description' => 'Enjoy fresh seafood at a romantic beachside dinner.',
+            'location' => 'Jimbaran Beach, Bali',
+            'day_number' => 4,
+            'time_of_day' => 'evening',
+            'start_time' => '19:30',
+            'end_time' => '21:30',
+            'cost' => 60,
+            'category' => 'food',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+    
+    private function createBaliDay5Activities($template, $getRandomImage)
+    {
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Water Sports Adventure',
+            'description' => 'Experience thrilling water activities including jet skiing, parasailing and banana boat rides.',
+            'location' => 'Nusa Dua, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'morning',
+            'start_time' => '09:00',
+            'end_time' => '13:00',
+            'cost' => 120,
+            'category' => 'adventure',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Farewell Dinner & Shopping',
+            'description' => 'Enjoy a farewell dinner and shop for souvenirs at local markets.',
+            'location' => 'Seminyak, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'evening',
+            'start_time' => '18:00',
+            'end_time' => '21:00',
+            'cost' => 50,
+            'category' => 'food',
+            'image_url' => $getRandomImage(),
+        ]);
+        
+        TemplateActivity::create([
+            'trip_template_id' => $template->id,
+            'title' => 'Airport Transfer',
+            'description' => 'Transfer to Ngurah Rai International Airport for your departure.',
+            'location' => 'Denpasar, Bali',
+            'day_number' => 5,
+            'time_of_day' => 'afternoon',
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+            'cost' => 0,
+            'category' => 'transfer',
+            'image_url' => $getRandomImage(),
+        ]);
+    }
+}
+
+=== File: seeders/UserSeeder.php ===
+
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class UserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Create admin user
+        User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        
+        // Create regular user
+        User::create([
+            'name' => 'Test User',
+            'email' => 'user@example.com',
+            'password' => Hash::make('password'),
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+    }
+}
+
+=== File: seeders/DestinationSeeder.php ===
+
+<?php
+namespace Database\Seeders;
+use Illuminate\Database\Seeder;
+use App\Models\Destination;
+
+class DestinationSeeder extends Seeder
+{
+    public function run()
+    {
+        // Create an array of available image filenames
+        $imageFiles = [
+            'image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpeg', 'image5.jpg',
+            'image6.jpg', 'image7.jpg', 'image8.jpeg', 'image9.jpg', 'image10.jpg',
+            'image11.jpg', 'image12.jpg', 'image13.jpg', 'image14.jpeg', 'image15.jpg',
+            'image16.jpg', 'image17.jpg', 'image18.jpg', 'image19.jpg'
+        ];
+        
+        // Set up destinations with image files
+        $destinations = [
+            [
+                'name' => 'Bali',
+                'country' => 'Indonesia',
+                'city' => 'Denpasar',
+                'description' => 'A beautiful island paradise known for its stunning beaches, vibrant culture, and picturesque landscapes.',
+                'image_url' => $imageFiles[0], // Use image1.jpg for Bali
+            ],
+            [
+                'name' => 'Paris',
+                'country' => 'France',
+                'city' => 'Paris',
+                'description' => 'The City of Light, known for its art, fashion, gastronomy, and culture.',
+                'image_url' => $imageFiles[1], // Use image2.jpg for Paris
+            ],
+            [
+                'name' => 'Tokyo',
+                'country' => 'Japan',
+                'city' => 'Tokyo',
+                'description' => 'A bustling metropolis that blends ultramodern and traditional, with neon-lit skyscrapers and historic temples.',
+                'image_url' => $imageFiles[2], // Use image3.jpg for Tokyo
+            ],
+            [
+                'name' => 'New York',
+                'country' => 'United States',
+                'city' => 'New York',
+                'description' => 'The Big Apple, a global center for business, art, fashion, food, and entertainment.',
+                'image_url' => $imageFiles[3], // Use image4.jpeg for New York
+            ],
+            [
+                'name' => 'Barcelona',
+                'country' => 'Spain',
+                'city' => 'Barcelona',
+                'description' => 'A vibrant city known for its stunning architecture, Mediterranean beaches, and rich cultural heritage.',
+                'image_url' => $imageFiles[4], // Use image5.jpg for Barcelona
+            ],
+            [
+                'name' => 'Cape Town',
+                'country' => 'South Africa',
+                'city' => 'Cape Town',
+                'description' => 'A coastal city with dramatic scenery, including Table Mountain and beautiful beaches.',
+                'image_url' => $imageFiles[5], // Use image6.jpg for Cape Town
+            ],
+            [
+                'name' => 'Sydney',
+                'country' => 'Australia',
+                'city' => 'Sydney',
+                'description' => 'Famous for its stunning harbor, iconic Opera House, and beautiful beaches.',
+                'image_url' => $imageFiles[6], // Use image7.jpg for Sydney
+            ],
+            [
+                'name' => 'Rio de Janeiro',
+                'country' => 'Brazil',
+                'city' => 'Rio de Janeiro',
+                'description' => 'Known for its spectacular beaches, Carnival, and the Christ the Redeemer statue.',
+                'image_url' => $imageFiles[7], // Use image8.jpeg for Rio
+            ],
+            [
+                'name' => 'Marrakech',
+                'country' => 'Morocco',
+                'city' => 'Marrakech',
+                'description' => 'A historic city with vibrant markets, gardens, and traditional architecture.',
+                'image_url' => $imageFiles[8], // Use image9.jpg for Marrakech
+            ],
+            [
+                'name' => 'Santorini',
+                'country' => 'Greece',
+                'city' => 'Thira',
+                'description' => 'A stunning island with white-washed buildings, blue domes, and breathtaking sunsets.',
+                'image_url' => $imageFiles[9], // Use image10.jpg for Santorini
+            ],
+            [
+                'name' => 'Kyoto',
+                'country' => 'Japan',
+                'city' => 'Kyoto',
+                'description' => 'Japan\'s cultural capital, known for its classical Buddhist temples, gardens, and traditional wooden houses.',
+                'image_url' => $imageFiles[10], // Use image11.jpg for Kyoto
+            ],
+            [
+                'name' => 'Venice',
+                'country' => 'Italy',
+                'city' => 'Venice',
+                'description' => 'A unique city built on a lagoon, famous for its canals, gondolas, and historic architecture.',
+                'image_url' => $imageFiles[11], // Use image12.jpg for Venice
+            ],
+            [
+                'name' => 'Kenya',
+                'country' => 'Kenya',
+                'city' => 'Nairobi',
+                'description' => 'Kenya is renowned for its classic savanna safaris, deserts, dramatic mountain ranges, cultures and beautiful beaches.',
+                'image_url' => $imageFiles[12], // Use image13.jpg for Kenya
+            ],
+        ];
+        
+        // Insert destinations using firstOrCreate
+        foreach ($destinations as $destination) {
+            Destination::firstOrCreate(
+                ['name' => $destination['name']],
+                $destination
+            );
+        }
+    }
+}
+
+=== File: factories/UserFactory.php ===
+
+<?php
+
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ */
+class UserFactory extends Factory
+{
+    /**
+     * The current password being used by the factory.
+     */
+    protected static ?string $password;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'email_verified_at' => now(),
+            'password' => static::$password ??= Hash::make('password'),
+            'remember_token' => Str::random(10),
+        ];
+    }
+
+    /**
+     * Indicate that the model's email address should be unverified.
+     */
+    public function unverified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email_verified_at' => null,
+        ]);
+    }
+}
+
+
+=== File: migrations/2025_04_20_143602_create_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+=== File: migrations/2025_04_20_143628_create_itineraries_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('itineraries', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('day_number');
+            $table->date('date');
+            $table->timestamps();
+
+            // A trip can only have one itinerary per day
+            $table->unique(['trip_id', 'day_number']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('itineraries');
+    }
+};
+
+=== File: migrations/2025_04_20_143636_create_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('itinerary_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location')->nullable();
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('activities');
+    }
+};
+
+=== File: migrations/2025_05_07_121632_create_template_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('template_activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_template_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location');
+            $table->integer('day_number');
+            $table->enum('time_of_day', ['morning', 'afternoon', 'evening'])->default('morning');
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category');
+            $table->string('image_url')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('template_activities');
+    }
+};
+
+=== File: migrations/2025_04_20_143610_create_trips_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trips', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('destination');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->decimal('budget', 10, 2)->nullable();
+            $table->enum('status', ['planning', 'active', 'completed'])->default('planning');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trips');
+    }
+};
+
+=== File: migrations/2025_04_30_120741_fix_password_reset_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+=== File: migrations/2025_04_20_204409_create_sessions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sessions');
+    }
+};
+
+=== File: migrations/2025_04_20_143652_create_wallet_transactions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('wallet_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('wallet_id')->constrained('savings_wallets')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['deposit', 'withdrawal']);
+            $table->decimal('amount', 10, 2);
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('completed');
+            $table->string('payment_method')->nullable();
+            $table->string('transaction_reference')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('wallet_transactions');
+    }
+};
+
+=== File: migrations/0001_01_01_000002_create_jobs_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+
+
+=== File: migrations/2025_04_20_143511_create_password_reset_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('password_reset_tokens');
+    }
+};
+
+=== File: migrations/0001_01_01_000001_create_cache_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration');
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cache');
+        Schema::dropIfExists('cache_locks');
+    }
+};
+
+
+=== File: migrations/2025_04_30_120741_fix_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('personal_access_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('personal_access_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+=== File: migrations/2025_04_20_143710_create_notifications_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('type');
+            $table->string('title');
+            $table->text('message');
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('notifications');
+    }
+};
+
+=== File: migrations/2025_04_20_143644_create_savings_wallets_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('savings_wallets', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->string('name');
+            $table->decimal('target_amount', 10, 2);
+            $table->decimal('current_amount', 10, 2)->default(0);
+            $table->date('target_date')->nullable();
+            $table->enum('contribution_frequency', ['weekly', 'monthly'])->default('weekly');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('savings_wallets');
+    }
+};
+
+=== File: migrations/bundled_code.txt ===
+
+
+
+=== File: 2025_04_20_143602_create_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+=== File: 2025_04_20_143628_create_itineraries_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('itineraries', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('day_number');
+            $table->date('date');
+            $table->timestamps();
+
+            // A trip can only have one itinerary per day
+            $table->unique(['trip_id', 'day_number']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('itineraries');
+    }
+};
+
+=== File: 2025_04_20_143636_create_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('itinerary_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location')->nullable();
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('activities');
+    }
+};
+
+=== File: 2025_05_07_121632_create_template_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('template_activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_template_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location');
+            $table->integer('day_number');
+            $table->enum('time_of_day', ['morning', 'afternoon', 'evening'])->default('morning');
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category');
+            $table->string('image_url')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('template_activities');
+    }
+};
+
+=== File: 2025_04_20_143610_create_trips_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trips', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('destination');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->decimal('budget', 10, 2)->nullable();
+            $table->enum('status', ['planning', 'active', 'completed'])->default('planning');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trips');
+    }
+};
+
+=== File: 2025_04_30_120741_fix_password_reset_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+=== File: 2025_04_20_204409_create_sessions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sessions');
+    }
+};
+
+=== File: 2025_04_20_143652_create_wallet_transactions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('wallet_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('wallet_id')->constrained('savings_wallets')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['deposit', 'withdrawal']);
+            $table->decimal('amount', 10, 2);
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('completed');
+            $table->string('payment_method')->nullable();
+            $table->string('transaction_reference')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('wallet_transactions');
+    }
+};
+
+=== File: 0001_01_01_000002_create_jobs_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+
+
+=== File: 2025_04_20_143511_create_password_reset_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('password_reset_tokens');
+    }
+};
+
+=== File: 0001_01_01_000001_create_cache_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration');
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('cache');
+        Schema::dropIfExists('cache_locks');
+    }
+};
+
+
+=== File: 2025_04_30_120741_fix_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('personal_access_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('personal_access_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+=== File: 2025_04_20_143710_create_notifications_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('type');
+            $table->string('title');
+            $table->text('message');
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('notifications');
+    }
+};
+
+=== File: bundle_code.py ===
+
+import os
+
+EXCLUDED_DIRS = {"node_modules", "vendor", "tests", "storage"}
+EXCLUDED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".xml"}
+EXCLUDED_FILES = {"package-lock.json", "composer.lock"}
+OUTPUT_FILE = "bundled_code.txt"
+
+def is_hidden(path):
+    return any(part.startswith('.') for part in path.split(os.sep))
+
+def should_skip_file(filepath, root):
+    filename = os.path.basename(filepath)
+    ext = os.path.splitext(filename)[1].lower()
+
+    # Skip hidden files
+    if is_hidden(os.path.relpath(filepath)):
+        return True
+
+    # Skip excluded files and extensions
+    if ext in EXCLUDED_EXTENSIONS or filename in EXCLUDED_FILES:
+        return True
+
+    # Skip files in excluded dirs
+    for part in os.path.relpath(root).split(os.sep):
+        if part in EXCLUDED_DIRS:
+            return True
+
+    # Skip empty files
+    if os.path.getsize(filepath) == 0:
+        return True
+
+    return False
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as output:
+    for root, dirs, files in os.walk("."):
+        # Skip hidden directories
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in EXCLUDED_DIRS]
+
+        for file in files:
+            filepath = os.path.join(root, file)
+            if should_skip_file(filepath, root):
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    output.write(f"\n\n=== File: {os.path.relpath(filepath)} ===\n\n")
+                    output.write(f.read())
+            except Exception as e:
+                print(f"Skipped {filepath} due to error: {e}")
+
+
+=== File: 2025_04_20_143644_create_savings_wallets_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('savings_wallets', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->string('name');
+            $table->decimal('target_amount', 10, 2);
+            $table->decimal('current_amount', 10, 2)->default(0);
+            $table->date('target_date')->nullable();
+            $table->enum('contribution_frequency', ['weekly', 'monthly'])->default('weekly');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('savings_wallets');
+    }
+};
+
+=== File: bundled_code.txt ===
+
+
+
+=== File: 2025_04_20_143602_create_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+=== File: 2025_04_20_143628_create_itineraries_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('itineraries', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('day_number');
+            $table->date('date');
+            $table->timestamps();
+
+            // A trip can only have one itinerary per day
+            $table->unique(['trip_id', 'day_number']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('itineraries');
+    }
+};
+
+=== File: 2025_04_20_143636_create_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('itinerary_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location')->nullable();
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('activities');
+    }
+};
+
+=== File: 2025_05_07_121632_create_template_activities_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('template_activities', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_template_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('location');
+            $table->integer('day_number');
+            $table->enum('time_of_day', ['morning', 'afternoon', 'evening'])->default('morning');
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category');
+            $table->string('image_url')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('template_activities');
+    }
+};
+
+=== File: 2025_04_20_143610_create_trips_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trips', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('destination');
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->decimal('budget', 10, 2)->nullable();
+            $table->enum('status', ['planning', 'active', 'completed'])->default('planning');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trips');
+    }
+};
+
+=== File: 2025_04_30_120741_fix_password_reset_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('password_reset_tokens', function (Blueprint $table) {
+            //
+        });
+    }
+};
+
+
+=== File: 2025_04_20_204409_create_sessions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('sessions');
+    }
+};
+
+=== File: 2025_04_20_143652_create_wallet_transactions_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('wallet_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('wallet_id')->constrained('savings_wallets')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['deposit', 'withdrawal']);
+            $table->decimal('amount', 10, 2);
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('completed');
+            $table->string('payment_method')->nullable();
+            $table->string('transaction_reference')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('wallet_transactions');
+    }
+};
+
+=== File: 0001_01_01_000002_create_jobs_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('queue')->index();
+            $table->longText('payload');
+            $table->unsignedTinyInteger('attempts');
+            $table->unsignedInteger('reserved_at')->nullable();
+            $table->unsignedInteger('available_at');
+            $table->unsignedInteger('created_at');
+        });
+
+        Schema::create('job_batches', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('name');
+            $table->integer('total_jobs');
+            $table->integer('pending_jobs');
+            $table->integer('failed_jobs');
+            $table->longText('failed_job_ids');
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
+        });
+
+        Schema::create('failed_jobs', function (Blueprint $table) {
+            $table->id();
+            $table->string('uuid')->unique();
+            $table->text('connection');
+            $table->text('queue');
+            $table->longText('payload');
+            $table->longText('exception');
+            $table->timestamp('failed_at')->useCurrent();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('jobs');
+        Schema::dropIfExists('job_batches');
+        Schema::dropIfExists('failed_jobs');
+    }
+};
+
+
+=== File: 2025_04_20_143619_create_trip_members_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trip_members', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            $table->enum('role', ['organizer', 'member'])->default('member');
+            $table->enum('invitation_status', ['pending', 'accepted', 'declined'])->default('pending');
+            $table->string('invitation_email')->nullable();
+            $table->timestamps();
+
+            // One user can only be added once to a trip
+            $table->unique(['trip_id', 'user_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trip_members');
+    }
+};
+
+=== File: 2025_05_07_121545_create_trip_templates_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trip_templates', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('destination_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('duration_days');
+            $table->decimal('base_price', 10, 2);
+            $table->string('difficulty_level')->default('moderate'); // easy, moderate, adventurous
+            $table->string('trip_style')->default('general'); // cultural, adventure, relaxation, etc.
+            $table->boolean('is_featured')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trip_templates');
+    }
+};
+
+=== File: 0001_01_01_000000_create_users_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('phone_number')->nullable();
+            $table->string('profile_photo')->nullable();
+            $table->enum('role', ['user', 'admin'])->default('user');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
+};
+
+=== File: 2025_05_07_125857_create_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+
+=== File: 2025_05_07_121653_update_trips_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->foreignId('trip_template_id')->nullable()->after('creator_id')->constrained()->nullOnDelete();
+            $table->enum('planning_type', ['self_planned', 'pre_planned'])->default('self_planned')->after('trip_template_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->dropForeign(['trip_template_id']);
+            $table->dropColumn(['trip_template_id', 'planning_type']);
+        });
+    }
+};
+
+=== File: 2025_05_06_115022_create_destinations_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up()
+{
+    Schema::create('destinations', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('country')->nullable();
+        $table->string('city')->nullable();
+        $table->text('description')->nullable();
+        $table->string('image_url')->nullable();
+        $table->timestamps();
+    });
+}
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('destinations');
+    }
+};
+
+
+=== File: migrations/2025_04_20_143619_create_trip_members_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trip_members', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            $table->enum('role', ['organizer', 'member'])->default('member');
+            $table->enum('invitation_status', ['pending', 'accepted', 'declined'])->default('pending');
+            $table->string('invitation_email')->nullable();
+            $table->timestamps();
+
+            // One user can only be added once to a trip
+            $table->unique(['trip_id', 'user_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trip_members');
+    }
+};
+
+=== File: migrations/2025_05_07_121545_create_trip_templates_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trip_templates', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('destination_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->integer('duration_days');
+            $table->decimal('base_price', 10, 2);
+            $table->string('difficulty_level')->default('moderate'); // easy, moderate, adventurous
+            $table->string('trip_style')->default('general'); // cultural, adventure, relaxation, etc.
+            $table->boolean('is_featured')->default(false);
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trip_templates');
+    }
+};
+
+=== File: migrations/0001_01_01_000000_create_users_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('auth_provider')->nullable();
+            $table->string('auth_provider_id')->nullable();
+            $table->string('phone_number')->nullable();
+            $table->string('profile_photo')->nullable();
+            $table->enum('role', ['user', 'admin'])->default('user');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
+};
+
+=== File: migrations/2025_05_07_125857_create_personal_access_tokens_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('personal_access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('personal_access_tokens');
+    }
+};
+
+
+=== File: migrations/2025_05_07_121653_update_trips_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->foreignId('trip_template_id')->nullable()->after('creator_id')->constrained()->nullOnDelete();
+            $table->enum('planning_type', ['self_planned', 'pre_planned'])->default('self_planned')->after('trip_template_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->dropForeign(['trip_template_id']);
+            $table->dropColumn(['trip_template_id', 'planning_type']);
+        });
+    }
+};
+
+=== File: migrations/2025_05_06_115022_create_destinations_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up()
+{
+    Schema::create('destinations', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->string('country')->nullable();
+        $table->string('city')->nullable();
+        $table->text('description')->nullable();
+        $table->string('image_url')->nullable();
+        $table->timestamps();
+    });
+}
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('destinations');
+    }
+};

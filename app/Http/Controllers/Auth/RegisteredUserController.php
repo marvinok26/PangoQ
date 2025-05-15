@@ -51,13 +51,13 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Let's automatically log in the user after registration
-        Auth::login($user);
-
-        // Add a success message
-        session()->flash('success', 'Registration successful! Welcome to PangoQ.');
+        // Remove automatic login after registration
+        // Auth::login($user); <-- Comment out or remove this line
         
-        // Direct to dashboard
-        return redirect()->intended(route('dashboard'));
+        // Add a success message
+        session()->flash('success', 'Registration successful! Please login to access your account.');
+        
+        // Redirect to login instead of dashboard
+        return redirect()->route('login');
     }
 }

@@ -1,0 +1,1159 @@
+
+
+=== File: WalletTransaction.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class WalletTransaction extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'wallet_id',
+        'user_id',
+        'type',
+        'amount',
+        'status',
+        'payment_method',
+        'transaction_reference',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+    ];
+
+    public function wallet(): BelongsTo
+    {
+        return $this->belongsTo(SavingsWallet::class, 'wallet_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function isDeposit(): bool
+    {
+        return $this->type === 'deposit';
+    }
+
+    public function isWithdrawal(): bool
+    {
+        return $this->type === 'withdrawal';
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
+}
+
+=== File: SavingsWallet.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
+
+class SavingsWallet extends Model
+{
+    use HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
+
+    protected $fillable = [
+        'trip_id',
+        'name',
+        'target_amount',
+        'current_amount',
+        'target_date',
+        'contribution_frequency',
+    ];
+
+    protected $casts = [
+        'target_amount' => 'decimal:2',
+        'current_amount' => 'decimal:2',
+        'target_date' => 'date',
+    ];
+
+    public function trip(): BelongsTo
+    {
+        return $this->belongsTo(Trip::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class, 'wallet_id');
+    }
+
+    public function getProgressPercentageAttribute(): float
+    {
+        if ($this->target_amount <= 0) {
+            return 0;
+        }
+
+        $percentage = ($this->current_amount / $this->target_amount) * 100;
+        return min(100, round($percentage, 2));
+    }
+
+    public function getRemainingAmountAttribute(): float
+    {
+        return max(0, $this->target_amount - $this->current_amount);
+    }
+}
+
+=== File: TripMember.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TripMember extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'trip_id',
+        'user_id',
+        'role',
+        'invitation_status',
+        'invitation_email'
+    ];
+    
+    // A trip member belongs to a trip
+    public function trip()
+    {
+        return $this->belongsTo(Trip::class);
+    }
+    
+    // A trip member belongs to a user
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    
+    // Scope for pending invitations
+    public function scopePending($query)
+    {
+        return $query->where('invitation_status', 'pending');
+    }
+    
+    // Scope for accepted invitations
+    public function scopeAccepted($query)
+    {
+        return $query->where('invitation_status', 'accepted');
+    }
+    
+    // Scope for declined invitations
+    public function scopeDeclined($query)
+    {
+        return $query->where('invitation_status', 'declined');
+    }
+}
+
+=== File: Activity.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Activity extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'itinerary_id',
+        'title',
+        'description',
+        'location',
+        'start_time',
+        'end_time',
+        'cost',
+        'type',
+        'created_by',
+    ];
+    
+    protected $casts = [
+        'cost' => 'decimal:2',
+    ];
+    
+    /**
+     * Get the itinerary that owns the activity.
+     */
+    public function itinerary(): BelongsTo
+    {
+        return $this->belongsTo(Itinerary::class);
+    }
+    
+    /**
+     * Get the user who created the activity.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    
+    /**
+     * Get the formatted time range.
+     */
+    public function getFormattedTimeRangeAttribute(): string
+    {
+        return date('g:i A', strtotime($this->start_time)) . ' - ' . date('g:i A', strtotime($this->end_time));
+    }
+    
+    /**
+     * Get the formatted cost.
+     */
+    public function getFormattedCostAttribute(): string
+    {
+        if ($this->cost === null) {
+            return 'Free';
+        }
+        
+        return '$' . number_format($this->cost, 2);
+    }
+    
+    /**
+     * Get the time of day category.
+     */
+    public function getTimeOfDayAttribute(): string
+    {
+        $hour = (int) date('H', strtotime($this->start_time));
+        
+        if ($hour < 12) {
+            return 'morning';
+        } elseif ($hour < 17) {
+            return 'afternoon';
+        } else {
+            return 'evening';
+        }
+    }
+    
+    /**
+     * Get the time of day icon.
+     */
+    public function getTimeOfDayIconAttribute(): string
+    {
+        return match($this->time_of_day) {
+            'morning' => 'coffee',
+            'afternoon' => 'umbrella',
+            'evening' => 'moon',
+            default => 'clock',
+        };
+    }
+    
+    /**
+     * Get the time of day color.
+     */
+    public function getTimeOfDayColorAttribute(): string
+    {
+        return match($this->time_of_day) {
+            'morning' => 'yellow',
+            'afternoon' => 'orange',
+            'evening' => 'indigo',
+            default => 'gray',
+        };
+    }
+}
+
+=== File: Trip.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Trip extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'creator_id',
+        'trip_template_id',
+        'planning_type',
+        'title',
+        'description',
+        'destination',
+        'start_date',
+        'end_date',
+        'budget',
+        'status'
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'budget' => 'decimal:2',
+    ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function members()
+    {
+        return $this->hasMany(TripMember::class);
+    }
+
+    public function itineraries()
+    {
+        return $this->hasMany(Itinerary::class);
+    }
+
+    public function savingsWallet()
+    {
+        return $this->hasOne(SavingsWallet::class);
+    }
+    
+    public function tripTemplate()
+    {
+        return $this->belongsTo(TripTemplate::class);
+    }
+    
+    // Helper method to create itineraries from a trip template
+    public function createItinerariesFromTemplate()
+    {
+        if (!$this->tripTemplate) {
+            return false;
+        }
+        
+        // Get the trip template
+        $template = $this->tripTemplate;
+        
+        // Clear any existing itineraries for this trip
+        $this->itineraries()->delete();
+        
+        // Create an itinerary for each day in the template
+        for ($day = 1; $day <= $template->duration_days; $day++) {
+            $date = clone $this->start_date;
+            $date->addDays($day - 1);
+            
+            // Create the itinerary for this day
+            $itinerary = $this->itineraries()->create([
+                'title' => "Day $day: " . $this->destination,
+                'description' => "Itinerary for day $day in " . $this->destination,
+                'day_number' => $day,
+                'date' => $date,
+            ]);
+            
+            // Get template activities for this day
+            $activities = $template->getDayActivities($day);
+            
+            // Create activities for this itinerary
+            foreach ($activities as $templateActivity) {
+                $itinerary->activities()->create($templateActivity->toActivity($itinerary->id));
+            }
+        }
+        
+        return true;
+    }
+}
+
+=== File: TripTemplate.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TripTemplate extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'destination_id',
+        'title',
+        'description',
+        'duration_days',
+        'base_price',
+        'difficulty_level',
+        'trip_style',
+        'is_featured'
+    ];
+
+    public function destination()
+    {
+        return $this->belongsTo(Destination::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(TemplateActivity::class);
+    }
+
+    public function trips()
+    {
+        return $this->hasMany(Trip::class);
+    }
+    
+    // Get all activities for a specific day
+    public function getDayActivities($day)
+    {
+        return $this->activities()->where('day_number', $day)->orderBy('start_time')->get();
+    }
+    
+    // Calculate total cost of all activities
+    public function getTotalActivitiesCost()
+    {
+        return $this->activities()->sum('cost');
+    }
+    
+    // Get a summary of trip details for display
+    public function getSummary()
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'destination' => $this->destination->name,
+            'duration' => $this->duration_days,
+            'price' => $this->base_price,
+            'difficulty' => $this->difficulty_level,
+            'style' => $this->trip_style,
+            'activities_count' => $this->activities->count(),
+        ];
+    }
+}
+
+=== File: Notification.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
+
+class Notification extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'user_id',
+        'type',
+        'title',
+        'message',
+        'read_at',
+    ];
+    
+    protected $casts = [
+        'read_at' => 'datetime',
+    ];
+    
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+    
+    public function isRead(): bool
+    {
+        return $this->read_at !== null;
+    }
+    
+    public function markAsRead(): void
+    {
+        $this->update(['read_at' => Carbon::now()]);
+    }
+}
+
+=== File: User.php ===
+
+<?php
+
+namespace App\Models;
+
+use App\Traits\HasSavings;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable implements MustVerifyEmail
+{
+    use HasApiTokens, HasFactory, Notifiable, HasSavings;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'auth_provider',
+        'auth_provider_id',
+        'profile_photo_path',
+        'language',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
+
+    /**
+     * The trips that this user has created.
+     */
+    public function createdTrips(): HasMany
+    {
+        return $this->hasMany(Trip::class, 'creator_id');
+    }
+
+    /**
+     * The trip memberships of this user.
+     */
+    public function tripMemberships(): HasMany
+    {
+        return $this->hasMany(TripMember::class);
+    }
+
+    /**
+     * The trips that this user is a member of.
+     */
+    public function trips(): BelongsToMany
+    {
+        return $this->belongsToMany(Trip::class, 'trip_members')
+            ->withPivot('role', 'invitation_status')
+            ->wherePivot('invitation_status', 'accepted')
+            ->withTimestamps();
+    }
+
+    /**
+     * All the wallet transactions made by this user.
+     */
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
+    }
+
+/**
+ * Get the user's profile photo URL.
+ *
+ * @return string
+ */
+public function getPhotoUrlAttribute(): string
+{
+    // If profile_photo_path is a complete URL (social media avatar)
+    if ($this->profile_photo_path && filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)) {
+        return $this->profile_photo_path;
+    }
+    
+    // If it's a local path
+    if ($this->profile_photo_path) {
+        // Simple approach that assumes files are in public/storage
+        return url('storage/' . $this->profile_photo_path);
+    }
+    
+    // Fallback to Gravatar
+    $hash = md5(strtolower(trim($this->email)));
+    return "https://www.gravatar.com/avatar/{$hash}?d=mp&s=200";
+}
+
+    /**
+     * Get the user's initials (for avatar fallback).
+     */
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', $this->name);
+
+        if (count($parts) >= 2) {
+            return mb_substr($parts[0], 0, 1) . mb_substr(end($parts), 0, 1);
+        }
+
+        return mb_substr($this->name, 0, 2);
+    }
+}
+
+
+=== File: Destination.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Destination extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'country',
+        'city',
+        'description',
+        'image_url',
+    ];
+
+    /**
+     * Get the trip templates for the destination.
+     */
+    public function tripTemplates()
+    {
+        return $this->hasMany(TripTemplate::class);
+    }
+}
+
+=== File: bundled_code.txt ===
+
+
+
+=== File: WalletTransaction.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class WalletTransaction extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'wallet_id',
+        'user_id',
+        'type',
+        'amount',
+        'status',
+        'payment_method',
+        'transaction_reference',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+    ];
+
+    public function wallet(): BelongsTo
+    {
+        return $this->belongsTo(SavingsWallet::class, 'wallet_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function isDeposit(): bool
+    {
+        return $this->type === 'deposit';
+    }
+
+    public function isWithdrawal(): bool
+    {
+        return $this->type === 'withdrawal';
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
+}
+
+=== File: SavingsWallet.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
+
+class SavingsWallet extends Model
+{
+    use HasFactory, HasTranslations;
+
+    public array $translatable = ['name'];
+
+    protected $fillable = [
+        'trip_id',
+        'name',
+        'target_amount',
+        'current_amount',
+        'target_date',
+        'contribution_frequency',
+    ];
+
+    protected $casts = [
+        'target_amount' => 'decimal:2',
+        'current_amount' => 'decimal:2',
+        'target_date' => 'date',
+    ];
+
+    public function trip(): BelongsTo
+    {
+        return $this->belongsTo(Trip::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class, 'wallet_id');
+    }
+
+    public function getProgressPercentageAttribute(): float
+    {
+        if ($this->target_amount <= 0) {
+            return 0;
+        }
+
+        $percentage = ($this->current_amount / $this->target_amount) * 100;
+        return min(100, round($percentage, 2));
+    }
+
+    public function getRemainingAmountAttribute(): float
+    {
+        return max(0, $this->target_amount - $this->current_amount);
+    }
+}
+
+=== File: TripMember.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TripMember extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'trip_id',
+        'user_id',
+        'role',
+        'invitation_status',
+        'invitation_email'
+    ];
+    
+    // A trip member belongs to a trip
+    public function trip()
+    {
+        return $this->belongsTo(Trip::class);
+    }
+    
+    // A trip member belongs to a user
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    
+    // Scope for pending invitations
+    public function scopePending($query)
+    {
+        return $query->where('invitation_status', 'pending');
+    }
+    
+    // Scope for accepted invitations
+    public function scopeAccepted($query)
+    {
+        return $query->where('invitation_status', 'accepted');
+    }
+    
+    // Scope for declined invitations
+    public function scopeDeclined($query)
+    {
+        return $query->where('invitation_status', 'declined');
+    }
+}
+
+=== File: Activity.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Activity extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'itinerary_id',
+        'title',
+        'description',
+        'location',
+        'start_time',
+        'end_time',
+        'cost',
+        'type',
+        'created_by',
+    ];
+    
+    protected $casts = [
+        'cost' => 'decimal:2',
+    ];
+    
+    /**
+     * Get the itinerary that owns the activity.
+     */
+    public function itinerary(): BelongsTo
+    {
+        return $this->belongsTo(Itinerary::class);
+    }
+    
+    /**
+     * Get the user who created the activity.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+    
+    /**
+     * Get the formatted time range.
+     */
+    public function getFormattedTimeRangeAttribute(): string
+    {
+        return date('g:i A', strtotime($this->start_time)) . ' - ' . date('g:i A', strtotime($this->end_time));
+    }
+    
+    /**
+     * Get the formatted cost.
+     */
+    public function getFormattedCostAttribute(): string
+    {
+        if ($this->cost === null) {
+            return 'Free';
+        }
+        
+        return '$' . number_format($this->cost, 2);
+    }
+    
+    /**
+     * Get the time of day category.
+     */
+    public function getTimeOfDayAttribute(): string
+    {
+        $hour = (int) date('H', strtotime($this->start_time));
+        
+        if ($hour < 12) {
+            return 'morning';
+        } elseif ($hour < 17) {
+            return 'afternoon';
+        } else {
+            return 'evening';
+        }
+    }
+    
+    /**
+     * Get the time of day icon.
+     */
+    public function getTimeOfDayIconAttribute(): string
+    {
+        return match($this->time_of_day) {
+            'morning' => 'coffee',
+            'afternoon' => 'umbrella',
+            'evening' => 'moon',
+            default => 'clock',
+        };
+    }
+    
+    /**
+     * Get the time of day color.
+     */
+    public function getTimeOfDayColorAttribute(): string
+    {
+        return match($this->time_of_day) {
+            'morning' => 'yellow',
+            'afternoon' => 'orange',
+            'evening' => 'indigo',
+            default => 'gray',
+        };
+    }
+}
+
+=== File: Trip.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Trip extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'creator_id',
+        'trip_template_id',
+        'planning_type',
+        'title',
+        'description',
+        'destination',
+        'start_date',
+        'end_date',
+        'budget',
+        'status'
+    ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'budget' => 'decimal:2',
+    ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function members()
+    {
+        return $this->hasMany(TripMember::class);
+    }
+
+    public function itineraries()
+    {
+        return $this->hasMany(Itinerary::class);
+    }
+
+    public function savingsWallet()
+    {
+        return $this->hasOne(SavingsWallet::class);
+    }
+    
+    public function tripTemplate()
+    {
+        return $this->belongsTo(TripTemplate::class);
+    }
+    
+    // Helper method to create itineraries from a trip template
+    public function createItinerariesFromTemplate()
+    {
+        if (!$this->tripTemplate) {
+            return false;
+        }
+        
+        // Get the trip template
+        $template = $this->tripTemplate;
+        
+        // Clear any existing itineraries for this trip
+        $this->itineraries()->delete();
+        
+        // Create an itinerary for each day in the template
+        for ($day = 1; $day <= $template->duration_days; $day++) {
+            $date = clone $this->start_date;
+            $date->addDays($day - 1);
+            
+            // Create the itinerary for this day
+            $itinerary = $this->itineraries()->create([
+                'title' => "Day $day: " . $this->destination,
+                'description' => "Itinerary for day $day in " . $this->destination,
+                'day_number' => $day,
+                'date' => $date,
+            ]);
+            
+            // Get template activities for this day
+            $activities = $template->getDayActivities($day);
+            
+            // Create activities for this itinerary
+            foreach ($activities as $templateActivity) {
+                $itinerary->activities()->create($templateActivity->toActivity($itinerary->id));
+            }
+        }
+        
+        return true;
+    }
+}
+
+=== File: TemplateActivity.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class TemplateActivity extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'trip_template_id',
+        'title',
+        'description',
+        'location',
+        'day_number',
+        'time_of_day',
+        'start_time',
+        'end_time',
+        'cost',
+        'category',
+        'image_url'
+    ];
+
+    public function tripTemplate()
+    {
+        return $this->belongsTo(TripTemplate::class);
+    }
+    
+    // Convert template activity to regular activity
+    public function toActivity($itinerary_id)
+    {
+        return [
+            'itinerary_id' => $itinerary_id,
+            'title' => $this->title,
+            'description' => $this->description,
+            'location' => $this->location,
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+            'cost' => $this->cost,
+            'category' => $this->category,
+            
+        ];
+    }
+}
+
+=== File: Itinerary.php ===
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Itinerary extends Model
+{
+    use HasFactory;
+    
+    protected $fillable = [
+        'trip_id',
+        'title',
+        'description',
+        'day_number',
+        'date',
+    ];
+    
+    protected $casts = [
+        'date' => 'date',
+    ];
+    
+    /**
+     * Get the trip that owns the itinerary.
+     */
+    public function trip(): BelongsTo
+    {
+        return $this->belongsTo(Trip::class);
+    }
+    
+    /**
+     * Get the activities for the itinerary.
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class)->orderBy('start_time');
+    }
+    
+    /**
+     * Get the number of activities in this itinerary.
+     */
+    public function getActivityCountAttribute(): int
+    {
+        return $this->activities()->count();
+    }
+    
+    /**
+     * Get the activities for the itinerary grouped by time of day.
+     */
+    public function activitiesByTimeOfDay(): array
+    {
+        $activities = $this->activities()->get();
+        $groupedActivities = [
+            'morning' => [],
+            'afternoon' => [],
+            'evening' => [],
+        ];
+        
+        foreach ($activities as $activity) {
+            $hour = (int) date('H', strtotime($activity->start_time));
+            
+            if ($hour < 12) {
+                $groupedActivities['morning'][] = $activity;
+            } elseif ($hour < 17) {
+                $groupedActivities['afternoon'][] = $activity;
+            } else {
+                $groupedActivities['evening'][] = $activity;
+            }
+        }
+        
+        return $groupedActivities;
+    }
+    
+    /**
+     * Get the date formatted nicely.
+     */
+    public function getFormattedDateAttribute(): string
+    {
+        return $this->date->format('M d, Y');
+    }
+    
+    /**
+     * Get the short date.
+     */
+    public function getShortDateAttribute(): string
+    {
+        return $this->date->format('M d');
+    }
+}
