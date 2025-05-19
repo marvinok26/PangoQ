@@ -2,129 +2,192 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\SavingsWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
     /**
-     * Show the form for editing the profile.
+     * Display the user's profile dashboard.
+     *
+     * @return \Illuminate\View\View
      */
-    public function edit(): View
+    public function show()
     {
         $user = Auth::user();
-        return view('livewire.pages.profile.edit', compact('user'));
+        $totalBalance = $user->total_savings ?? 0;
+        $totalTarget = $user->total_savings_goal ?? 0;
+        $progressPercentage = $user->savings_progress_percentage ?? 0;
+
+        // Get the user's trips with their savings wallets
+        $trips = $user->trips()->with('savingsWallet')->latest()->take(3)->get();
+
+        return view('livewire.pages.profile.show', compact('user', 'totalBalance', 'totalTarget', 'progressPercentage', 'trips'));
     }
 
     /**
-     * Update the user's profile.
+     * Show the form for editing the user's profile.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function edit()
+    {
+        return view('livewire.pages.profile.edit', [
+            'user' => Auth::user(),
+        ]);
+    }
+
+    /**
+     * Update the user's profile information.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request)
     {
         $user = Auth::user();
-        
-        // Validate request
+
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'phone_number' => 'nullable|string|max:20',
-            'profile_photo' => 'nullable|image|max:1024',
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'phone_number' => ['nullable', 'string', 'max:20'],
+            'id_card_number' => ['nullable', 'string', 'max:50'],
+            'passport_number' => ['nullable', 'string', 'max:50'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
+            'nationality' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'profile_photo' => ['nullable', 'image', 'max:1024'],
         ]);
-        
-        // Handle profile photo upload
+
         if ($request->hasFile('profile_photo')) {
+            // Delete old photo if exists
+            if ($user->profile_photo && !filter_var($user->profile_photo, FILTER_VALIDATE_URL)) {
+                Storage::delete('public/' . $user->profile_photo);
+            }
+
             $path = $request->file('profile_photo')->store('profile-photos', 'public');
             $validated['profile_photo'] = $path;
         }
-        
-        // Update user
+
         $user->update($validated);
-        
-        return redirect()->route('profile.edit')
-            ->with('success', 'Profile updated successfully!');
+
+        return redirect()->route('profile.edit')->with('success', 'Profile updated successfully.');
     }
 
     /**
-     * Show security settings page.
+     * Show the security settings page.
+     *
+     * @return \Illuminate\View\View
      */
-    public function security(): View
+    public function security()
     {
         return view('livewire.pages.profile.security');
     }
 
     /**
      * Update the user's password.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updatePassword(Request $request)
     {
-        $user = Auth::user();
-        
-        // Validate request
         $validated = $request->validate([
-            'current_password' => 'required|current_password',
-            'password' => 'required|string|min:8|confirmed',
+            'current_password' => ['required', 'string', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
-        
-        // Update password
-        $user->update([
+
+        Auth::user()->update([
             'password' => Hash::make($validated['password']),
         ]);
-        
-        return redirect()->route('profile.security')
-            ->with('success', 'Password updated successfully!');
+
+        return redirect()->route('profile.security')->with('success', 'Password updated successfully.');
     }
 
     /**
-     * Show notifications settings page.
+     * Show the notifications settings page.
+     *
+     * @return \Illuminate\View\View
      */
-    public function notifications(): View
+    public function notifications()
     {
         return view('livewire.pages.profile.notifications');
     }
 
     /**
      * Update notification preferences.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function updateNotifications(Request $request)
     {
-        $user = Auth::user();
-        
-        // Validate request
-        $validated = $request->validate([
-            'email_notifications' => 'nullable|boolean',
-            'trip_updates' => 'nullable|boolean',
-            'payment_notifications' => 'nullable|boolean',
-            'marketing_emails' => 'nullable|boolean',
-        ]);
-        
-        // TODO: Update user notification preferences based on your database structure
-        
-        return redirect()->route('profile.notifications')
-            ->with('success', 'Notification preferences updated successfully!');
+        // Implement notification settings update logic
+        return redirect()->route('profile.notifications')->with('success', 'Notification preferences updated.');
     }
 
     /**
-     * Remove the user's account.
+     * Delete the user's account.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Request $request)
     {
         $request->validate([
-            'password' => 'required|current_password',
+            'password' => ['required', 'current_password'],
         ]);
-        
-        $user = Auth::user();
-        
+
+        $user = $request->user();
+
         Auth::logout();
-        
+
         $user->delete();
-        
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/');
+    }
+
+    /**
+     * Show the account settings page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function account()
+    {
+        return view('livewire.pages.profile.account', [
+            'user' => Auth::user(),
+        ]);
+    }
+
+    /**
+     * Update account settings.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateAccount(Request $request)
+    {
+        $validated = $request->validate([
+            'account_type' => ['required', Rule::in(['personal', 'business'])],
+            'currency' => ['required', 'string', 'max:3'],
+            'linked_bank_account' => ['nullable', 'string', 'max:255'],
+            'wallet_provider' => ['nullable', 'string', 'max:255'],
+            'account_status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
+            'preferred_payment_method' => ['required', Rule::in(['wallet', 'bank_transfer', 'credit_card', 'm_pesa'])],
+            'daily_transaction_limit' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        Auth::user()->update($validated);
+
+        return redirect()->route('profile.account')->with('success', 'Account settings updated successfully.');
     }
 }

@@ -21,6 +21,7 @@ class SavingsWallet extends Model
         'current_amount',
         'target_date',
         'contribution_frequency',
+        'currency',
     ];
 
     protected $casts = [
@@ -32,6 +33,11 @@ class SavingsWallet extends Model
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
+    }
+    
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function transactions(): HasMany
