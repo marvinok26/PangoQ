@@ -5,16 +5,16 @@ namespace App\Livewire\Trips;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CreateTrip extends Component
 {
-    public $currentStep = 0; // Start at step 0 for trip type selection
+    public $currentStep = 0;
     public $totalSteps = 5;
     public $showNavButtons = false;
     public $tripType = null;
     public $tripTemplateId = null;
 
-    // Use specific events for each step transition
     protected $listeners = [
         'tripTypeSelected' => 'selectTripType',
         'tripTemplateSelected' => 'selectTripTemplate',
@@ -44,9 +44,6 @@ class CreateTrip extends Component
 
     public function render()
     {
-        // Debug info
-        session(['debug_info' => "Current step: {$this->currentStep}, Trip type: {$this->tripType}"]);
-
         return view('livewire.trips.create-trip');
     }
 
@@ -155,35 +152,58 @@ class CreateTrip extends Component
         }
     }
 
-    /**
+       /**
      * Handle the create trip button click
      * Saves trip data to session and redirects to login
      */
     public function createTrip()
-{
-    // Mark session data as "new" so it will be saved after login
-    session(['trip_data_not_saved' => true]);
-    
-    // Add a flash message for the login/register page
-    session()->flash('message', 'Please login or create an account to save your trip plans.');
-    
-    // Check if user is authenticated
-    if (auth()->check()) {
-        // User is already logged in, save trip directly
-        return redirect()->route('trips.index');
-    } else {
-        // User is not logged in, redirect to login
-        return redirect()->route('login');
+    {
+        // Mark session data as "new" so it will be saved after login
+        session(['trip_data_not_saved' => true]);
+
+        // Ensure total cost and budget are properly set in session
+        $tripDetails = session('trip_details', []);
+        $totalPrice = session('trip_total_price', 0);
+
+        // Make sure we have a total cost value
+        if (!isset($tripDetails['total_cost'])) {
+            if ($totalPrice > 0) {
+                $tripDetails['total_cost'] = $totalPrice;
+            } elseif (isset($tripDetails['budget'])) {
+                $tripDetails['total_cost'] = $tripDetails['budget'];
+            } else {
+                $tripDetails['total_cost'] = 0;
+            }
+
+            // Make sure budget is at least equal to total cost
+            if (!isset($tripDetails['budget']) || $tripDetails['budget'] < $tripDetails['total_cost']) {
+                $tripDetails['budget'] = $tripDetails['total_cost'];
+            }
+
+            session(['trip_details' => $tripDetails]);
+        }
+
+        // Log session data before redirect
+        Log::info('Trip data before redirect to login', [
+            'trip_data_not_saved' => session('trip_data_not_saved'),
+            'selected_trip_type' => session('selected_trip_type'),
+            'selected_destination' => session('selected_destination'),
+            'trip_details' => session('trip_details'),
+            'selected_optional_activities' => session('selected_optional_activities'),
+            'trip_total_price' => session('trip_total_price'),
+            'session_id' => session()->getId()
+        ]);
+
+        // Add a flash message for the login/register page
+        session()->flash('message', 'Please login or create an account to save your trip plans.');
+
+        // Check if user is authenticated
+        if (Auth::check()) {
+            // User is already logged in, redirect to trips index for middleware to handle
+            return redirect()->route('trips.index');
+        } else {
+            // User is not logged in, redirect to login
+            return redirect()->route('login');
+        }
     }
 }
-
-
-}
-
-Log::info('Trip data before redirect to login', [
-    'trip_data_not_saved' => session('trip_data_not_saved'),
-    'selected_trip_type' => session('selected_trip_type'),
-    'selected_destination' => session('selected_destination'),
-    'trip_details' => session('trip_details'),
-    'session_id' => session()->getId()
-]);

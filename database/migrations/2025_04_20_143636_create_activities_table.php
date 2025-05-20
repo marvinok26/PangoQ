@@ -17,6 +17,11 @@ return new class extends Migration
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
             $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category')->nullable();
+            $table->string('image_url')->nullable();
+            $table->boolean('is_optional')->default(false);
+            $table->boolean('is_highlight')->default(false);
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }

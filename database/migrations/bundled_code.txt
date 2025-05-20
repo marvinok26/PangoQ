@@ -1,5 +1,30 @@
 
 
+=== File: 2025_05_20_053441_add_currency_to_savings_wallets_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->string('currency', 3)->default('USD')->after('contribution_frequency');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->dropColumn('currency');
+        });
+    }
+};
+
 === File: 2025_04_20_143602_create_personal_access_tokens_table.php ===
 
 <?php
@@ -89,6 +114,11 @@ return new class extends Migration
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
             $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category')->nullable();
+            $table->string('image_url')->nullable();
+            $table->boolean('is_optional')->default(false);
+            $table->boolean('is_highlight')->default(false);
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }
@@ -124,6 +154,8 @@ return new class extends Migration
             $table->decimal('cost', 10, 2)->nullable();
             $table->string('category');
             $table->string('image_url')->nullable();
+            $table->boolean('is_highlight')->default(false);
+            $table->boolean('is_optional')->default(false);
             $table->timestamps();
         });
     }
@@ -149,12 +181,15 @@ return new class extends Migration
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
             $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('trip_template_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('planning_type')->default('self_planned');
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('destination');
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('budget', 10, 2)->nullable();
+            $table->decimal('total_cost', 10, 2)->nullable();
             $table->enum('status', ['planning', 'active', 'completed'])->default('planning');
             $table->timestamps();
         });
@@ -260,6 +295,31 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('wallet_transactions');
+    }
+};
+
+=== File: 2025_05_19_131422_add_selected_optional_activities_column.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->json('selected_optional_activities')->nullable()->after('total_cost');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('trips', function (Blueprint $table) {
+            $table->dropColumn('selected_optional_activities');
+        });
     }
 };
 
@@ -471,7 +531,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('trip_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->decimal('target_amount', 10, 2);
+            $table->decimal('minimum_goal', 10, 2);
+            $table->decimal('custom_goal', 10, 2)->nullable();
             $table->decimal('current_amount', 10, 2)->default(0);
             $table->date('target_date')->nullable();
             $table->enum('contribution_frequency', ['weekly', 'monthly'])->default('weekly');
@@ -488,6 +549,31 @@ return new class extends Migration
 === File: bundled_code.txt ===
 
 
+
+=== File: 2025_05_20_053441_add_currency_to_savings_wallets_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->string('currency', 3)->default('USD')->after('contribution_frequency');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->dropColumn('currency');
+        });
+    }
+};
 
 === File: 2025_04_20_143602_create_personal_access_tokens_table.php ===
 
@@ -578,6 +664,11 @@ return new class extends Migration
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
             $table->decimal('cost', 10, 2)->nullable();
+            $table->string('category')->nullable();
+            $table->string('image_url')->nullable();
+            $table->boolean('is_optional')->default(false);
+            $table->boolean('is_highlight')->default(false);
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }
@@ -613,6 +704,8 @@ return new class extends Migration
             $table->decimal('cost', 10, 2)->nullable();
             $table->string('category');
             $table->string('image_url')->nullable();
+            $table->boolean('is_highlight')->default(false);
+            $table->boolean('is_optional')->default(false);
             $table->timestamps();
         });
     }
@@ -638,12 +731,15 @@ return new class extends Migration
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
             $table->foreignId('creator_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('trip_template_id')->nullable()->constrained()->onDelete('set null');
+            $table->string('planning_type')->default('self_planned');
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('destination');
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('budget', 10, 2)->nullable();
+            $table->decimal('total_cost', 10, 2)->nullable();
             $table->enum('status', ['planning', 'active', 'completed'])->default('planning');
             $table->timestamps();
         });
@@ -752,66 +848,64 @@ return new class extends Migration
     }
 };
 
-=== File: 0001_01_01_000002_create_jobs_table.php ===
+=== File: 2025_05_20_053553_modify_name_column_in_savings_wallets_table.php ===
 
 <?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('jobs', function (Blueprint $table) {
-            $table->id();
-            $table->string('queue')->index();
-            $table->longText('payload');
-            $table->unsignedTinyInteger('attempts');
-            $table->unsignedInteger('reserved_at')->nullable();
-            $table->unsignedInteger('available_at');
-            $table->unsignedInteger('created_at');
+        // First, create a backup of the existing names
+        $wallets = DB::table('savings_wallets')->select('id', 'name')->get();
+        $backups = [];
+        
+        foreach ($wallets as $wallet) {
+            $backups[$wallet->id] = $wallet->name;
+        }
+        
+        // Change the column type to JSON
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->json('name')->change();
         });
-
-        Schema::create('job_batches', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('name');
-            $table->integer('total_jobs');
-            $table->integer('pending_jobs');
-            $table->integer('failed_jobs');
-            $table->longText('failed_job_ids');
-            $table->mediumText('options')->nullable();
-            $table->integer('cancelled_at')->nullable();
-            $table->integer('created_at');
-            $table->integer('finished_at')->nullable();
-        });
-
-        Schema::create('failed_jobs', function (Blueprint $table) {
-            $table->id();
-            $table->string('uuid')->unique();
-            $table->text('connection');
-            $table->text('queue');
-            $table->longText('payload');
-            $table->longText('exception');
-            $table->timestamp('failed_at')->useCurrent();
-        });
+        
+        // Restore the names as JSON
+        foreach ($backups as $id => $name) {
+            DB::table('savings_wallets')
+                ->where('id', $id)
+                ->update(['name' => json_encode(['en' => $name])]);
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('jobs');
-        Schema::dropIfExists('job_batches');
-        Schema::dropIfExists('failed_jobs');
+        // First, extract the English names
+        $wallets = DB::table('savings_wallets')->select('id', 'name')->get();
+        $backups = [];
+        
+        foreach ($wallets as $wallet) {
+            $nameData = json_decode($wallet->name, true);
+            $backups[$wallet->id] = $nameData['en'] ?? '';
+        }
+        
+        // Change back to string
+        Schema::table('savings_wallets', function (Blueprint $table) {
+            $table->string('name')->change();
+        });
+        
+        // Restore the string names
+        foreach ($backups as $id => $name) {
+            DB::table('savings_wallets')
+                ->where('id', $id)
+                ->update(['name' => $name]);
+        }
     }
 };
-
 
 === File: 2025_04_20_143619_create_trip_members_table.php ===
 
@@ -845,38 +939,6 @@ return new class extends Migration
     }
 };
 
-=== File: 2025_05_07_121545_create_trip_templates_table.php ===
-
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    public function up(): void
-    {
-        Schema::create('trip_templates', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('destination_id')->constrained()->onDelete('cascade');
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->integer('duration_days');
-            $table->decimal('base_price', 10, 2);
-            $table->string('difficulty_level')->default('moderate'); // easy, moderate, adventurous
-            $table->string('trip_style')->default('general'); // cultural, adventure, relaxation, etc.
-            $table->boolean('is_featured')->default(false);
-            $table->timestamps();
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('trip_templates');
-    }
-};
-
 === File: 0001_01_01_000000_create_users_table.php ===
 
 <?php
@@ -893,15 +955,31 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->string('auth_provider')->nullable();
-            $table->string('auth_provider_id')->nullable();
             $table->string('phone_number')->nullable();
-            $table->string('profile_photo')->nullable();
-            $table->enum('role', ['user', 'admin'])->default('user');
+            $table->string('profile_photo_path')->nullable();
+            $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+
+            $table->string('id_card_number')->nullable();
+            $table->string('passport_number')->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->enum('gender', ['male', 'female', 'other'])->nullable();
+            $table->string('nationality')->nullable();
+            $table->string('address')->nullable();
+
+            $table->string('account_number')->nullable();
+            $table->enum('account_type', ['personal', 'business'])->default('personal');
+            $table->string('currency', 3)->default('USD');
+            $table->string('linked_bank_account')->nullable();
+            $table->string('wallet_provider')->nullable();
+            $table->enum('account_status', ['active', 'inactive', 'pending'])->default('active');
+            $table->enum('preferred_payment_method', ['wallet', 'bank_transfer', 'credit_card', 'm_pesa'])->default('wallet');
+
+            $table->timestamp('email_verified_at')->nullable();
+            
+            $table->string('auth_provider')->nullable();
+            $table->string('auth_provider_id')->nullable();
         });
     }
 
@@ -911,71 +989,7 @@ return new class extends Migration
     }
 };
 
-=== File: 2025_05_07_125857_create_personal_access_tokens_table.php ===
-
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('personal_access_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->morphs('tokenable');
-            $table->string('name');
-            $table->string('token', 64)->unique();
-            $table->text('abilities')->nullable();
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamps();
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('personal_access_tokens');
-    }
-};
-
-
-=== File: 2025_05_07_121653_update_trips_table.php ===
-
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    public function up(): void
-    {
-        Schema::table('trips', function (Blueprint $table) {
-            $table->foreignId('trip_template_id')->nullable()->after('creator_id')->constrained()->nullOnDelete();
-            $table->enum('planning_type', ['self_planned', 'pre_planned'])->default('self_planned')->after('trip_template_id');
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table('trips', function (Blueprint $table) {
-            $table->dropForeign(['trip_template_id']);
-            $table->dropColumn(['trip_template_id', 'planning_type']);
-        });
-    }
-};
-
-=== File: 2025_05_06_115022_create_destinations_table.php ===
+=== File: 2025_04_20_143450_create_destinations_table.php ===
 
 <?php
 
@@ -1007,5 +1021,40 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('destinations');
+    }
+};
+
+
+=== File: 2025_04_20_143500_create_trip_templates_table.php ===
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('trip_templates', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('destination_id')->constrained()->onDelete('cascade');
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->text('highlights')->nullable();
+            $table->integer('duration_days');
+            $table->decimal('base_price', 10, 2);
+            $table->string('difficulty_level')->default('moderate');
+            $table->string('trip_style')->default('general');
+            $table->boolean('is_featured')->default(false);
+            $table->string('featured_image')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('trip_templates');
     }
 };

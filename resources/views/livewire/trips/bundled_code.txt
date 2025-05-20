@@ -737,18 +737,21 @@
     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg mb-6">
         <div class="flex flex-wrap items-center justify-between">
             <div class="flex items-center mb-2 sm:mb-0">
-                <span class="font-medium text-gray-700">{{ $tripTitle ?? 'Summer Getaway 2023' }}</span>
+                <span class="font-medium text-gray-700">{{ $tripTitle ?? 'Summer Getaway 2029' }}</span>
                 <span class="mx-2 text-gray-400">•</span>
                 <span class="text-gray-600">{{ $destination }}</span>
                 <span class="mx-2 text-gray-400">•</span>
                 <span class="text-gray-600">{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</span>
             </div>
-            <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                </svg>
-                <span class="text-gray-600">{{ $travelers ?? '4' }} travelers planned</span>
-            </div>
+           
+<div class="flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+    </svg>
+    <span class="text-gray-600">
+        {{ 1 }} organizer{{ count($inviteEmails) > 0 ? ' + ' . count($inviteEmails) . ' invited' : '' }}
+    </span>
+</div>
         </div>
     </div>
     
@@ -895,16 +898,17 @@
             </div>
             
             <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
-                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <div class="font-medium text-gray-700">Travelers</div>
-                    <div class="text-xs text-gray-500">
-                        @if(isset($inviteEmails) && count($inviteEmails) > 0)
-                            {{ count($inviteEmails) }} invited
-                        @else
-                            0 of {{ $travelers ?? 3 }} confirmed
-                        @endif
-                    </div>
-                </div>
+               
+<div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+    <div class="font-medium text-gray-700">Travelers</div>
+    <div class="text-xs text-gray-500">
+        @if(count($inviteEmails) > 0)
+            {{ count($inviteEmails) }} invited
+        @else
+            0 of {{ max(1, $travelers - 1) }} confirmed
+        @endif
+    </div>
+</div>
                 
                 @if(isset($inviteEmails) && count($inviteEmails) > 0)
                     @foreach($inviteEmails as $index => $invite)
@@ -1142,13 +1146,36 @@
                     <p class="font-medium text-gray-800">{{ $tripTemplate->title }}</p>
                     <p class="text-gray-600">{{ $tripTemplate->destination->name }}, {{ $tripTemplate->destination->country }}</p>
                     <p class="mt-2 text-gray-600">{{ $tripTemplate->description }}</p>
+                    
+                    <!-- Trip Highlights Section -->
+                    @if(!empty($templateHighlights))
+                        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
+                            <h4 class="text-sm font-semibold text-yellow-800 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                                </svg>
+                                Trip Highlights
+                            </h4>
+                            <ul class="mt-2 space-y-1">
+                                @foreach($templateHighlights as $highlight)
+                                    <li class="flex items-start">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-500 mt-0.5 mr-1.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="text-sm text-yellow-700">{{ $highlight }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                    
                     <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                             <p class="text-sm text-gray-500">Duration</p>
                             <p class="font-medium">{{ $tripTemplate->duration_days }} days</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Price</p>
+                            <p class="text-sm text-gray-500">Base Price</p>
                             <p class="font-medium">${{ number_format($tripTemplate->base_price, 2) }}/person</p>
                         </div>
                         <div>
@@ -1329,6 +1356,50 @@
             </div>
         @endif
         
+        <!-- Selected Optional Activities Section -->
+        @if($tripType === 'pre_planned' && $tripTemplate && !empty($selectedOptionalActivities) && !empty($optionalActivities))
+            <div class="bg-white border border-gray-200 rounded-lg p-5">
+                <div class="flex justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">Selected Optional Activities</h3>
+                    <button wire:click="editItinerary" type="button" class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                </div>
+                
+                <div class="mt-3 space-y-3">
+                    @php
+                        $optionalActivitiesCost = 0;
+                    @endphp
+                    
+                    @foreach($selectedOptionalActivities as $activityId)
+                        @php
+                            $activity = $optionalActivities->firstWhere('id', $activityId);
+                            if ($activity) {
+                                $optionalActivitiesCost += $activity->cost;
+                            }
+                        @endphp
+                        
+                        @if($activity)
+                            <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                <div class="flex items-start">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                                    </svg>
+                                    <div>
+                                        <h4 class="font-medium text-blue-800">{{ $activity->title }}</h4>
+                                        <p class="text-sm text-blue-600 mt-1">{{ $activity->description }}</p>
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{{ $activity->location }}</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activity->cost, 2) }}</span>
+                                            <span class="px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs">{{ ucfirst($activity->category) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
+        
         <!-- Invite Friends -->
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <div class="flex justify-between">
@@ -1360,7 +1431,7 @@
             @endif
         </div>
         
-        <!-- Summary -->
+        <!-- Summary with Budget Details -->
         <div class="bg-white border border-blue-200 rounded-lg p-5">
             <h3 class="text-lg font-medium text-blue-900">Trip Summary</h3>
             
@@ -1413,27 +1484,89 @@
                     </span>
                 </div>
                 
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Total Budget:</span>
-                    <span class="font-medium">
-                        @if($tripType === 'pre_planned' && $tripTemplate)
-                            ${{ number_format($tripTemplate->base_price * (count($invites) + 1), 2) }}
-                        @elseif(isset($tripDetails['budget']) && isset($tripDetails['travelers']))
-                            ${{ number_format($tripDetails['budget'] * $tripDetails['travelers'], 2) }}
-                        @else
-                            Not set
-                        @endif
-                    </span>
+                <!-- Budget Information (updated with optional activities) -->
+                @if($tripType === 'pre_planned' && $tripTemplate)
+    <div class="flex justify-between font-medium text-gray-800">
+        <span class="text-gray-600">Base Package Price:</span>
+        <span>${{ number_format($basePrice, 2) }} / person</span>
+    </div>
+    
+    @if(!empty($selectedOptionalActivities))
+        <div class="pt-2 border-t border-gray-200 mt-2">
+            <span class="text-gray-600 font-medium">Optional Activities:</span>
+            
+            @php
+                $optionalTotal = 0;
+            @endphp
+            
+            @foreach($selectedOptionalActivities as $id => $activity)
+                @php
+                    $optionalTotal += $activity['cost'] ?? 0;
+                @endphp
+                <div class="flex justify-between pl-4 mt-1 text-sm">
+                    <span>• {{ $activity['title'] }}</span>
+                    <span>${{ number_format($activity['cost'] ?? 0, 2) }}</span>
                 </div>
+            @endforeach
+            
+            <div class="flex justify-between mt-2 font-medium">
+                <span>Optional Activities Subtotal:</span>
+                <span>${{ number_format($optionalTotal, 2) }} / person</span>
+            </div>
+        </div>
+    @endif
+    
+    <div class="flex justify-between text-blue-700 font-bold pt-2 border-t border-blue-200 mt-2">
+        <span>Total Per Person:</span>
+        <span>${{ number_format($totalCost, 2) }}</span>
+    </div>
+    
+    <div class="pt-2 border-t border-gray-200 flex justify-between">
+        <span class="text-gray-600">Group Total ({{ count($invites) + 1 }} travelers):</span>
+        <span class="font-bold">${{ number_format($totalCost * (count($invites) + 1), 2) }}</span>
+    </div>
+@else
+    <div class="flex justify-between">
+        <span class="text-gray-600">Total Budget:</span>
+        <span class="font-medium">
+            @if(isset($tripDetails['budget']) && isset($tripDetails['travelers']))
+                ${{ number_format($tripDetails['budget'] * $tripDetails['travelers'], 2) }}
+            @else
+                Not set
+            @endif
+        </span>
+    </div>
+@endif
                 
                 <div class="flex justify-between">
                     <span class="text-gray-600">Activities:</span>
                     <span class="font-medium">
-                        @if($tripType === 'pre_planned' && $tripTemplate)
-                            {{ $tripTemplate->activities->count() }} activities
-                        @else
-                            {{ collect($tripActivities)->flatten(1)->count() }} activities
-                        @endif
+@if($tripType === 'pre_planned' && $tripTemplate && !empty($selectedOptionalActivities))
+    <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="flex justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Selected Optional Activities</h3>
+            <button wire:click="editItinerary" type="button" class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+        </div>
+        
+        <div class="mt-3 space-y-3">
+            @foreach($selectedOptionalActivities as $activityId => $activityData)
+                <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <div class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <h4 class="font-medium text-blue-800">{{ $activityData['title'] }}</h4>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activityData['cost'], 2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
                     </span>
                 </div>
                 
@@ -1554,7 +1687,7 @@
         <div class="max-w-7xl mx-auto">
             <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="text-2xl font-bold">{{ $tripTitle ?? 'Summer Getaway 2023' }}</h1>
+                    <h1 class="text-2xl font-bold">{{ $tripTitle ?? 'Summer Getaway 2029' }}</h1>
                     <div class="flex items-center mt-1">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -1590,8 +1723,104 @@
     </div>
 
     <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Left Column - Day Selection -->
+        <!-- Left Column - Day Selection & Budget -->
         <div class="lg:w-1/4">
+            <!-- Trip Budget Panel for Pre-planned Trips -->
+            @if($tripTemplate)
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Trip Budget</h2>
+                    <div class="space-y-4">
+                        <!-- Base Price -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Base Package:</span>
+                            <span class="font-medium">${{ number_format($basePrice, 2) }}</span>
+                        </div>
+                        
+                        <!-- Optional Activities Cost -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Optional Activities:</span>
+                            <span class="font-medium">${{ number_format($totalCost - $basePrice, 2) }}</span>
+                        </div>
+                        
+                        <!-- Divider Line -->
+                        <div class="border-t border-gray-200 my-2"></div>
+                        
+                        <!-- Total Cost -->
+                        <div class="flex justify-between items-center text-lg">
+                            <span class="font-semibold text-gray-700">Total Cost:</span>
+                            <span class="font-bold text-blue-600">${{ number_format($totalCost, 2) }}</span>
+                        </div>
+                        
+                        <!-- Update Budget -->
+                        <div class="pt-3">
+                            <div class="mb-2">
+                                <label for="budget" class="block text-sm font-medium text-gray-700 mb-1">Update Budget</label>
+                                <div class="flex items-center">
+                                    <span class="text-gray-500 mr-2">$</span>
+                                    <input 
+                                        type="number" 
+                                        id="budget" 
+                                        wire:model="budget" 
+                                        min="{{ $totalCost }}"
+                                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    >
+                                </div>
+                                @error('budget') 
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p> 
+                                @enderror
+                            </div>
+                            
+                            <button 
+                                wire:click="updateBudget" 
+                                class="w-full bg-blue-50 text-blue-600 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-100"
+                            >
+                                Update Budget
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Optional Activities Selection Section -->
+                @if(count($optionalActivities) > 0)
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Optional Activities</h2>
+                        <div class="space-y-4">
+                            @foreach($optionalActivities as $activity)
+                                <div class="border rounded-lg p-3 {{ in_array($activity->id, $selectedOptionalActivities) ? 'border-blue-300 bg-blue-50' : 'border-gray-200' }}">
+                                    <div class="flex items-start">
+                                        <div class="flex-1">
+                                            <div class="font-medium text-gray-900">{{ $activity->title }}</div>
+                                            <div class="text-sm text-gray-600 mt-1">{{ $activity->description }}</div>
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{{ $activity->location }}</span>
+                                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activity->cost, 2) }}</span>
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{{ ucfirst($activity->category) }}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button 
+                                                wire:click="toggleOptionalActivity({{ $activity->id }})" 
+                                                class="h-6 w-6 rounded-full {{ in_array($activity->id, $selectedOptionalActivities) ? 'bg-blue-500 text-white' : 'bg-gray-200' }} flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                                            >
+                                                @if(in_array($activity->id, $selectedOptionalActivities))
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @else
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @endif
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @endif
+
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">Trip Days</h2>
                 <div class="space-y-2">
@@ -2056,339 +2285,6 @@
                             </div>
                         @endif
 
-                    <!-- Add Empty Time Block if needed -->
-                    @php
-                        $hasMorning = count($morningActivities) > 0;
-                        $hasAfternoon = count($afternoonActivities) > 0;
-                        $hasEvening = count($eveningActivities) > 0;
-                    @endphp
-
-                    @if(!$hasMorning)
-                        <div class="mb-8">
-                            <div class="flex items-center mb-4">
-                                <div class="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-lg font-medium text-gray-800">Morning</h3>
-                            </div>
-                            
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                                <h4 class="text-lg font-medium text-gray-700">Add Morning Activity</h4>
-                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-                                    Start your day with sightseeing, a relaxing breakfast, or a cool morning swim
-                                </p>
-                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'morning' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    Browse Suggestions
-                                </button>
-                            </div>
-                        </div>
-                    @endif
-
-                    @if(!$hasAfternoon)
-                        <div class="mb-8">
-                            <div class="flex items-center mb-4">
-                                <div class="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-lg font-medium text-gray-800">Afternoon</h3>
-                            </div>
-                            
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                                <h4 class="text-lg font-medium text-gray-700">Add Afternoon Activity</h4>
-                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-                                    Explore beaches, visit temples, or enjoy a local food experience
-                                </p>
-                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'afternoon' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    Browse Suggestions
-                                </button>
-                            </div>
-                        </div>
-                    @endif
-
-                    @if(!$hasEvening)
-                        <div>
-                            <div class="flex items-center mb-4">
-                                <div class="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                                    </svg>
-                                </div>
-                                <h3 class="text-lg font-medium text-gray-800">Evening</h3>
-                            </div>
-                            
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                                <h4 class="text-lg font-medium text-gray-700">Add Evening Activity</h4>
-                                <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-                                    Explore local restaurants, traditional performances, or nightlife options for your evening
-                                </p>
-                                <button wire:click="$dispatch('showAddActivityModal', { timeOfDay: 'evening' })" class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                    Browse Suggestions
-                                </button>
-                            </div>
-                        </div>
-                    @endif
-                @else
-                    <div class="text-center p-8">
-                        <div class="inline-flex items-center justify-center h-16 w-16 bg-blue-50 rounded-full mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-medium text-gray-900 mb-2">No activities yet!</h3>
-                        <p class="text-gray-500 mb-4">Plan your day by adding some exciting activities</p>
-                        <button 
-                            wire:click="$dispatch('showAddActivityModal')"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add First Activity
-                        </button>
-                    </div>
-                @endif
-            </div>
-        </div>
-        
-        <!-- Suggested Activities -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="bg-blue-50 p-6 flex justify-between items-center border-b border-blue-100">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800">Suggested Activities</h2>
-                    <div class="text-sm text-gray-600 mt-1">Popular in {{ $destination ?? 'Bali, Indonesia' }}</div>
-                </div>
-            </div>
-            
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @forelse($suggestedActivities ?? [] as $index => $suggestion)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" wire:click="addSuggestedActivity({{ $index }})">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="text-lg font-medium text-gray-900">{{ $suggestion['title'] }}</h4>
-                                    <div class="flex items-center mt-1">
-                                        <div class="flex items-center mr-3">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span class="text-sm text-gray-500">{{ $suggestion['location'] }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
-                                    {{ ucfirst($suggestion['category']) }}
-                                </div>
-                            </div>
-                            
-                            @if(isset($suggestion['description']) && $suggestion['description'])
-                                <p class="mt-2 text-sm text-gray-600">
-                                    {{ $suggestion['description'] }}
-                                </p>
-                            @endif
-                            
-                            <div class="mt-4 flex items-center justify-between">
-                                @if(isset($suggestion['cost']))
-                                    @php
-                                        $cost = is_numeric($suggestion['cost']) ? floatval($suggestion['cost']) : 0;
-                                    @endphp
-                                    @if($cost > 0)
-                                        <div class="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            ${{ number_format($cost, 2) }} / person
-                                        </div>
-                                    @endif
-                                @endif
-                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                    Add to Day {{ $activeDay }}
-                                </button>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="col-span-2 text-center py-8">
-                            <div class="text-gray-500">No suggestions available for this destination.</div>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-        
-        <!-- Navigation Buttons -->
-        <div class="flex justify-between mt-8">
-            <button wire:click="$dispatch('goToPreviousStep')" 
-                class="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                Back to Trip Details
-            </button>
-            <button wire:click="continueToNextStep" 
-                class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                Continue to Invite Friends
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Add Activity Modal -->
-<div x-data="{ open: false, timeOfDay: 'morning' }" 
-     x-show="open"
-     @show-add-activity-modal.window="open = true; timeOfDay = $event.detail?.timeOfDay || 'morning'"
-     @close-add-activity-modal.window="open = false"
-     x-cloak
-     class="fixed inset-0 z-50 overflow-y-auto" 
-     style="display: none;"
-     role="dialog" 
-     aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div x-show="open" 
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 transition-opacity" 
-             aria-hidden="true">
-            <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-        </div>
-
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
-        <div x-show="open" 
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                            Add Activity to Day {{ $activeDay }}
-                        </h3>
-                        <div class="mt-6 space-y-4">
-                            <div>
-                                <label for="activity-title" class="block text-sm font-medium text-gray-700">Activity Title</label>
-                                <input type="text" name="activity-title" id="activity-title" wire:model="newActivity.title" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                                @error('newActivity.title') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            
-                            <div>
-                                <label for="activity-time" class="block text-sm font-medium text-gray-700">Time of Day</label>
-                                <select id="activity-time" name="activity-time" wire:model="newActivity.time_of_day" x-model="timeOfDay" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <option value="morning">Morning</option>
-                                    <option value="afternoon">Afternoon</option>
-                                    <option value="evening">Evening</option>
-                                </select>
-                                @error('newActivity.time_of_day') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="activity-start-time" class="block text-sm font-medium text-gray-700">Start Time</label>
-                                    <input type="time" name="activity-start-time" id="activity-start-time" wire:model="newActivity.start_time" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                                    @error('newActivity.start_time') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                                </div>
-                                
-                                <div>
-                                    <label for="activity-end-time" class="block text-sm font-medium text-gray-700">End Time</label>
-                                    <input type="time" name="activity-end-time" id="activity-end-time" wire:model="newActivity.end_time" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                                    @error('newActivity.end_time') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label for="activity-location" class="block text-sm font-medium text-gray-700">Location</label>
-                                <input type="text" name="activity-location" id="activity-location" wire:model="newActivity.location" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                                @error('newActivity.location') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            
-                            <div>
-                                <label for="activity-cost" class="block text-sm font-medium text-gray-700">Cost per Person ($)</label>
-                                <input type="number" min="0" step="0.01" name="activity-cost" id="activity-cost" wire:model="newActivity.cost" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                                @error('newActivity.cost') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            
-                            <div>
-                                <label for="activity-category" class="block text-sm font-medium text-gray-700">Category</label>
-                                <select id="activity-category" name="activity-category" wire:model="newActivity.category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-                                    <option value="">Select a category</option>
-                                    <option value="cultural">Cultural</option>
-                                    <option value="adventure">Adventure</option>
-                                    <option value="relaxation">Relaxation</option>
-                                    <option value="food">Food & Dining</option>
-                                    <option value="nightlife">Nightlife</option>
-                                    <option value="shopping">Shopping</option>
-                                    <option value="nature">Nature</option>
-                                    <option value="sightseeing">Sightseeing</option>
-                                </select>
-                                @error('newActivity.category') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                            
-                            <div>
-                                <label for="activity-description" class="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea id="activity-description" name="activity-description" rows="3" wire:model="newActivity.description" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
-                                @error('newActivity.description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button wire:click="addActivity" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Add Activity
-                </button>
-                <button @click="open = false" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('livewire:initialized', function () {
-        window.addEventListener('showAddActivityModal', (event) => {
-            const timeOfDay = event.detail?.timeOfDay || 'morning';
-            window.dispatchEvent(new CustomEvent('show-add-activity-modal', { 
-                detail: { timeOfDay: timeOfDay } 
-            }));
-        });
-        
-        window.addEventListener('closeAddActivityModal', () => {
-            window.dispatchEvent(new CustomEvent('close-add-activity-modal'));
-        });
-    });
-</script>
-</div>
-
 === File: create-trip.blade.php ===
 
 {{-- resources/views/livewire/trips/create-trip.blade.php --}}
@@ -2407,15 +2303,15 @@
                     @endif
                 </div>
                 @if($currentStep > 0 && $currentStep < $totalSteps)
-                    <button wire:click="skipToSummary" type="button"
-                        class="text-sm text-blue-600 hover:text-blue-800">
+                    <button wire:click="skipToSummary" type="button" class="text-sm text-blue-600 hover:text-blue-800">
                         Skip to summary
                     </button>
                 @endif
             </div>
             @if($currentStep > 0)
                 <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="h-full bg-blue-600 rounded-full" style="width: {{ min(100, ($currentStep / $totalSteps) * 100) }}%"></div>
+                    <div class="h-full bg-blue-600 rounded-full"
+                        style="width: {{ min(100, ($currentStep / $totalSteps) * 100) }}%"></div>
                 </div>
             @endif
         </div>
@@ -2423,33 +2319,33 @@
         <!-- Trip Type Selection (Step 0) -->
         @if($currentStep === 0)
             <livewire:trips.trip-type-selection />
-        
-        <!-- Either Destination Selection or Template Selection (Step 1) -->
+
+            <!-- Either Destination Selection or Template Selection (Step 1) -->
         @elseif($currentStep === 1)
             @if($tripType === 'pre_planned')
                 <livewire:trips.pre-planned-trip-selection />
             @else
                 <livewire:trips.destination-selection />
             @endif
-        
-        <!-- Trip Details (Step 2) - Only for self-planned trips -->
+
+            <!-- Trip Details (Step 2) - Only for self-planned trips -->
         @elseif($currentStep === 2 && $tripType === 'self_planned')
             <livewire:trips.trip-details />
-        
-        <!-- Itinerary Planning (Step 3) - Only for self-planned trips -->
+
+            <!-- Itinerary Planning (Step 3) - Only for self-planned trips -->
         @elseif($currentStep === 3 && $tripType === 'self_planned')
             <livewire:trips.itinerary-planning />
-        
-        <!-- Invite Friends (Step 4) -->
+
+            <!-- Invite Friends (Step 4) -->
         @elseif($currentStep === 4)
             <livewire:trips.invite-friends />
-        
-        <!-- Review (Step 5) -->
+
+            <!-- Review (Step 5) -->
         @elseif($currentStep === 5)
             <livewire:trips.review />
-            
+
             <!-- Create Trip Button -->
-            <div class="mt-8 flex justify-center">
+            <div class="flex justify-center mt-8">
                 <button wire:click="createTrip"
                     class="px-6 py-3 bg-blue-600 text-white font-medium rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     Create Trip
@@ -2463,7 +2359,9 @@
                 <button wire:click="previousStep" type="button"
                     class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd"
+                            d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z"
+                            clip-rule="evenodd" />
                     </svg>
                     Back
                 </button>
@@ -2550,6 +2448,35 @@
                             
                             <p class="mt-3 text-gray-600">{{ $template->description }}</p>
                             
+                            <!-- Display Highlights Preview if available -->
+                            @if($template->highlights)
+    @php
+        // Check if highlights is already an array
+        $highlights = is_array($template->highlights) ? $template->highlights : json_decode($template->highlights, true);
+        $previewHighlights = $highlights ? array_slice($highlights, 0, 3) : [];
+    @endphp
+    @if(!empty($previewHighlights))
+        <div class="mt-3 bg-yellow-50 rounded-md p-3">
+            <h4 class="text-sm font-semibold text-yellow-800 mb-2">Highlights:</h4>
+            <ul class="text-sm text-yellow-700 space-y-1">
+                @foreach($previewHighlights as $highlight)
+                    <li class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-500 mt-0.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>{{ $highlight }}</span>
+                    </li>
+                @endforeach
+            </ul>
+            @if($highlights && count($highlights) > 3)
+                <div class="text-right mt-1">
+                    <span class="text-xs text-yellow-600">+{{ count($highlights) - 3 }} more</span>
+                </div>
+            @endif
+        </div>
+    @endif
+@endif
+                            
                             <div class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
                                 <div class="flex items-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -2573,7 +2500,11 @@
                             </div>
                             
                             <div class="mt-6 flex justify-end">
-                                <button wire:click="viewTemplateDetails({{ $template->id }})" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+                                <button 
+                                    wire:click="viewTemplateDetails({{ $template->id }})"
+                                    type="button"
+                                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                                >
                                     View Details
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -2610,13 +2541,35 @@
                             </div>
                         @endif
                         
+                        <!-- Trip Highlights -->
+                        @if(!empty($templateHighlights))
+                            <div class="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                                <h3 class="text-lg font-medium text-yellow-800 mb-3 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                                    </svg>
+                                    Trip Highlights
+                                </h3>
+                                <ul class="space-y-2">
+                                    @foreach($templateHighlights as $highlight)
+                                        <li class="flex items-start">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="text-yellow-700">{{ $highlight }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        
                         <div class="mt-4 space-y-3">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Duration:</span>
                                 <span class="font-medium">{{ $selectedTemplate->duration_days }} days</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Price:</span>
+                                <span class="text-gray-600">Base Price:</span>
                                 <span class="font-medium">${{ number_format($selectedTemplate->base_price, 2) }}/person</span>
                             </div>
                             <div class="flex justify-between">
@@ -2632,6 +2585,66 @@
                                 <span class="font-medium">{{ $selectedTemplate->activities->count() }}</span>
                             </div>
                         </div>
+                        
+                        <!-- Optional Activities Selection -->
+@if(isset($optionalActivities) && count($optionalActivities) > 0)
+    <div class="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+        <h3 class="text-lg font-medium text-blue-800 mb-3 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+            </svg>
+            Optional Activities
+        </h3>
+        <p class="text-sm text-blue-700 mb-3">Select optional activities to enhance your trip experience:</p>
+        <div class="space-y-3">
+            @foreach($optionalActivities as $activity)
+                <div class="flex items-center p-2 rounded-md hover:bg-blue-100 transition-colors">
+                    <input type="checkbox" 
+                        id="activity-{{ $activity->id }}" 
+                        wire:click="toggleOptionalActivity({{ $activity->id }})" 
+                        @if(isset($selectedOptionalActivities[$activity->id])) checked @endif
+                        class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    >
+                    <label for="activity-{{ $activity->id }}" class="ml-2 flex-1 flex items-center justify-between cursor-pointer">
+                        <div>
+                            <span class="text-blue-700 font-medium">{{ $activity->title }}</span>
+                            <p class="text-xs text-blue-600 mt-1">{{ $activity->description }}</p>
+                        </div>
+                        <span class="text-blue-500 text-sm font-medium ml-2">${{ number_format($activity->cost, 2) }}</span>
+                    </label>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+<!-- Price Summary -->
+<div class="mt-6 bg-green-50 rounded-lg p-4 border border-green-100">
+    <h3 class="text-lg font-medium text-green-800 mb-3">Trip Summary</h3>
+    <div class="space-y-3">
+        <div class="flex justify-between">
+            <span class="text-green-700">Base Price:</span>
+            <span class="font-medium">${{ number_format($selectedTemplate->base_price, 2) }}</span>
+        </div>
+        
+        @if(count($selectedOptionalActivities) > 0)
+            <div class="pt-2 border-t border-green-200">
+                <p class="text-green-700 font-medium mb-2">Selected Optional Activities:</p>
+                @foreach($selectedOptionalActivities as $activity)
+                    <div class="flex justify-between mt-1 pl-4">
+                        <span class="text-green-700">{{ $activity['title'] }}</span>
+                        <span class="font-medium">${{ number_format($activity['cost'], 2) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+        
+        <div class="pt-3 border-t border-green-300 flex justify-between text-lg font-bold">
+            <span class="text-green-800">Total Price:</span>
+            <span class="text-green-800">${{ number_format($totalPrice, 2) }}</span>
+        </div>
+    </div>
+</div>
                         
                         <div class="mt-6">
                             <button wire:click="selectTripTemplate" class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
@@ -2693,6 +2706,14 @@
                                                                 <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activity->cost, 2) }}</span>
                                                             @endif
                                                             <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{{ ucfirst($activity->category) }}</span>
+                                                            @if($activity->is_highlight)
+                                                               <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+    </svg>
+    Highlight
+</span>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>

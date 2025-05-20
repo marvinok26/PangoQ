@@ -12,7 +12,7 @@ class InviteFriends extends Component
     public $tripTitle;
     public $startDate;
     public $endDate;
-    public $travelers;
+    public $travelers = 1; // Default to 1 (just the organizer)
     
     public $friendName = '';
     public $friendContact = '';
@@ -37,7 +37,10 @@ class InviteFriends extends Component
             $this->tripTitle = $tripDetails['title'] ?? '';
             $this->startDate = $tripDetails['start_date'] ?? '';
             $this->endDate = $tripDetails['end_date'] ?? '';
-            $this->travelers = $tripDetails['travelers'] ?? 4;
+            // Only set $travelers from session if it's a valid number greater than 0
+            if (isset($tripDetails['travelers']) && $tripDetails['travelers'] > 0) {
+                $this->travelers = $tripDetails['travelers'];
+            }
         }
         
         // Load saved invites if available
@@ -125,6 +128,14 @@ class InviteFriends extends Component
     
     public function continueToNextStep()
     {
+        // Calculate and update total travelers (organizer + invited)
+        $totalTravelers = 1 + count($this->inviteEmails);
+        
+        // Update trip details in session
+        $tripDetails = session('trip_details', []);
+        $tripDetails['travelers'] = $totalTravelers;
+        session(['trip_details' => $tripDetails]);
+        
         // Save invites to session
         session(['trip_invites' => $this->inviteEmails]);
         

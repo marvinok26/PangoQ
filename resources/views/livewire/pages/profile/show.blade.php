@@ -18,8 +18,9 @@
             <div class="flex items-center mb-8">
                 <div class="relative">
                     <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white">
-                        @if($user->profile_photo)
-                            <img src="{{ $user->photo_url }}" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                        @if($user->profile_photo_path)
+                            <img src="{{ asset('storage/' . $user->profile_photo_path) }}" alt="{{ $user->name }}"
+                                class="w-full h-full object-cover">
                         @else
                             <div
                                 class="w-full h-full bg-blue-100 flex items-center justify-center text-blue-700 text-2xl font-semibold">
@@ -115,7 +116,6 @@
                     </div>
                 </div>
 
-                <!-- Account Information Card -->
                 <!-- Account Information Card -->
                 <div class="flex-1 bg-white rounded-lg shadow p-4">
                     <div class="flex justify-between items-center mb-4">

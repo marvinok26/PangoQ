@@ -17,7 +17,8 @@ class SavingsWallet extends Model
     protected $fillable = [
         'trip_id',
         'name',
-        'target_amount',
+        'minimum_goal',
+        'custom_goal',
         'current_amount',
         'target_date',
         'contribution_frequency',
@@ -25,7 +26,8 @@ class SavingsWallet extends Model
     ];
 
     protected $casts = [
-        'target_amount' => 'decimal:2',
+        'minimum_goal' => 'decimal:2',
+        'custom_goal' => 'decimal:2',
         'current_amount' => 'decimal:2',
         'target_date' => 'date',
     ];
@@ -43,6 +45,14 @@ class SavingsWallet extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class, 'wallet_id');
+    }
+
+    /**
+     * Get the effective target amount (either custom_goal if set, or minimum_goal).
+     */
+    public function getTargetAmountAttribute(): float
+    {
+        return $this->custom_goal ?? $this->minimum_goal;
     }
 
     public function getProgressPercentageAttribute(): float

@@ -52,8 +52,8 @@
                             <div>
                                 <button @click="open = !open" class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                     <div class="flex items-center">
-                                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700">
-                                            {{ substr(Auth::user()->name, 0, 1) }}
+                                        <div class="h-8 w-8 rounded-full overflow-hidden shadow-sm border border-gray-200">
+                                            <img src="{{ Auth::user()->photo_url }}" alt="{{ Auth::user()->name }}" class="h-full w-full object-cover">
                                         </div>
                                         <span class="ml-2 text-sm font-medium text-gray-700">{{ Auth::user()->name }}</span>
                                         <svg class="ml-1 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -73,8 +73,13 @@
                                  x-transition:leave-end="transform opacity-0 scale-95"
                                  class="absolute right-0 mt-2 w-48 py-2 bg-white rounded-md shadow-lg z-50"
                                  style="display: none;">
+                                <div class="px-4 py-3">
+                                    <p class="text-sm font-medium text-gray-900 truncate">{{ Auth::user()->name }}</p>
+                                    <p class="text-xs text-gray-500 truncate">{{ Auth::user()->email }}</p>
+                                </div>
+                                <div class="border-t border-gray-100"></div>
                                 <a href="{{ route('dashboard') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
-                                <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Profile</a>
+                                <a href="{{ route('profile.show') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Profile</a>
                                 <a href="{{ route('trips.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Trips</a>
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <form method="POST" action="{{ route('logout') }}">
@@ -126,7 +131,7 @@
                                 </svg>
                                 Plan a Trip
                             </a>
-                            <a href="{{ route('profile.show') }}" class="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md {{ request()->routeIs('profile.edit') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
+                            <a href="{{ route('profile.show') }}" class="w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md {{ request()->routeIs('profile.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="12" cy="7" r="4"></circle>

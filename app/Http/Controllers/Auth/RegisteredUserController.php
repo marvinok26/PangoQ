@@ -3,24 +3,28 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
-use Illuminate\View\View;
-use App\Models\User;
 
 class RegisteredUserController extends Controller
 {
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create()
     {
-        return view('auth.register');
+        // Check if we have trip planning data to customize the registration message
+        $hasTripData = session()->has('selected_trip_type') || 
+                       session()->has('selected_destination') || 
+                       session()->has('trip_details');
+        
+        return view('auth.register', ['hasTripData' => $hasTripData]);
     }
 
     /**
@@ -28,20 +32,33 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request)
     {
-        $validationRules = [
+        $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ];
-        
-        // Only add terms validation if it's in your form
-        if ($request->has('terms')) {
-            $validationRules['terms'] = ['required', 'accepted'];
+        ]);
+
+        // Log registration step for debugging
+        Log::info('User registration initiated', [
+            'email' => $request->email,
+            'has_trip_data' => session()->has('trip_data_not_saved')
+        ]);
+
+        // If we have trip data in session, mark it for saving after login
+        if (
+            session()->has('selected_trip_type') || 
+            session()->has('selected_destination')
+        ) {
+            session(['trip_data_not_saved' => true]);
+
+            Log::info('Trip data marked for saving after registration', [
+                'trip_type' => session('selected_trip_type'),
+                'has_destination' => session()->has('selected_destination'),
+                'has_trip_details' => session()->has('trip_details')
+            ]);
         }
-        
-        $request->validate($validationRules);
 
         $user = User::create([
             'name' => $request->name,
@@ -51,13 +68,7 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Remove automatic login after registration
-        // Auth::login($user); <-- Comment out or remove this line
-        
-        // Add a success message
-        session()->flash('success', 'Registration successful! Please login to access your account.');
-        
-        // Redirect to login instead of dashboard
-        return redirect()->route('login');
+         return redirect()->route('login')
+            ->with('status', 'Your account has been created successfully! Please log in.');
     }
 }

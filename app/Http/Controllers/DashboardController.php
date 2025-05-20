@@ -5,22 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Trip;
 use App\Models\SavingsWallet;
 use App\Models\TripMember;
-use App\Models\WalletTransaction;
-use App\Services\SavingsService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    protected $savingsService;
-    
-    public function __construct(SavingsService $savingsService)
-    {
-        // Do not use middleware here in Laravel 12
-        $this->savingsService = $savingsService;
-    }
-
     /**
      * Display the dashboard with real data from the database.
      */
@@ -33,115 +24,103 @@ class DashboardController extends Controller
         
         $user = auth()->user();
         
-        // Fetch user's wallets data
-        $wallet = $this->getWalletData($user->id);
+        // Debug: Log user information
+        Log::info('Dashboard for user', [
+            'user_id' => $user->id,
+            'email' => $user->email
+        ]);
         
-        // Fetch upcoming trips
-        $upcomingTrips = $this->getUpcomingTrips($user->id);
-        
-        // Fetch recent activity
-        $recentActivities = $this->getRecentActivities($user->id);
-        
-        // Fetch trip invitations
-        $invitations = $this->getTripInvitations($user);
-        
-        // Fetch user stats
-        $stats = $this->getUserStats($user->id, $wallet);
-        
-        return view('livewire.pages.dashboard', compact(
-            'upcomingTrips',
-            'recentActivities',
-            'invitations',
-            'stats',
-            'wallet'
-        ));
-    }
-    
-    /**
-     * Get user's wallet data
-     */
-    private function getWalletData($userId)
-    {
-        // Get all user's savings wallets
-        $wallets = SavingsWallet::whereHas('trip.members', function($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })->get();
-        
-        // Calculate totals
-        $totalBalance = $wallets->sum('current_amount');
-        $totalTarget = $wallets->sum('target_amount') > 0 ? $wallets->sum('target_amount') : 1; // Avoid division by zero
-        $progressPercentage = min(100, round(($totalBalance / $totalTarget) * 100, 2));
-        
-        // Calculate monthly growth
-        $lastMonth = now()->startOfMonth()->subMonth();
-        $thisMonth = now()->startOfMonth();
-        
-        $lastMonthContributions = WalletTransaction::whereIn('wallet_id', $wallets->pluck('id'))
-            ->where('type', 'deposit')
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$lastMonth, $thisMonth->copy()->subSecond()])
-            ->sum('amount');
+        try {
+            // Get trips where user is the creator
+            $createdTrips = $user->createdTrips()->get();
             
-        $thisMonthContributions = WalletTransaction::whereIn('wallet_id', $wallets->pluck('id'))
-            ->where('type', 'deposit')
-            ->where('status', 'completed')
-            ->where('created_at', '>=', $thisMonth)
-            ->sum('amount');
-        
-        // Calculate growth percentage
-        $monthlyGrowthPercentage = 0;
-        if ($lastMonthContributions > 0) {
-            $monthlyGrowthPercentage = round((($thisMonthContributions - $lastMonthContributions) / $lastMonthContributions) * 100);
-        } elseif ($thisMonthContributions > 0) {
-            $monthlyGrowthPercentage = 100; // If no previous month contributions, but we have this month
-        }
-        
-        return [
-            'balance' => $totalBalance,
-            'target_amount' => $totalTarget,
-            'progress_percentage' => $progressPercentage,
-            'monthly_growth_percentage' => max(0, $monthlyGrowthPercentage) // Ensure positive for UI
-        ];
-    }
-    
-    /**
-     * Get user's upcoming trips
-     */
-    private function getUpcomingTrips($userId)
-    {
-        $trips = Trip::with(['members', 'savingsWallet'])
-            ->whereHas('members', function($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
-            ->where('start_date', '>=', now())
-            ->orderBy('start_date')
-            ->get();
-        
-        // Transform trips to match the expected format
-        $formattedTrips = $trips->map(function($trip) {
-            $progressPercentage = 0;
-            if ($trip->savingsWallet) {
-                $progress = $trip->savingsWallet->target_amount > 0 
-                    ? ($trip->savingsWallet->current_amount / $trip->savingsWallet->target_amount) * 100 
-                    : 0;
-                $progressPercentage = min(100, round($progress));
+            // Get trips where user is a member
+            $memberTrips = Trip::join('trip_members', 'trips.id', '=', 'trip_members.trip_id')
+                ->where('trip_members.user_id', $user->id)
+                ->where('trip_members.invitation_status', 'accepted')
+                ->select('trips.*')
+                ->distinct()
+                ->get();
+            
+            // Combine both sets and remove duplicates
+            $allTrips = $createdTrips->merge($memberTrips)->unique('id');
+            
+            // Log what we found
+            Log::info('Found trips for dashboard', [
+                'user_id' => $user->id,
+                'trips_count' => $allTrips->count(),
+                'trip_ids' => $allTrips->pluck('id')->toArray()
+            ]);
+            
+            // Format trips for display
+            $upcomingTrips = $allTrips->map(function($trip) {
+                // Make sure date is Carbon instance
+                $startDate = $trip->start_date instanceof Carbon ? 
+                    $trip->start_date : 
+                    Carbon::parse($trip->start_date);
+                    
+                $endDate = $trip->end_date instanceof Carbon ? 
+                    $trip->end_date : 
+                    Carbon::parse($trip->end_date);
+                
+                // Get savings wallet data if it exists
+                $progressPercentage = 0;
+                if ($trip->savingsWallet) {
+                    $progressPercentage = $trip->savingsWallet->progress_percentage;
+                }
+                
+                // Count members
+                $memberCount = $trip->members ? $trip->members->count() : 1;
+                
+                return (object)[
+                    'id' => $trip->id,
+                    'title' => $trip->title,
+                    'destination' => $trip->destination,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'progress' => $progressPercentage,
+                    'members' => $memberCount
+                ];
+            });
+            
+            // Sort by start date
+            $upcomingTrips = $upcomingTrips->sortBy('start_date');
+            
+            // If no trips, provide a default
+            if ($upcomingTrips->isEmpty()) {
+                $upcomingTrips = collect([(object)[
+                    'id' => 0,
+                    'title' => 'No Upcoming Trips',
+                    'destination' => 'Start planning your adventure!',
+                    'start_date' => now()->addWeeks(2),
+                    'end_date' => now()->addWeeks(3),
+                    'progress' => 0,
+                    'members' => 1,
+                ]]);
             }
             
-            return (object)[
-                'id' => $trip->id,
-                'title' => $trip->title,
-                'destination' => $trip->destination,
-                'start_date' => $trip->start_date,
-                'end_date' => $trip->end_date,
-                'progress' => $progressPercentage,
-                'members' => $trip->members->count(),
-                'savingsWallet' => $trip->savingsWallet
-            ];
-        });
-        
-        // If no trips, provide a default one for UI
-        if ($formattedTrips->isEmpty()) {
-            $formattedTrips->push((object)[
+            // Get wallet data
+            $walletData = $this->getWalletData($user, $allTrips);
+            
+            // Create activities based on trips
+            $recentActivities = $this->getRecentActivities($allTrips);
+            
+            // Get pending invitations
+            $invitations = $this->getPendingInvitations($user);
+            
+            // Calculate stats
+            $stats = $this->calculateStats($user, $allTrips);
+            
+        } catch (\Exception $e) {
+            // Log error for debugging
+            Log::error('Error loading dashboard data', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Set default values
+            $upcomingTrips = collect([(object)[
                 'id' => 0,
                 'title' => 'No Upcoming Trips',
                 'destination' => 'Start planning your adventure!',
@@ -149,73 +128,88 @@ class DashboardController extends Controller
                 'end_date' => now()->addWeeks(3),
                 'progress' => 0,
                 'members' => 1,
-                'savingsWallet' => null
-            ]);
+            ]]);
+            
+            $walletData = [
+                'balance' => 0,
+                'target_amount' => 1.00,
+                'progress_percentage' => 0,
+                'monthly_growth_percentage' => 0
+            ];
+            
+            $recentActivities = collect([(object)[
+                'id' => 1,
+                'type' => 'contribution',
+                'amount' => 0,
+                'date' => now()->subDays(1),
+                'trip' => 'Start your journey!'
+            ]]);
+            
+            $invitations = collect();
+            
+            $stats = [
+                'trips_planned' => 0,
+                'trips_completed' => 0,
+                'trips_upcoming' => 0,
+                'friends_onboarded' => 0,
+                'monthly_growth_percentage' => 0
+            ];
         }
         
-        return $formattedTrips;
+        return view('livewire.pages.dashboard', [
+            'upcomingTrips' => $upcomingTrips,
+            'wallet' => $walletData,
+            'recentActivities' => $recentActivities,
+            'invitations' => $invitations,
+            'stats' => $stats,
+        ]);
     }
     
     /**
-     * Get user's recent activity
+     * Get wallet data for the dashboard
      */
-    private function getRecentActivities($userId)
+    private function getWalletData($user, $trips)
     {
-        // Get recent wallet transactions
-        $transactions = WalletTransaction::with(['wallet.trip', 'user'])
-            ->whereHas('wallet.trip.members', function($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function($transaction) {
-                return (object)[
-                    'id' => $transaction->id,
-                    'type' => 'contribution',
-                    'amount' => $transaction->amount,
-                    'date' => $transaction->created_at,
-                    'trip' => $transaction->wallet->trip->title ?? 'Unknown Trip'
-                ];
-            });
+        $wallets = SavingsWallet::whereIn('trip_id', $trips->pluck('id'))->get();
         
-        // Get friend joined activities
-        $memberJoins = TripMember::with(['trip', 'user'])
-            ->whereHas('trip.members', function($query) use ($userId) {
-                $query->where('user_id', $userId);
-            })
-            ->where('user_id', '!=', $userId)
-            ->where('invitation_status', 'accepted')
-            ->orderBy('updated_at', 'desc')
-            ->limit(3)
-            ->get()
-            ->map(function($member) {
-                return (object)[
-                    'id' => 'member-' . $member->id,
-                    'type' => 'friend_joined',
-                    'user' => $member->user->name ?? ($member->invitation_email ?? 'A friend'),
-                    'date' => $member->updated_at,
-                    'trip' => $member->trip->title ?? 'Unknown Trip'
-                ];
-            });
+        $balance = $wallets->sum('current_amount');
+        $targetAmount = $wallets->sum('minimum_goal');
         
-        // Get itinerary updates (simplified version)
-        $itineraryUpdates = collect([(object)[
-            'id' => 'itinerary-1',
-            'type' => 'itinerary_update',
-            'date' => now()->subDays(rand(5, 15)),
-            'trip' => $transactions->first()->trip ?? 'Trip Itinerary'
-        ]]);
+        if ($targetAmount <= 0) {
+            $targetAmount = max(1, $trips->sum('budget') ?: 1);
+        }
         
-        // Combine all activities and sort by date
-        $allActivities = $transactions->concat($memberJoins)->concat($itineraryUpdates)
-            ->sortByDesc('date')
-            ->take(5)
-            ->values();
+        $progressPercentage = 0;
+        if ($targetAmount > 0) {
+            $progressPercentage = min(100, round(($balance / $targetAmount) * 100, 2));
+        }
         
-        // If no activities, provide a default one
-        if ($allActivities->isEmpty()) {
-            $allActivities->push((object)[
+        return [
+            'balance' => $balance,
+            'target_amount' => $targetAmount,
+            'progress_percentage' => $progressPercentage,
+            'monthly_growth_percentage' => 0 // Calculate this later if needed
+        ];
+    }
+    
+    /**
+     * Get recent activities for the dashboard
+     */
+    private function getRecentActivities($trips)
+    {
+        $activities = collect();
+        
+        foreach ($trips->take(3) as $index => $trip) {
+            $activities->push((object)[
+                'id' => $index + 1,
+                'type' => 'itinerary_update',
+                'date' => $trip->created_at ?: now()->subDays($index + 1),
+                'trip' => $trip->title
+            ]);
+        }
+        
+        if ($activities->isEmpty()) {
+            $activities->push((object)[
                 'id' => 1,
                 'type' => 'contribution',
                 'amount' => 0,
@@ -224,73 +218,34 @@ class DashboardController extends Controller
             ]);
         }
         
-        return $allActivities;
+        return $activities;
     }
     
     /**
-     * Get user's trip invitations
+     * Get pending invitations for the user
      */
-    private function getTripInvitations($user)
+    private function getPendingInvitations($user)
     {
-        $invitations = TripMember::with(['trip.creator'])
-            ->where(function($query) use ($user) {
-                $query->where('user_id', $user->id)
-                      ->orWhere('invitation_email', $user->email);
-            })
-            ->where('invitation_status', 'pending')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function($invitation) {
-                return (object)[
-                    'id' => $invitation->id,
-                    'title' => $invitation->trip->title ?? 'Trip Invitation',
-                    'invited_by' => $invitation->trip->creator->name ?? 'A friend',
-                    'expires_at' => $invitation->created_at->addDays(7)
-                ];
-            });
-        
-        return $invitations;
+        return collect(); // Implement later if needed
     }
     
     /**
-     * Get user statistics
+     * Calculate stats for the dashboard
      */
-    private function getUserStats($userId, $wallet)
+    private function calculateStats($user, $trips)
     {
-        // Count user's trips
-        $tripsPlanned = Trip::whereHas('members', function($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })->count();
-        
-        $tripsCompleted = Trip::whereHas('members', function($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })
-        ->where('end_date', '<', now())
-        ->count();
-        
-        $tripsUpcoming = Trip::whereHas('members', function($query) use ($userId) {
-            $query->where('user_id', $userId);
-        })
-        ->where('start_date', '>=', now())
-        ->count();
-        
-        // Count friends onboarded
-        $friendsOnboarded = TripMember::whereHas('trip', function($query) use ($userId) {
-            $query->whereHas('members', function($q) use ($userId) {
-                $q->where('user_id', $userId);
-            });
-        })
-        ->where('user_id', '!=', $userId)
-        ->where('invitation_status', 'accepted')
-        ->distinct('user_id')
-        ->count();
+        $now = now();
         
         return [
-            'trips_planned' => $tripsPlanned,
-            'trips_completed' => $tripsCompleted,
-            'trips_upcoming' => $tripsUpcoming,
-            'friends_onboarded' => $friendsOnboarded,
-            'monthly_growth_percentage' => $wallet['monthly_growth_percentage']
+            'trips_planned' => $trips->count(),
+            'trips_completed' => $trips->filter(function($trip) use ($now) {
+                return $trip->end_date < $now;
+            })->count(),
+            'trips_upcoming' => $trips->filter(function($trip) use ($now) {
+                return $trip->start_date >= $now;
+            })->count(),
+            'friends_onboarded' => 0,
+            'monthly_growth_percentage' => 0
         ];
     }
 }

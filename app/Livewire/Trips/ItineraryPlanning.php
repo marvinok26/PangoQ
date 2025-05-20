@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Trips;
 
+use App\Models\TripTemplate;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
@@ -14,10 +15,15 @@ class ItineraryPlanning extends Component
     public $startDate;
     public $endDate;
     public $budget;
+    public $basePrice;
+    public $totalCost;
     public $travelers;
     public $activeDay = 1;
     public $dayActivities = [];
     public $totalDays;
+    public $tripTemplate;
+    public $optionalActivities = [];
+    public $selectedOptionalActivities = [];
     
     // For new activities
     public $newActivity = [
@@ -43,6 +49,7 @@ class ItineraryPlanning extends Component
         $selectedDestination = session('selected_destination');
         $tripDetails = session('trip_details');
         $tripInvites = session('trip_invites');
+        $templateId = session('selected_trip_template');
         
         if ($selectedDestination) {
             $this->destination = $selectedDestination['name'] ?? '';
@@ -65,6 +72,39 @@ class ItineraryPlanning extends Component
         
         if ($tripInvites) {
             $this->inviteEmails = $tripInvites;
+        }
+        
+        // Get trip template if this is a pre-planned trip
+        if ($templateId) {
+            $this->tripTemplate = TripTemplate::with(['activities' => function($query) {
+                $query->where('is_optional', false);
+            }])->find($templateId);
+            
+            // Get optional activities
+            if ($this->tripTemplate) {
+                $this->basePrice = $this->tripTemplate->base_price;
+                $this->budget = $this->basePrice;
+                $this->totalCost = $this->basePrice;
+                
+                // Get optional activities
+                $this->optionalActivities = $this->tripTemplate->activities()
+                    ->where('is_optional', true)
+                    ->get();
+                    
+                // Load any previously selected optional activities
+                $selectedOptActivities = session('selected_optional_activities', []);
+                if (!empty($selectedOptActivities)) {
+                    $this->selectedOptionalActivities = $selectedOptActivities;
+                    
+                    // Recalculate total cost
+                    foreach ($this->selectedOptionalActivities as $activityId) {
+                        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+                        if ($activity) {
+                            $this->totalCost += $activity->cost;
+                        }
+                    }
+                }
+            }
         }
         
         // Load saved activities if available
@@ -112,6 +152,16 @@ class ItineraryPlanning extends Component
         // Add to current day's activities
         $this->dayActivities[$this->activeDay][] = array_merge($this->newActivity, ['id' => $id]);
         
+        // Update total cost if cost is provided
+        if (!empty($this->newActivity['cost']) && is_numeric($this->newActivity['cost'])) {
+            $this->totalCost += floatval($this->newActivity['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
         // Save to session
         session(['trip_activities' => $this->dayActivities]);
         
@@ -139,6 +189,16 @@ class ItineraryPlanning extends Component
     public function removeActivity($day, $activityId)
     {
         if (isset($this->dayActivities[$day])) {
+            // Get activity cost before removing
+            $activityCost = 0;
+            foreach ($this->dayActivities[$day] as $activity) {
+                if ($activity['id'] === $activityId && isset($activity['cost'])) {
+                    $activityCost = floatval($activity['cost']);
+                    break;
+                }
+            }
+            
+            // Remove activity
             $this->dayActivities[$day] = array_filter($this->dayActivities[$day], function($activity) use ($activityId) {
                 return $activity['id'] !== $activityId;
             });
@@ -146,8 +206,65 @@ class ItineraryPlanning extends Component
             // Re-index array
             $this->dayActivities[$day] = array_values($this->dayActivities[$day]);
             
+            // Update total cost
+            $this->totalCost -= $activityCost;
+            
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    public function toggleOptionalActivity($activityId)
+    {
+        // Find activity in optional activities
+        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+        
+        if (!$activity) return;
+        
+        // Check if already selected
+        $index = array_search($activityId, $this->selectedOptionalActivities);
+        
+        if ($index !== false) {
+            // Remove from selected activities
+            unset($this->selectedOptionalActivities[$index]);
+            $this->selectedOptionalActivities = array_values($this->selectedOptionalActivities);
+            
+            // Subtract cost
+            $this->totalCost -= $activity->cost;
+        } else {
+            // Add to selected activities
+            $this->selectedOptionalActivities[] = $activityId;
+            
+            // Add cost
+            $this->totalCost += $activity->cost;
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
+        // Save selected optional activities to session
+        session(['selected_optional_activities' => $this->selectedOptionalActivities]);
+    }
+    
+    public function updateBudget()
+    {
+        // Validate budget
+        $this->validate([
+            'budget' => 'required|numeric|min:' . $this->totalCost,
+        ], [
+            'budget.min' => 'Budget cannot be less than the total cost of selected activities ($' . number_format($this->totalCost, 2) . ')'
+        ]);
+        
+        // Save the budget to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget
+            ]]);
         }
     }
     
@@ -184,6 +301,14 @@ class ItineraryPlanning extends Component
                 'category' => $suggestion['category'],
                 'time_of_day' => $timeOfDay
             ];
+            
+            // Update total cost
+            $this->totalCost += floatval($suggestion['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
             
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
@@ -231,6 +356,18 @@ class ItineraryPlanning extends Component
     
     public function continueToNextStep()
     {
+        // Save budget and total cost to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            $tripDetails['total_cost'] = $this->totalCost;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget,
+                'total_cost' => $this->totalCost
+            ]]);
+        }
+        
         // Save activities to session
         session(['trip_activities' => $this->dayActivities]);
         

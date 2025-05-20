@@ -158,7 +158,7 @@ class CreateTrip extends Component
     public $showNavButtons = false;
     public $tripType = null;
     public $tripTemplateId = null;
-    
+
     // Use specific events for each step transition
     protected $listeners = [
         'tripTypeSelected' => 'selectTripType',
@@ -169,88 +169,88 @@ class CreateTrip extends Component
         'completeInvitesStep' => 'moveToReview',
         'goToPreviousStep' => 'previousStep'
     ];
-    
+
     public function mount()
     {
-        // Reset step to 0 for the trip type selection
+        // Reset step to a for the trip type selection
         $this->currentStep = 0;
-        
+
         // Check if we already have a trip type selected in session
         $this->tripType = session('selected_trip_type');
         $this->tripTemplateId = session('selected_trip_template');
-        
+
         // If trip type is already selected, start at step 1 (destination or template selection)
         if ($this->tripType) {
             $this->currentStep = 1;
         }
-        
+
         Log::info("CreateTrip component mounted with step: {$this->currentStep}, trip type: {$this->tripType}");
     }
-    
+
     public function render()
     {
         // Debug info
         session(['debug_info' => "Current step: {$this->currentStep}, Trip type: {$this->tripType}"]);
-        
+
         return view('livewire.trips.create-trip');
     }
-    
+
     public function selectTripType($tripType)
     {
         $this->tripType = $tripType;
         Session::put('selected_trip_type', $tripType);
-        
+
         $this->currentStep = 1; // Move to either destination selection or template selection
-        
+
         Log::info("Trip type selected: {$tripType}, moved to step 1");
     }
-    
+
     public function selectTripTemplate($tripTemplateId)
     {
         $this->tripTemplateId = $tripTemplateId;
         Session::put('selected_trip_template', $tripTemplateId);
-        
+
         // Pre-planned trips skip steps 1-3 since the template already has them
         // Move directly to invites (step 4)
         $this->currentStep = 4;
-        
+
         Log::info("Trip template selected: {$tripTemplateId}, moved to step 4 (invites)");
     }
-    
+
     public function selectDestination($destination)
     {
         // Store destination (for self-planned trips)
         Session::put('selected_destination', $destination);
-        
+
         // Go to Trip Details
         $oldStep = $this->currentStep;
         $this->currentStep = 2;
         Log::info("Selected destination, moved from step {$oldStep} to 2");
     }
-    
+
     // Specific transition methods for each step
     public function moveToItinerary()
     {
         Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
         $this->currentStep = 3;
     }
-    
+
     public function moveToInvites()
     {
         Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
         $this->currentStep = 4;
     }
-    
+
     public function moveToReview()
     {
         Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
         $this->currentStep = 5;
     }
-    
+
     public function previousStep()
     {
         $oldStep = $this->currentStep;
-        
+
         // Special handling for pre-planned trips
         if ($this->tripType === 'pre_planned' && $this->currentStep === 4) {
             // Go back to template selection
@@ -259,14 +259,14 @@ class CreateTrip extends Component
             // Normal step backwards
             $this->currentStep--;
         }
-        
+
         Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
     }
-    
+
     public function goToStep($step)
     {
         $oldStep = $this->currentStep;
-        
+
         // Only allow valid steps and consider trip type
         if ($step >= 0 && $step <= $this->totalSteps) {
             // For pre-planned trips, only allow steps 0, 1, 4 and 5
@@ -275,7 +275,7 @@ class CreateTrip extends Component
                     $this->currentStep = $step;
                     Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
                 }
-            } 
+            }
             // For self-planned trips or initial selection, allow normal flow
             else {
                 // Only allow backward navigation or one step forward
@@ -286,21 +286,97 @@ class CreateTrip extends Component
             }
         }
     }
-    
+
     public function skipToSummary()
     {
         $oldStep = $this->currentStep;
-        
+
         if ($this->tripType === 'pre_planned' && $this->tripTemplateId) {
             $this->currentStep = $this->totalSteps; // Go to review
             Log::info("Skipped from step {$oldStep} to summary (step 5) for pre-planned trip");
-        } 
-        else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
+        } else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
             $this->currentStep = $this->totalSteps; // Go to review
             Log::info("Skipped from step {$oldStep} to summary (step 5) for self-planned trip");
         }
     }
+
+    /**
+     * Handle the create trip button click
+     * Saves trip data to session and redirects to login
+     */
+    public function createTrip()
+    {
+        // Mark session data as "new" so it will be saved after login
+        session(['trip_data_not_saved' => true]);
+
+        // Log session data before redirect
+        Log::info('Trip data before redirect to login', [
+            'trip_data_not_saved' => session('trip_data_not_saved'),
+            'selected_trip_type' => session('selected_trip_type'),
+            'selected_destination' => session('selected_destination'),
+            'trip_details' => session('trip_details'),
+            'session_id' => session()->getId()
+        ]);
+
+        // Flash message for login/register page
+        session()->flash('message', 'Please login or create an account to save your trip plans.');
+
+        // Check if user is authenticated
+        if (auth()->check()) {
+            // User is already logged in, redirect to trips.index
+            return redirect()->route('trips.index');
+        } else {
+            // User is not logged in, redirect to login
+            return redirect()->route('login');
+        }
+
+        // Ensure total cost and budget are properly set in session
+        $tripDetails = session('trip_details', []);
+        $totalPrice = session('trip_total_price', 0);
+
+        // Make sure we have a total cost value
+        if (!isset($tripDetails['total_cost'])) {
+            if ($totalPrice > 0) {
+                $tripDetails['total_cost'] = $totalPrice;
+            } elseif (isset($tripDetails['budget'])) {
+                $tripDetails['total_cost'] = $tripDetails['budget'];
+            } else {
+                $tripDetails['total_cost'] = 0;
+            }
+
+            // Make sure budget is at least equal to total cost
+            if (!isset($tripDetails['budget']) || $tripDetails['budget'] < $tripDetails['total_cost']) {
+                $tripDetails['budget'] = $tripDetails['total_cost'];
+            }
+
+            session(['trip_details' => $tripDetails]);
+        }
+
+        // Log session data before redirect
+        Log::info('Trip data before redirect to login', [
+            'trip_data_not_saved' => session('trip_data_not_saved'),
+            'selected_trip_type' => session('selected_trip_type'),
+            'selected_destination' => session('selected_destination'),
+            'trip_details' => session('trip_details'),
+            'selected_optional_activities' => session('selected_optional_activities'),
+            'trip_total_price' => session('trip_total_price'),
+            'session_id' => session()->getId()
+        ]);
+
+        // Add a flash message for the login/register page
+        session()->flash('message', 'Please login or create an account to save your trip plans.');
+
+        // Check if user is authenticated
+        if (auth()->check()) {
+            // User is already logged in, redirect to trips index for middleware to handle
+            return redirect()->route('trips.index');
+        } else {
+            // User is not logged in, redirect to login
+            return redirect()->route('login');
+        }
+    }
 }
+
 
 === File: Review.php ===
 
@@ -321,7 +397,12 @@ class Review extends Component
     public $invites;
     public $tripTemplate;
     public $templateActivities;
-    
+    public $templateHighlights;
+    public $selectedOptionalActivities = [];
+    public $optionalActivities = [];
+    public $basePrice;
+    public $totalCost;
+
     public function mount()
     {
         $this->tripType = session('selected_trip_type');
@@ -329,67 +410,110 @@ class Review extends Component
         $this->tripDetails = session('trip_details', []);
         $this->tripActivities = session('trip_activities', []);
         $this->invites = session('trip_invites', []);
-        
+
         // If pre-planned trip, get template details
         if ($this->tripType === 'pre_planned') {
             $templateId = session('selected_trip_template');
             if ($templateId) {
-                $this->tripTemplate = TripTemplate::with('destination')->find($templateId);
-                
+                $this->tripTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
+
                 if ($this->tripTemplate) {
-                    // Group activities by day
-                    $activities = $this->tripTemplate->activities;
+                    // Parse the highlights JSON field if it exists
+                    if ($this->tripTemplate->highlights) {
+                        // Check if highlights is already an array
+                        $this->templateHighlights = is_array($this->tripTemplate->highlights)
+                            ? $this->tripTemplate->highlights
+                            : json_decode($this->tripTemplate->highlights, true) ?? [];
+                    } else {
+                        $this->templateHighlights = [];
+                    }
+
+                    // Get base price
+                    $this->basePrice = $this->tripTemplate->base_price;
+
+                    // Get optional activities
+                    $this->optionalActivities = $this->tripTemplate->activities()
+                        ->where('is_optional', true)
+                        ->get();
+
+                    // Get selected optional activities from session
+                    $this->selectedOptionalActivities = session('selected_optional_activities', []);
+
+                    // Try to get total price from session first
+                    $this->totalCost = session('trip_total_price', $this->basePrice);
+
+                    // If no total price in session, calculate it
+                    if ($this->totalCost == $this->basePrice && !empty($this->selectedOptionalActivities)) {
+                        foreach ($this->selectedOptionalActivities as $id => $activity) {
+                            if (isset($activity['cost'])) {
+                                $this->totalCost += $activity['cost'];
+                            }
+                        }
+                    }
+
+                    // Make sure trip details has the correct total cost
+                    if ((!isset($this->tripDetails['total_cost']) || $this->tripDetails['total_cost'] != $this->totalCost)) {
+                        $this->tripDetails['total_cost'] = $this->totalCost;
+                        session(['trip_details' => $this->tripDetails]);
+                    }
+
+                    // Group activities by day (only non-optional)
+                    $activities = $this->tripTemplate->activities()
+                        ->where('is_optional', false)
+                        ->get();
+
                     $groupedActivities = [];
-                    
+
                     foreach ($activities as $activity) {
                         $groupedActivities[$activity->day_number][] = $activity;
                     }
-                    
+
                     // Sort activities by start_time for each day
                     foreach ($groupedActivities as $day => $dayActivities) {
-                        usort($dayActivities, function($a, $b) {
+                        usort($dayActivities, function ($a, $b) {
                             return $a->start_time <=> $b->start_time;
                         });
-                        
+
                         $groupedActivities[$day] = $dayActivities;
                     }
-                    
+
                     $this->templateActivities = $groupedActivities;
                 }
             }
         }
     }
-    
+
     public function render()
     {
         return view('livewire.trips.review');
     }
-    
+
     public function editTripType()
     {
         $this->dispatch('goToStep', step: 0);
     }
-    
+
     public function editDestination()
     {
         $this->dispatch('goToStep', step: 1);
     }
-    
+
     public function editDetails()
     {
         $this->dispatch('goToStep', step: 2);
     }
-    
+
     public function editItinerary()
     {
         $this->dispatch('goToStep', step: 3);
     }
-    
+
     public function editInvites()
     {
         $this->dispatch('goToStep', step: 4);
     }
 }
+
 
 === File: DestinationSelection.php ===
 
@@ -513,6 +637,7 @@ class DestinationSelection extends Component
 
 namespace App\Livewire\Trips;
 
+use App\Models\TripTemplate;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
@@ -525,10 +650,15 @@ class ItineraryPlanning extends Component
     public $startDate;
     public $endDate;
     public $budget;
+    public $basePrice;
+    public $totalCost;
     public $travelers;
     public $activeDay = 1;
     public $dayActivities = [];
     public $totalDays;
+    public $tripTemplate;
+    public $optionalActivities = [];
+    public $selectedOptionalActivities = [];
     
     // For new activities
     public $newActivity = [
@@ -554,6 +684,7 @@ class ItineraryPlanning extends Component
         $selectedDestination = session('selected_destination');
         $tripDetails = session('trip_details');
         $tripInvites = session('trip_invites');
+        $templateId = session('selected_trip_template');
         
         if ($selectedDestination) {
             $this->destination = $selectedDestination['name'] ?? '';
@@ -576,6 +707,39 @@ class ItineraryPlanning extends Component
         
         if ($tripInvites) {
             $this->inviteEmails = $tripInvites;
+        }
+        
+        // Get trip template if this is a pre-planned trip
+        if ($templateId) {
+            $this->tripTemplate = TripTemplate::with(['activities' => function($query) {
+                $query->where('is_optional', false);
+            }])->find($templateId);
+            
+            // Get optional activities
+            if ($this->tripTemplate) {
+                $this->basePrice = $this->tripTemplate->base_price;
+                $this->budget = $this->basePrice;
+                $this->totalCost = $this->basePrice;
+                
+                // Get optional activities
+                $this->optionalActivities = $this->tripTemplate->activities()
+                    ->where('is_optional', true)
+                    ->get();
+                    
+                // Load any previously selected optional activities
+                $selectedOptActivities = session('selected_optional_activities', []);
+                if (!empty($selectedOptActivities)) {
+                    $this->selectedOptionalActivities = $selectedOptActivities;
+                    
+                    // Recalculate total cost
+                    foreach ($this->selectedOptionalActivities as $activityId) {
+                        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+                        if ($activity) {
+                            $this->totalCost += $activity->cost;
+                        }
+                    }
+                }
+            }
         }
         
         // Load saved activities if available
@@ -623,6 +787,16 @@ class ItineraryPlanning extends Component
         // Add to current day's activities
         $this->dayActivities[$this->activeDay][] = array_merge($this->newActivity, ['id' => $id]);
         
+        // Update total cost if cost is provided
+        if (!empty($this->newActivity['cost']) && is_numeric($this->newActivity['cost'])) {
+            $this->totalCost += floatval($this->newActivity['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
         // Save to session
         session(['trip_activities' => $this->dayActivities]);
         
@@ -650,6 +824,16 @@ class ItineraryPlanning extends Component
     public function removeActivity($day, $activityId)
     {
         if (isset($this->dayActivities[$day])) {
+            // Get activity cost before removing
+            $activityCost = 0;
+            foreach ($this->dayActivities[$day] as $activity) {
+                if ($activity['id'] === $activityId && isset($activity['cost'])) {
+                    $activityCost = floatval($activity['cost']);
+                    break;
+                }
+            }
+            
+            // Remove activity
             $this->dayActivities[$day] = array_filter($this->dayActivities[$day], function($activity) use ($activityId) {
                 return $activity['id'] !== $activityId;
             });
@@ -657,8 +841,65 @@ class ItineraryPlanning extends Component
             // Re-index array
             $this->dayActivities[$day] = array_values($this->dayActivities[$day]);
             
+            // Update total cost
+            $this->totalCost -= $activityCost;
+            
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    public function toggleOptionalActivity($activityId)
+    {
+        // Find activity in optional activities
+        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+        
+        if (!$activity) return;
+        
+        // Check if already selected
+        $index = array_search($activityId, $this->selectedOptionalActivities);
+        
+        if ($index !== false) {
+            // Remove from selected activities
+            unset($this->selectedOptionalActivities[$index]);
+            $this->selectedOptionalActivities = array_values($this->selectedOptionalActivities);
+            
+            // Subtract cost
+            $this->totalCost -= $activity->cost;
+        } else {
+            // Add to selected activities
+            $this->selectedOptionalActivities[] = $activityId;
+            
+            // Add cost
+            $this->totalCost += $activity->cost;
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
+        // Save selected optional activities to session
+        session(['selected_optional_activities' => $this->selectedOptionalActivities]);
+    }
+    
+    public function updateBudget()
+    {
+        // Validate budget
+        $this->validate([
+            'budget' => 'required|numeric|min:' . $this->totalCost,
+        ], [
+            'budget.min' => 'Budget cannot be less than the total cost of selected activities ($' . number_format($this->totalCost, 2) . ')'
+        ]);
+        
+        // Save the budget to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget
+            ]]);
         }
     }
     
@@ -695,6 +936,14 @@ class ItineraryPlanning extends Component
                 'category' => $suggestion['category'],
                 'time_of_day' => $timeOfDay
             ];
+            
+            // Update total cost
+            $this->totalCost += floatval($suggestion['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
             
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
@@ -742,6 +991,18 @@ class ItineraryPlanning extends Component
     
     public function continueToNextStep()
     {
+        // Save budget and total cost to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            $tripDetails['total_cost'] = $this->totalCost;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget,
+                'total_cost' => $this->totalCost
+            ]]);
+        }
+        
         // Save activities to session
         session(['trip_activities' => $this->dayActivities]);
         
@@ -915,7 +1176,7 @@ class CreateTrip extends Component
     public $showNavButtons = false;
     public $tripType = null;
     public $tripTemplateId = null;
-    
+
     // Use specific events for each step transition
     protected $listeners = [
         'tripTypeSelected' => 'selectTripType',
@@ -926,88 +1187,88 @@ class CreateTrip extends Component
         'completeInvitesStep' => 'moveToReview',
         'goToPreviousStep' => 'previousStep'
     ];
-    
+
     public function mount()
     {
-        // Reset step to 0 for the trip type selection
+        // Reset step to a for the trip type selection
         $this->currentStep = 0;
-        
+
         // Check if we already have a trip type selected in session
         $this->tripType = session('selected_trip_type');
         $this->tripTemplateId = session('selected_trip_template');
-        
+
         // If trip type is already selected, start at step 1 (destination or template selection)
         if ($this->tripType) {
             $this->currentStep = 1;
         }
-        
+
         Log::info("CreateTrip component mounted with step: {$this->currentStep}, trip type: {$this->tripType}");
     }
-    
+
     public function render()
     {
         // Debug info
         session(['debug_info' => "Current step: {$this->currentStep}, Trip type: {$this->tripType}"]);
-        
+
         return view('livewire.trips.create-trip');
     }
-    
+
     public function selectTripType($tripType)
     {
         $this->tripType = $tripType;
         Session::put('selected_trip_type', $tripType);
-        
+
         $this->currentStep = 1; // Move to either destination selection or template selection
-        
+
         Log::info("Trip type selected: {$tripType}, moved to step 1");
     }
-    
+
     public function selectTripTemplate($tripTemplateId)
     {
         $this->tripTemplateId = $tripTemplateId;
         Session::put('selected_trip_template', $tripTemplateId);
-        
+
         // Pre-planned trips skip steps 1-3 since the template already has them
         // Move directly to invites (step 4)
         $this->currentStep = 4;
-        
+
         Log::info("Trip template selected: {$tripTemplateId}, moved to step 4 (invites)");
     }
-    
+
     public function selectDestination($destination)
     {
         // Store destination (for self-planned trips)
         Session::put('selected_destination', $destination);
-        
+
         // Go to Trip Details
         $oldStep = $this->currentStep;
         $this->currentStep = 2;
         Log::info("Selected destination, moved from step {$oldStep} to 2");
     }
-    
+
     // Specific transition methods for each step
     public function moveToItinerary()
     {
         Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
         $this->currentStep = 3;
     }
-    
+
     public function moveToInvites()
     {
         Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
         $this->currentStep = 4;
     }
-    
+
     public function moveToReview()
     {
         Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
         $this->currentStep = 5;
     }
-    
+
     public function previousStep()
     {
         $oldStep = $this->currentStep;
-        
+
         // Special handling for pre-planned trips
         if ($this->tripType === 'pre_planned' && $this->currentStep === 4) {
             // Go back to template selection
@@ -1016,14 +1277,14 @@ class CreateTrip extends Component
             // Normal step backwards
             $this->currentStep--;
         }
-        
+
         Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
     }
-    
+
     public function goToStep($step)
     {
         $oldStep = $this->currentStep;
-        
+
         // Only allow valid steps and consider trip type
         if ($step >= 0 && $step <= $this->totalSteps) {
             // For pre-planned trips, only allow steps 0, 1, 4 and 5
@@ -1032,7 +1293,7 @@ class CreateTrip extends Component
                     $this->currentStep = $step;
                     Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
                 }
-            } 
+            }
             // For self-planned trips or initial selection, allow normal flow
             else {
                 // Only allow backward navigation or one step forward
@@ -1043,21 +1304,97 @@ class CreateTrip extends Component
             }
         }
     }
-    
+
     public function skipToSummary()
     {
         $oldStep = $this->currentStep;
-        
+
         if ($this->tripType === 'pre_planned' && $this->tripTemplateId) {
             $this->currentStep = $this->totalSteps; // Go to review
             Log::info("Skipped from step {$oldStep} to summary (step 5) for pre-planned trip");
-        } 
-        else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
+        } else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
             $this->currentStep = $this->totalSteps; // Go to review
             Log::info("Skipped from step {$oldStep} to summary (step 5) for self-planned trip");
         }
     }
+
+    /**
+     * Handle the create trip button click
+     * Saves trip data to session and redirects to login
+     */
+    public function createTrip()
+    {
+        // Mark session data as "new" so it will be saved after login
+        session(['trip_data_not_saved' => true]);
+
+        // Log session data before redirect
+        Log::info('Trip data before redirect to login', [
+            'trip_data_not_saved' => session('trip_data_not_saved'),
+            'selected_trip_type' => session('selected_trip_type'),
+            'selected_destination' => session('selected_destination'),
+            'trip_details' => session('trip_details'),
+            'session_id' => session()->getId()
+        ]);
+
+        // Flash message for login/register page
+        session()->flash('message', 'Please login or create an account to save your trip plans.');
+
+        // Check if user is authenticated
+        if (auth()->check()) {
+            // User is already logged in, redirect to trips.index
+            return redirect()->route('trips.index');
+        } else {
+            // User is not logged in, redirect to login
+            return redirect()->route('login');
+        }
+
+        // Ensure total cost and budget are properly set in session
+        $tripDetails = session('trip_details', []);
+        $totalPrice = session('trip_total_price', 0);
+
+        // Make sure we have a total cost value
+        if (!isset($tripDetails['total_cost'])) {
+            if ($totalPrice > 0) {
+                $tripDetails['total_cost'] = $totalPrice;
+            } elseif (isset($tripDetails['budget'])) {
+                $tripDetails['total_cost'] = $tripDetails['budget'];
+            } else {
+                $tripDetails['total_cost'] = 0;
+            }
+
+            // Make sure budget is at least equal to total cost
+            if (!isset($tripDetails['budget']) || $tripDetails['budget'] < $tripDetails['total_cost']) {
+                $tripDetails['budget'] = $tripDetails['total_cost'];
+            }
+
+            session(['trip_details' => $tripDetails]);
+        }
+
+        // Log session data before redirect
+        Log::info('Trip data before redirect to login', [
+            'trip_data_not_saved' => session('trip_data_not_saved'),
+            'selected_trip_type' => session('selected_trip_type'),
+            'selected_destination' => session('selected_destination'),
+            'trip_details' => session('trip_details'),
+            'selected_optional_activities' => session('selected_optional_activities'),
+            'trip_total_price' => session('trip_total_price'),
+            'session_id' => session()->getId()
+        ]);
+
+        // Add a flash message for the login/register page
+        session()->flash('message', 'Please login or create an account to save your trip plans.');
+
+        // Check if user is authenticated
+        if (auth()->check()) {
+            // User is already logged in, redirect to trips index for middleware to handle
+            return redirect()->route('trips.index');
+        } else {
+            // User is not logged in, redirect to login
+            return redirect()->route('login');
+        }
+    }
 }
+
 
 === File: Review.php ===
 
@@ -1078,7 +1415,12 @@ class Review extends Component
     public $invites;
     public $tripTemplate;
     public $templateActivities;
-    
+    public $templateHighlights;
+    public $selectedOptionalActivities = [];
+    public $optionalActivities = [];
+    public $basePrice;
+    public $totalCost;
+
     public function mount()
     {
         $this->tripType = session('selected_trip_type');
@@ -1086,67 +1428,110 @@ class Review extends Component
         $this->tripDetails = session('trip_details', []);
         $this->tripActivities = session('trip_activities', []);
         $this->invites = session('trip_invites', []);
-        
+
         // If pre-planned trip, get template details
         if ($this->tripType === 'pre_planned') {
             $templateId = session('selected_trip_template');
             if ($templateId) {
-                $this->tripTemplate = TripTemplate::with('destination')->find($templateId);
-                
+                $this->tripTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
+
                 if ($this->tripTemplate) {
-                    // Group activities by day
-                    $activities = $this->tripTemplate->activities;
+                    // Parse the highlights JSON field if it exists
+                    if ($this->tripTemplate->highlights) {
+                        // Check if highlights is already an array
+                        $this->templateHighlights = is_array($this->tripTemplate->highlights)
+                            ? $this->tripTemplate->highlights
+                            : json_decode($this->tripTemplate->highlights, true) ?? [];
+                    } else {
+                        $this->templateHighlights = [];
+                    }
+
+                    // Get base price
+                    $this->basePrice = $this->tripTemplate->base_price;
+
+                    // Get optional activities
+                    $this->optionalActivities = $this->tripTemplate->activities()
+                        ->where('is_optional', true)
+                        ->get();
+
+                    // Get selected optional activities from session
+                    $this->selectedOptionalActivities = session('selected_optional_activities', []);
+
+                    // Try to get total price from session first
+                    $this->totalCost = session('trip_total_price', $this->basePrice);
+
+                    // If no total price in session, calculate it
+                    if ($this->totalCost == $this->basePrice && !empty($this->selectedOptionalActivities)) {
+                        foreach ($this->selectedOptionalActivities as $id => $activity) {
+                            if (isset($activity['cost'])) {
+                                $this->totalCost += $activity['cost'];
+                            }
+                        }
+                    }
+
+                    // Make sure trip details has the correct total cost
+                    if ((!isset($this->tripDetails['total_cost']) || $this->tripDetails['total_cost'] != $this->totalCost)) {
+                        $this->tripDetails['total_cost'] = $this->totalCost;
+                        session(['trip_details' => $this->tripDetails]);
+                    }
+
+                    // Group activities by day (only non-optional)
+                    $activities = $this->tripTemplate->activities()
+                        ->where('is_optional', false)
+                        ->get();
+
                     $groupedActivities = [];
-                    
+
                     foreach ($activities as $activity) {
                         $groupedActivities[$activity->day_number][] = $activity;
                     }
-                    
+
                     // Sort activities by start_time for each day
                     foreach ($groupedActivities as $day => $dayActivities) {
-                        usort($dayActivities, function($a, $b) {
+                        usort($dayActivities, function ($a, $b) {
                             return $a->start_time <=> $b->start_time;
                         });
-                        
+
                         $groupedActivities[$day] = $dayActivities;
                     }
-                    
+
                     $this->templateActivities = $groupedActivities;
                 }
             }
         }
     }
-    
+
     public function render()
     {
         return view('livewire.trips.review');
     }
-    
+
     public function editTripType()
     {
         $this->dispatch('goToStep', step: 0);
     }
-    
+
     public function editDestination()
     {
         $this->dispatch('goToStep', step: 1);
     }
-    
+
     public function editDetails()
     {
         $this->dispatch('goToStep', step: 2);
     }
-    
+
     public function editItinerary()
     {
         $this->dispatch('goToStep', step: 3);
     }
-    
+
     public function editInvites()
     {
         $this->dispatch('goToStep', step: 4);
     }
 }
+
 
 === File: DestinationSelection.php ===
 
@@ -1270,6 +1655,7 @@ class DestinationSelection extends Component
 
 namespace App\Livewire\Trips;
 
+use App\Models\TripTemplate;
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
@@ -1282,10 +1668,15 @@ class ItineraryPlanning extends Component
     public $startDate;
     public $endDate;
     public $budget;
+    public $basePrice;
+    public $totalCost;
     public $travelers;
     public $activeDay = 1;
     public $dayActivities = [];
     public $totalDays;
+    public $tripTemplate;
+    public $optionalActivities = [];
+    public $selectedOptionalActivities = [];
     
     // For new activities
     public $newActivity = [
@@ -1311,6 +1702,7 @@ class ItineraryPlanning extends Component
         $selectedDestination = session('selected_destination');
         $tripDetails = session('trip_details');
         $tripInvites = session('trip_invites');
+        $templateId = session('selected_trip_template');
         
         if ($selectedDestination) {
             $this->destination = $selectedDestination['name'] ?? '';
@@ -1333,6 +1725,39 @@ class ItineraryPlanning extends Component
         
         if ($tripInvites) {
             $this->inviteEmails = $tripInvites;
+        }
+        
+        // Get trip template if this is a pre-planned trip
+        if ($templateId) {
+            $this->tripTemplate = TripTemplate::with(['activities' => function($query) {
+                $query->where('is_optional', false);
+            }])->find($templateId);
+            
+            // Get optional activities
+            if ($this->tripTemplate) {
+                $this->basePrice = $this->tripTemplate->base_price;
+                $this->budget = $this->basePrice;
+                $this->totalCost = $this->basePrice;
+                
+                // Get optional activities
+                $this->optionalActivities = $this->tripTemplate->activities()
+                    ->where('is_optional', true)
+                    ->get();
+                    
+                // Load any previously selected optional activities
+                $selectedOptActivities = session('selected_optional_activities', []);
+                if (!empty($selectedOptActivities)) {
+                    $this->selectedOptionalActivities = $selectedOptActivities;
+                    
+                    // Recalculate total cost
+                    foreach ($this->selectedOptionalActivities as $activityId) {
+                        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+                        if ($activity) {
+                            $this->totalCost += $activity->cost;
+                        }
+                    }
+                }
+            }
         }
         
         // Load saved activities if available
@@ -1380,6 +1805,16 @@ class ItineraryPlanning extends Component
         // Add to current day's activities
         $this->dayActivities[$this->activeDay][] = array_merge($this->newActivity, ['id' => $id]);
         
+        // Update total cost if cost is provided
+        if (!empty($this->newActivity['cost']) && is_numeric($this->newActivity['cost'])) {
+            $this->totalCost += floatval($this->newActivity['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
         // Save to session
         session(['trip_activities' => $this->dayActivities]);
         
@@ -1407,6 +1842,16 @@ class ItineraryPlanning extends Component
     public function removeActivity($day, $activityId)
     {
         if (isset($this->dayActivities[$day])) {
+            // Get activity cost before removing
+            $activityCost = 0;
+            foreach ($this->dayActivities[$day] as $activity) {
+                if ($activity['id'] === $activityId && isset($activity['cost'])) {
+                    $activityCost = floatval($activity['cost']);
+                    break;
+                }
+            }
+            
+            // Remove activity
             $this->dayActivities[$day] = array_filter($this->dayActivities[$day], function($activity) use ($activityId) {
                 return $activity['id'] !== $activityId;
             });
@@ -1414,8 +1859,65 @@ class ItineraryPlanning extends Component
             // Re-index array
             $this->dayActivities[$day] = array_values($this->dayActivities[$day]);
             
+            // Update total cost
+            $this->totalCost -= $activityCost;
+            
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
+        }
+    }
+    
+    public function toggleOptionalActivity($activityId)
+    {
+        // Find activity in optional activities
+        $activity = $this->optionalActivities->firstWhere('id', $activityId);
+        
+        if (!$activity) return;
+        
+        // Check if already selected
+        $index = array_search($activityId, $this->selectedOptionalActivities);
+        
+        if ($index !== false) {
+            // Remove from selected activities
+            unset($this->selectedOptionalActivities[$index]);
+            $this->selectedOptionalActivities = array_values($this->selectedOptionalActivities);
+            
+            // Subtract cost
+            $this->totalCost -= $activity->cost;
+        } else {
+            // Add to selected activities
+            $this->selectedOptionalActivities[] = $activityId;
+            
+            // Add cost
+            $this->totalCost += $activity->cost;
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
+        }
+        
+        // Save selected optional activities to session
+        session(['selected_optional_activities' => $this->selectedOptionalActivities]);
+    }
+    
+    public function updateBudget()
+    {
+        // Validate budget
+        $this->validate([
+            'budget' => 'required|numeric|min:' . $this->totalCost,
+        ], [
+            'budget.min' => 'Budget cannot be less than the total cost of selected activities ($' . number_format($this->totalCost, 2) . ')'
+        ]);
+        
+        // Save the budget to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget
+            ]]);
         }
     }
     
@@ -1452,6 +1954,14 @@ class ItineraryPlanning extends Component
                 'category' => $suggestion['category'],
                 'time_of_day' => $timeOfDay
             ];
+            
+            // Update total cost
+            $this->totalCost += floatval($suggestion['cost']);
+            
+            // Update budget if needed
+            if ($this->totalCost > $this->budget) {
+                $this->budget = $this->totalCost;
+            }
             
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
@@ -1499,6 +2009,18 @@ class ItineraryPlanning extends Component
     
     public function continueToNextStep()
     {
+        // Save budget and total cost to session
+        if ($tripDetails = session('trip_details')) {
+            $tripDetails['budget'] = $this->budget;
+            $tripDetails['total_cost'] = $this->totalCost;
+            session(['trip_details' => $tripDetails]);
+        } else {
+            session(['trip_details' => [
+                'budget' => $this->budget,
+                'total_cost' => $this->totalCost
+            ]]);
+        }
+        
         // Save activities to session
         session(['trip_activities' => $this->dayActivities]);
         
@@ -1526,7 +2048,7 @@ class InviteFriends extends Component
     public $tripTitle;
     public $startDate;
     public $endDate;
-    public $travelers;
+    public $travelers = 1; // Default to 1 (just the organizer)
     
     public $friendName = '';
     public $friendContact = '';
@@ -1551,7 +2073,10 @@ class InviteFriends extends Component
             $this->tripTitle = $tripDetails['title'] ?? '';
             $this->startDate = $tripDetails['start_date'] ?? '';
             $this->endDate = $tripDetails['end_date'] ?? '';
-            $this->travelers = $tripDetails['travelers'] ?? 4;
+            // Only set $travelers from session if it's a valid number greater than 0
+            if (isset($tripDetails['travelers']) && $tripDetails['travelers'] > 0) {
+                $this->travelers = $tripDetails['travelers'];
+            }
         }
         
         // Load saved invites if available
@@ -1639,6 +2164,14 @@ class InviteFriends extends Component
     
     public function continueToNextStep()
     {
+        // Calculate and update total travelers (organizer + invited)
+        $totalTravelers = 1 + count($this->inviteEmails);
+        
+        // Update trip details in session
+        $tripDetails = session('trip_details', []);
+        $tripDetails['travelers'] = $totalTravelers;
+        session(['trip_details' => $tripDetails]);
+        
         // Save invites to session
         session(['trip_invites' => $this->inviteEmails]);
         
@@ -1658,6 +2191,7 @@ namespace App\Livewire\Trips;
 
 use App\Models\Destination;
 use App\Models\TripTemplate;
+use App\Models\TemplateActivity;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
 
@@ -1669,61 +2203,134 @@ class PrePlannedTripSelection extends Component
     public $selectedTemplate = null;
     public $showTemplateDetails = false;
     public $templateActivities = [];
+    public $templateHighlights = [];
+    public $optionalActivities = [];
     
+    // New properties for optional activities selection
+    public $selectedOptionalActivities = [];
+    public $totalPrice = 0;
+
     public function mount()
     {
         $this->destinations = Destination::has('tripTemplates')->get();
     }
-    
+
     public function render()
     {
         return view('livewire.trips.pre-planned-trip-selection');
     }
-    
+
     public function selectDestination($destinationId)
     {
         $this->selectedDestination = Destination::find($destinationId);
         $this->tripTemplates = TripTemplate::where('destination_id', $destinationId)
             ->with('destination')
             ->get();
-        
+
         // Reset template selection
         $this->selectedTemplate = null;
         $this->showTemplateDetails = false;
         $this->templateActivities = [];
+        $this->templateHighlights = [];
+        $this->selectedOptionalActivities = [];
+        $this->totalPrice = 0;
     }
-    
+
+    protected function getListeners()
+    {
+        return [
+            'viewTemplate' => 'handleViewTemplate',
+        ];
+    }
+
+    public function handleViewTemplate($data)
+    {
+        \Illuminate\Support\Facades\Log::info('handleViewTemplate called with data: ', $data);
+        $this->viewTemplateDetails($data['templateId']);
+    }
+
     public function viewTemplateDetails($templateId)
     {
-        $this->selectedTemplate = TripTemplate::with('activities', 'destination')->find($templateId);
+        // Debug information
+        \Illuminate\Support\Facades\Log::info('viewTemplateDetails called with ID: ' . $templateId);
+
+        $this->selectedTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
         $this->showTemplateDetails = true;
+
+        // Reset selected optional activities
+        $this->selectedOptionalActivities = [];
         
-        // Group activities by day
+        // Set initial total price to base price
+        $this->totalPrice = $this->selectedTemplate->base_price;
+
+        // Parse the highlights field if it exists
+if ($this->selectedTemplate->highlights) {
+    // Check if highlights is already an array
+    $this->templateHighlights = is_array($this->selectedTemplate->highlights) 
+        ? $this->selectedTemplate->highlights 
+        : json_decode($this->selectedTemplate->highlights, true) ?? [];
+} else {
+    $this->templateHighlights = [];
+}
+
+        // Group activities by day and separate optional activities
         $activities = $this->selectedTemplate->activities;
         $groupedActivities = [];
-        
+        $optionalActivities = [];
+
         foreach ($activities as $activity) {
-            $groupedActivities[$activity->day_number][] = $activity;
+            if ($activity->is_optional) {
+                $optionalActivities[] = $activity;
+            } else {
+                $groupedActivities[$activity->day_number][] = $activity;
+            }
         }
-        
+
         // Sort activities by start_time for each day
         foreach ($groupedActivities as $day => $dayActivities) {
-            usort($dayActivities, function($a, $b) {
+            usort($dayActivities, function ($a, $b) {
                 return $a->start_time <=> $b->start_time;
             });
-            
+
             $groupedActivities[$day] = $dayActivities;
         }
-        
+
         $this->templateActivities = $groupedActivities;
+        $this->optionalActivities = $optionalActivities;
     }
-    
+
+    // Toggle optional activity selection
+    public function toggleOptionalActivity($activityId)
+    {
+        if (isset($this->selectedOptionalActivities[$activityId])) {
+            // If already selected, remove it
+            $activityCost = $this->selectedOptionalActivities[$activityId]['cost'];
+            $this->totalPrice -= $activityCost;
+            unset($this->selectedOptionalActivities[$activityId]);
+        } else {
+            // If not selected, add it
+            $activity = TemplateActivity::find($activityId);
+            if ($activity) {
+                $this->selectedOptionalActivities[$activityId] = [
+                    'id' => $activity->id,
+                    'title' => $activity->title,
+                    'cost' => $activity->cost
+                ];
+                $this->totalPrice += $activity->cost;
+            }
+        }
+        
+        // Debug information
+        \Illuminate\Support\Facades\Log::info('Optional activity toggled. New total price: ' . $this->totalPrice);
+        \Illuminate\Support\Facades\Log::info('Selected optional activities: ', $this->selectedOptionalActivities);
+    }
+
     public function selectTripTemplate()
     {
         if (!$this->selectedTemplate) {
             return;
         }
-        
+
         // Store template selection in session
         Session::put('selected_trip_template', $this->selectedTemplate->id);
         Session::put('selected_destination', [
@@ -1732,16 +2339,27 @@ class PrePlannedTripSelection extends Component
             'country' => $this->selectedDestination->country,
             'city' => $this->selectedDestination->city,
         ]);
+
+        // Store price information and selected optional activities in session
+        Session::put('trip_base_price', $this->selectedTemplate->base_price);
+        Session::put('selected_optional_activities', $this->selectedOptionalActivities);
+        Session::put('trip_total_price', $this->totalPrice);
         
+        // Update trip details with total price
+        $tripDetails = Session::get('trip_details', []);
+        $tripDetails['total_cost'] = $this->totalPrice;
+        $tripDetails['budget'] = max($tripDetails['budget'] ?? 0, $this->totalPrice);
+        Session::put('trip_details', $tripDetails);
+
         // Dispatch event to parent component
         $this->dispatch('tripTemplateSelected', tripTemplateId: $this->selectedTemplate->id);
     }
-    
+
     public function backToTemplates()
     {
         $this->showTemplateDetails = false;
     }
-    
+
     public function backToDestinations()
     {
         $this->selectedDestination = null;

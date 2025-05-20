@@ -42,43 +42,53 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function update(Request $request)
-    {
-        $user = Auth::user();
+/**
+ * Update the user's profile information.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\RedirectResponse
+ */
+public function update(Request $request)
+{
+    $user = Auth::user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'phone_number' => ['nullable', 'string', 'max:20'],
-            'id_card_number' => ['nullable', 'string', 'max:50'],
-            'passport_number' => ['nullable', 'string', 'max:50'],
-            'date_of_birth' => ['nullable', 'date'],
-            'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
-            'nationality' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'profile_photo' => ['nullable', 'image', 'max:1024'],
-        ]);
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+        'phone_number' => ['nullable', 'string', 'max:20'],
+        'id_card_number' => ['nullable', 'string', 'max:50'],
+        'passport_number' => ['nullable', 'string', 'max:50'],
+        'date_of_birth' => ['nullable', 'date'],
+        'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
+        'nationality' => ['nullable', 'string', 'max:100'],
+        'address' => ['nullable', 'string', 'max:255'],
+        'profile_photo' => ['nullable', 'image', 'max:1024'],
+    ]);
 
-        if ($request->hasFile('profile_photo')) {
-            // Delete old photo if exists
-            if ($user->profile_photo && !filter_var($user->profile_photo, FILTER_VALIDATE_URL)) {
-                Storage::delete('public/' . $user->profile_photo);
-            }
-
-            $path = $request->file('profile_photo')->store('profile-photos', 'public');
-            $validated['profile_photo'] = $path;
+    // Handle the profile photo separately
+    if ($request->hasFile('profile_photo')) {
+        // Delete old photo if exists
+        if ($user->profile_photo_path && !filter_var($user->profile_photo_path, FILTER_VALIDATE_URL)) {
+            Storage::delete('public/' . $user->profile_photo_path);
         }
 
-        $user->update($validated);
-
-        return redirect()->route('profile.edit')->with('success', 'Profile updated successfully.');
+        $path = $request->file('profile_photo')->store('profile-photos', 'public');
+        
+        // Save the profile photo path directly to the user model
+        $user->profile_photo_path = $path;
     }
+
+    // Remove profile_photo from the validated array since it's not a database column
+    if (isset($validated['profile_photo'])) {
+        unset($validated['profile_photo']);
+    }
+
+    // Update user with validated data
+    $user->fill($validated);
+    $user->save();
+
+    return redirect()->route('profile.edit')->with('success', 'Profile updated successfully.');
+}
 
     /**
      * Show the security settings page.
@@ -183,7 +193,7 @@ class ProfileController extends Controller
             'wallet_provider' => ['nullable', 'string', 'max:255'],
             'account_status' => ['required', Rule::in(['active', 'inactive', 'pending'])],
             'preferred_payment_method' => ['required', Rule::in(['wallet', 'bank_transfer', 'credit_card', 'm_pesa'])],
-            'daily_transaction_limit' => ['required', 'numeric', 'min:0'],
+            // Removed daily_transaction_limit since it doesn't exist
         ]);
 
         Auth::user()->update($validated);

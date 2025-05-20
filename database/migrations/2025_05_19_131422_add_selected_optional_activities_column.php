@@ -9,16 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('trips', function (Blueprint $table) {
-            $table->foreignId('trip_template_id')->nullable()->after('creator_id')->constrained()->nullOnDelete();
-            $table->enum('planning_type', ['self_planned', 'pre_planned'])->default('self_planned')->after('trip_template_id');
+            $table->json('selected_optional_activities')->nullable()->after('total_cost');
         });
     }
 
     public function down(): void
     {
         Schema::table('trips', function (Blueprint $table) {
-            $table->dropForeign(['trip_template_id']);
-            $table->dropColumn(['trip_template_id', 'planning_type']);
+            $table->dropColumn('selected_optional_activities');
         });
     }
 };

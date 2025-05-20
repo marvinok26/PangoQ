@@ -13,11 +13,13 @@ return new class extends Migration
             $table->foreignId('destination_id')->constrained()->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
+            $table->text('highlights')->nullable();
             $table->integer('duration_days');
             $table->decimal('base_price', 10, 2);
-            $table->string('difficulty_level')->default('moderate'); // easy, moderate, adventurous
-            $table->string('trip_style')->default('general'); // cultural, adventure, relaxation, etc.
+            $table->string('difficulty_level')->default('moderate');
+            $table->string('trip_style')->default('general');
             $table->boolean('is_featured')->default(false);
+            $table->string('featured_image')->nullable();
             $table->timestamps();
         });
     }

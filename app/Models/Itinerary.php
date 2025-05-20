@@ -40,6 +40,22 @@ class Itinerary extends Model
     }
     
     /**
+     * Get regular (non-optional) activities.
+     */
+    public function regularActivities()
+    {
+        return $this->activities()->where('is_optional', false);
+    }
+    
+    /**
+     * Get optional activities.
+     */
+    public function optionalActivities()
+    {
+        return $this->activities()->where('is_optional', true);
+    }
+    
+    /**
      * Get the number of activities in this itinerary.
      */
     public function getActivityCountAttribute(): int
@@ -60,7 +76,7 @@ class Itinerary extends Model
         ];
         
         foreach ($activities as $activity) {
-            $hour = (int) date('H', strtotime($activity->start_time));
+            $hour = (int) date('H', strtotime($activity->start_time ?? '12:00:00'));
             
             if ($hour < 12) {
                 $groupedActivities['morning'][] = $activity;

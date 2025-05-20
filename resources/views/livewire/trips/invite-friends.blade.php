@@ -7,18 +7,21 @@
     <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg mb-6">
         <div class="flex flex-wrap items-center justify-between">
             <div class="flex items-center mb-2 sm:mb-0">
-                <span class="font-medium text-gray-700">{{ $tripTitle ?? 'Summer Getaway 2023' }}</span>
+                <span class="font-medium text-gray-700">{{ $tripTitle ?? 'Summer Getaway 2029' }}</span>
                 <span class="mx-2 text-gray-400">•</span>
                 <span class="text-gray-600">{{ $destination }}</span>
                 <span class="mx-2 text-gray-400">•</span>
                 <span class="text-gray-600">{{ isset($startDate) && isset($endDate) ? \Carbon\Carbon::parse($startDate)->format('M d') . ' - ' . \Carbon\Carbon::parse($endDate)->format('M d, Y') : 'Aug 15 - Aug 22, 2023' }}</span>
             </div>
-            <div class="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                </svg>
-                <span class="text-gray-600">{{ $travelers ?? '4' }} travelers planned</span>
-            </div>
+           
+<div class="flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+    </svg>
+    <span class="text-gray-600">
+        {{ 1 }} organizer{{ count($inviteEmails) > 0 ? ' + ' . count($inviteEmails) . ' invited' : '' }}
+    </span>
+</div>
         </div>
     </div>
     
@@ -165,16 +168,17 @@
             </div>
             
             <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm mb-6">
-                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                    <div class="font-medium text-gray-700">Travelers</div>
-                    <div class="text-xs text-gray-500">
-                        @if(isset($inviteEmails) && count($inviteEmails) > 0)
-                            {{ count($inviteEmails) }} invited
-                        @else
-                            0 of {{ $travelers ?? 3 }} confirmed
-                        @endif
-                    </div>
-                </div>
+               
+<div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+    <div class="font-medium text-gray-700">Travelers</div>
+    <div class="text-xs text-gray-500">
+        @if(count($inviteEmails) > 0)
+            {{ count($inviteEmails) }} invited
+        @else
+            0 of {{ max(1, $travelers - 1) }} confirmed
+        @endif
+    </div>
+</div>
                 
                 @if(isset($inviteEmails) && count($inviteEmails) > 0)
                     @foreach($inviteEmails as $index => $invite)

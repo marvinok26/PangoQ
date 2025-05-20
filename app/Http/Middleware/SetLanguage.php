@@ -4,25 +4,29 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class SetLanguage
 {
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
+     */
+    public function handle(Request $request, Closure $next)
     {
-        // Check if language is set in session
-        if ($request->session()->has('locale')) {
-            App::setLocale($request->session()->get('locale'));
-        } elseif ($request->hasHeader('Accept-Language')) {
-            // Use browser language if available
-            $locale = substr($request->header('Accept-Language'), 0, 2);
-            if (in_array($locale, config('app.available_locales', ['en']))) {
-                App::setLocale($locale);
-                $request->session()->put('locale', $locale);
-            }
+        if (Auth::check() && Auth::user()->preferred_language) {
+            app()->setLocale(Auth::user()->preferred_language);
+        } else {
+            // Set default language from session if available
+            $locale = Session::get('locale', config('app.locale'));
+            app()->setLocale($locale);
         }
-
+        
         return $next($request);
     }
 }

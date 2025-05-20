@@ -12,12 +12,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('phone_number')->nullable(); // Required for your "after" clauses
+            $table->string('phone_number')->nullable();
+            $table->string('profile_photo_path')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
 
-            // Personal information fields
             $table->string('id_card_number')->nullable();
             $table->string('passport_number')->nullable();
             $table->date('date_of_birth')->nullable();
@@ -25,7 +25,6 @@ return new class extends Migration
             $table->string('nationality')->nullable();
             $table->string('address')->nullable();
 
-            // Account information fields
             $table->string('account_number')->nullable();
             $table->enum('account_type', ['personal', 'business'])->default('personal');
             $table->string('currency', 3)->default('USD');
@@ -34,8 +33,10 @@ return new class extends Migration
             $table->enum('account_status', ['active', 'inactive', 'pending'])->default('active');
             $table->enum('preferred_payment_method', ['wallet', 'bank_transfer', 'credit_card', 'm_pesa'])->default('wallet');
 
-            // optional fields like email_verified_at
             $table->timestamp('email_verified_at')->nullable();
+            
+            $table->string('auth_provider')->nullable();
+            $table->string('auth_provider_id')->nullable();
         });
     }
 

@@ -28,7 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'auth_provider',
         'auth_provider_id',
-        'profile_photo',
+        'profile_photo_path',
         'phone_number',
         'id_card_number',
         'passport_number',
@@ -158,7 +158,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getTotalSavingsGoalAttribute()
     {
-        return $this->savingsWallets()->sum('target_amount');
+        // Use minimum_goal instead of target_amount
+        return $this->savingsWallets()->sum('minimum_goal');
     }
 
     /**
@@ -181,15 +182,15 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getPhotoUrlAttribute(): string
     {
-        // If profile_photo is a complete URL (social media avatar)
-        if ($this->profile_photo && filter_var($this->profile_photo, FILTER_VALIDATE_URL)) {
-            return $this->profile_photo;
+        // If profile_photo_path is a complete URL (social media avatar)
+        if ($this->profile_photo_path && filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)) {
+            return $this->profile_photo_path;
         }
         
         // If it's a local path
-        if ($this->profile_photo) {
+        if ($this->profile_photo_path) {
             // Simple approach that assumes files are in public/storage
-            return url('storage/' . $this->profile_photo);
+            return url('storage/' . $this->profile_photo_path);
         }
         
         // Fallback to Gravatar

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Session;
 
 /*
 |--------------------------------------------------------------------------
+| routes/web.php
 | Web Routes
 |--------------------------------------------------------------------------
 */
@@ -137,7 +138,9 @@ Route::prefix('api')->name('api.')->group(function () {
 });
 
 // Dashboard
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware('auth')
+    ->name('dashboard');
 
 // Profile routes
 Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -295,4 +298,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+
+    Route::get('/trips/create-from-session', [TripController::class, 'createFromSession'])
+    ->name('trips.create-from-session')
+    ->middleware('auth');
 });

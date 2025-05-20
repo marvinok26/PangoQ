@@ -18,12 +18,18 @@ class Activity extends Model
         'start_time',
         'end_time',
         'cost',
-        'type',
+        'category',
+        'image_url',
+        'is_optional', 
+        'is_highlight',
         'created_by',
+        'type'
     ];
     
     protected $casts = [
         'cost' => 'decimal:2',
+        'is_optional' => 'boolean',
+        'is_highlight' => 'boolean'
     ];
     
     /**
@@ -47,6 +53,10 @@ class Activity extends Model
      */
     public function getFormattedTimeRangeAttribute(): string
     {
+        if (!$this->start_time || !$this->end_time) {
+            return 'Flexible';
+        }
+        
         return date('g:i A', strtotime($this->start_time)) . ' - ' . date('g:i A', strtotime($this->end_time));
     }
     
@@ -55,7 +65,7 @@ class Activity extends Model
      */
     public function getFormattedCostAttribute(): string
     {
-        if ($this->cost === null) {
+        if ($this->cost === null || $this->cost == 0) {
             return 'Free';
         }
         
@@ -67,6 +77,10 @@ class Activity extends Model
      */
     public function getTimeOfDayAttribute(): string
     {
+        if (!$this->start_time) {
+            return 'flexible';
+        }
+        
         $hour = (int) date('H', strtotime($this->start_time));
         
         if ($hour < 12) {
@@ -87,6 +101,7 @@ class Activity extends Model
             'morning' => 'coffee',
             'afternoon' => 'umbrella',
             'evening' => 'moon',
+            'flexible' => 'calendar',
             default => 'clock',
         };
     }
@@ -100,7 +115,35 @@ class Activity extends Model
             'morning' => 'yellow',
             'afternoon' => 'orange',
             'evening' => 'indigo',
+            'flexible' => 'blue',
             default => 'gray',
         };
+    }
+    
+    /**
+     * Determine if this is an optional activity.
+     */
+    public function isOptional(): bool
+    {
+        return $this->is_optional === true;
+    }
+    
+    /**
+     * Create an Activity from a TemplateActivity.
+     */
+    public static function createFromTemplate(TemplateActivity $templateActivity, $itineraryId): self
+    {
+        return self::create([
+            'itinerary_id' => $itineraryId,
+            'title' => $templateActivity->title,
+            'description' => $templateActivity->description,
+            'location' => $templateActivity->location,
+            'start_time' => $templateActivity->start_time,
+            'end_time' => $templateActivity->end_time,
+            'cost' => $templateActivity->cost,
+            'type' => $templateActivity->category ?? 'activity',
+            'category' => $templateActivity->category ?? 'activity',
+            'is_optional' => $templateActivity->is_optional ?? false,
+        ]);
     }
 }

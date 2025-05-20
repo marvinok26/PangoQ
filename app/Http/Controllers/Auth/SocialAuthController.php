@@ -4,131 +4,118 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Exception;
-use Illuminate\Http\RedirectResponse;
+use App\Providers\RouteServiceProvider;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
     /**
-     * Redirect to the given provider's authentication page
+     * Redirect the user to the OAuth Provider.
      *
      * @param string $provider
-     * @return mixed
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function authProviderRedirect($provider)
+    public function redirectToProvider($provider)
     {
-        try {
-            if (in_array($provider, ['google', 'facebook'])) {
-                // Store trip data flag in the session before social redirection
-                if (session('trip_data_not_saved')) {
-                    // Save trip planning data in a specific key that won't be lost in redirections
-                    // Some providers like Facebook can lose session data during OAuth
-                    $tripData = [
-                        'trip_data_not_saved' => session('trip_data_not_saved'),
-                        'selected_trip_type' => session('selected_trip_type'),
-                        'selected_destination' => session('selected_destination'),
-                        'selected_trip_template' => session('selected_trip_template'),
-                        'trip_details' => session('trip_details'),
-                        'trip_activities' => session('trip_activities'),
-                        'trip_invites' => session('trip_invites'),
-                    ];
-                    
-                    // Store trip data in a persistent session variable
-                    session(['social_auth_trip_data' => $tripData]);
+        // If we're in the middle of trip planning, save session data to special key
+        if (
+            session()->has('selected_trip_type') || 
+            session()->has('selected_destination') || 
+            session()->has('trip_details')
+        ) {
+            $tripDataKeys = [
+                'selected_trip_type',
+                'selected_destination',
+                'selected_trip_template',
+                'trip_details',
+                'trip_activities',
+                'trip_invites',
+                'selected_optional_activities',
+                'trip_total_price'
+            ];
+            
+            $tripData = [];
+            foreach ($tripDataKeys as $key) {
+                if (session()->has($key)) {
+                    $tripData[$key] = session($key);
                 }
-                
-                return Socialite::driver($provider)->redirect();
             }
-            return redirect()->route('login')->with('error', 'Invalid authentication provider.');
-        } catch (Exception $e) {
-            Log::error('Social auth redirect error: ' . $e->getMessage());
-            return redirect()->route('login')->with('error', 'Could not connect to ' . ucfirst($provider) . '. Please try again.');
+            
+            if (!empty($tripData)) {
+                // Flag that we have trip data to save after authentication
+                $tripData['trip_data_not_saved'] = true;
+                
+                // Store in a special session key that won't be lost during social auth
+                session(['social_auth_trip_data' => $tripData]);
+                Log::info('Stored trip data before social auth redirect', ['keys' => array_keys($tripData)]);
+            }
         }
+        
+        return Socialite::driver($provider)->redirect();
     }
 
     /**
-     * Handle the callback from social authentication providers
+     * Obtain the user information from provider.
      *
      * @param string $provider
-     * @return RedirectResponse
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function socialAuthentication($provider)
+    public function handleProviderCallback($provider)
     {
         try {
-            if (!in_array($provider, ['google', 'facebook'])) {
-                return redirect()->route('login')->with('error', 'Invalid authentication provider.');
-            }
+            $providerUser = Socialite::driver($provider)->user();
             
-            $socialUser = Socialite::driver($provider)->user();
+            // Check if the user already exists in our database
+            $user = User::where('email', $providerUser->getEmail())->first();
             
-            // Find user by provider ID first
-            $user = User::where('auth_provider_id', $socialUser->id)
-                        ->where('auth_provider', $provider)
-                        ->first();
-            
-            // If user not found by provider ID, try to find by email
+            // If user doesn't exist, create a new one
             if (!$user) {
-                $user = User::where('email', $socialUser->email)->first();
+                $user = User::create([
+                    'name' => $providerUser->getName(),
+                    'email' => $providerUser->getEmail(),
+                    'password' => Hash::make(substr(md5(rand()), 0, 16)), // Random password
+                    'auth_provider' => $provider,
+                    'auth_provider_id' => $providerUser->getId(),
+                    'profile_photo_path' => $providerUser->getAvatar(),
+                    'email_verified_at' => now() // Social accounts are considered verified
+                ]);
+            } 
+            // If user exists but not linked to this provider, update provider info
+            else if (!$user->auth_provider_id || $user->auth_provider_id !== $providerUser->getId()) {
+                $user->update([
+                    'auth_provider' => $provider,
+                    'auth_provider_id' => $providerUser->getId(),
+                ]);
                 
-                // If user exists with the same email, update their provider details
-                if ($user) {
-                    $user->update([
-                        'auth_provider' => $provider,
-                        'auth_provider_id' => $socialUser->id,
-                    ]);
-                } else {
-                    // Create a new user
-                    $user = User::create([
-                        'name' => $socialUser->name,
-                        'email' => $socialUser->email,
-                        'password' => Hash::make(Str::random(24)), // Generate a secure random password
-                        'auth_provider_id' => $socialUser->id,
-                        'auth_provider' => $provider,
-                        'email_verified_at' => now(), // Social logins are considered verified
-                    ]);
-                    
-                    // Save profile photo if available
-                    if ($socialUser->avatar) {
-                        $user->update([
-                            'profile_photo_path' => $socialUser->avatar
-                        ]);
-                    }
+                // Update profile photo if not set
+                if (!$user->profile_photo_path) {
+                    $user->update(['profile_photo_path' => $providerUser->getAvatar()]);
                 }
             }
             
-            // Log the user in
+            // Login the user
             Auth::login($user);
             
-            // Restore trip planning data from social auth session if it exists
+            // If social_auth_trip_data session exists, restore it
             if (session()->has('social_auth_trip_data')) {
                 $tripData = session('social_auth_trip_data');
                 
-                // Restore all trip session variables
                 foreach ($tripData as $key => $value) {
                     session([$key => $value]);
                 }
                 
-                // Clear the temporary storage
                 session()->forget('social_auth_trip_data');
-                
-                // If trip data was saved, redirect to trips page
-                if (session('trip_data_not_saved')) {
-                    return redirect()->route('dashboard')->with('success', 'Successfully logged in! Your trip plan has been saved.');
-                }
+                Log::info('Restored trip data in social auth callback');
             }
             
-            return redirect()->route('dashboard')->with('success', 'Successfully logged in!');
-            
-        } catch (Exception $e) {
+            return redirect()->intended(RouteServiceProvider::HOME);
+        } catch (\Exception $e) {
             Log::error('Social authentication error: ' . $e->getMessage());
-            return redirect()->route('login')
-                ->with('error', 'Authentication failed. Please try again or use email login.');
+            return redirect()->route('login')->with('error', 'Authentication failed. Please try again.');
         }
     }
 }

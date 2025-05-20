@@ -30,13 +30,36 @@
                     <p class="font-medium text-gray-800">{{ $tripTemplate->title }}</p>
                     <p class="text-gray-600">{{ $tripTemplate->destination->name }}, {{ $tripTemplate->destination->country }}</p>
                     <p class="mt-2 text-gray-600">{{ $tripTemplate->description }}</p>
+                    
+                    <!-- Trip Highlights Section -->
+                    @if(!empty($templateHighlights))
+                        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
+                            <h4 class="text-sm font-semibold text-yellow-800 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                                </svg>
+                                Trip Highlights
+                            </h4>
+                            <ul class="mt-2 space-y-1">
+                                @foreach($templateHighlights as $highlight)
+                                    <li class="flex items-start">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-500 mt-0.5 mr-1.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="text-sm text-yellow-700">{{ $highlight }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                    
                     <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                             <p class="text-sm text-gray-500">Duration</p>
                             <p class="font-medium">{{ $tripTemplate->duration_days }} days</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Price</p>
+                            <p class="text-sm text-gray-500">Base Price</p>
                             <p class="font-medium">${{ number_format($tripTemplate->base_price, 2) }}/person</p>
                         </div>
                         <div>
@@ -217,6 +240,50 @@
             </div>
         @endif
         
+        <!-- Selected Optional Activities Section -->
+        @if($tripType === 'pre_planned' && $tripTemplate && !empty($selectedOptionalActivities) && !empty($optionalActivities))
+            <div class="bg-white border border-gray-200 rounded-lg p-5">
+                <div class="flex justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">Selected Optional Activities</h3>
+                    <button wire:click="editItinerary" type="button" class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                </div>
+                
+                <div class="mt-3 space-y-3">
+                    @php
+                        $optionalActivitiesCost = 0;
+                    @endphp
+                    
+                    @foreach($selectedOptionalActivities as $activityId)
+                        @php
+                            $activity = $optionalActivities->firstWhere('id', $activityId);
+                            if ($activity) {
+                                $optionalActivitiesCost += $activity->cost;
+                            }
+                        @endphp
+                        
+                        @if($activity)
+                            <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                <div class="flex items-start">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                                    </svg>
+                                    <div>
+                                        <h4 class="font-medium text-blue-800">{{ $activity->title }}</h4>
+                                        <p class="text-sm text-blue-600 mt-1">{{ $activity->description }}</p>
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{{ $activity->location }}</span>
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activity->cost, 2) }}</span>
+                                            <span class="px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs">{{ ucfirst($activity->category) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
+        
         <!-- Invite Friends -->
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <div class="flex justify-between">
@@ -248,7 +315,7 @@
             @endif
         </div>
         
-        <!-- Summary -->
+        <!-- Summary with Budget Details -->
         <div class="bg-white border border-blue-200 rounded-lg p-5">
             <h3 class="text-lg font-medium text-blue-900">Trip Summary</h3>
             
@@ -301,27 +368,89 @@
                     </span>
                 </div>
                 
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Total Budget:</span>
-                    <span class="font-medium">
-                        @if($tripType === 'pre_planned' && $tripTemplate)
-                            ${{ number_format($tripTemplate->base_price * (count($invites) + 1), 2) }}
-                        @elseif(isset($tripDetails['budget']) && isset($tripDetails['travelers']))
-                            ${{ number_format($tripDetails['budget'] * $tripDetails['travelers'], 2) }}
-                        @else
-                            Not set
-                        @endif
-                    </span>
+                <!-- Budget Information (updated with optional activities) -->
+                @if($tripType === 'pre_planned' && $tripTemplate)
+    <div class="flex justify-between font-medium text-gray-800">
+        <span class="text-gray-600">Base Package Price:</span>
+        <span>${{ number_format($basePrice, 2) }} / person</span>
+    </div>
+    
+    @if(!empty($selectedOptionalActivities))
+        <div class="pt-2 border-t border-gray-200 mt-2">
+            <span class="text-gray-600 font-medium">Optional Activities:</span>
+            
+            @php
+                $optionalTotal = 0;
+            @endphp
+            
+            @foreach($selectedOptionalActivities as $id => $activity)
+                @php
+                    $optionalTotal += $activity['cost'] ?? 0;
+                @endphp
+                <div class="flex justify-between pl-4 mt-1 text-sm">
+                    <span>• {{ $activity['title'] }}</span>
+                    <span>${{ number_format($activity['cost'] ?? 0, 2) }}</span>
                 </div>
+            @endforeach
+            
+            <div class="flex justify-between mt-2 font-medium">
+                <span>Optional Activities Subtotal:</span>
+                <span>${{ number_format($optionalTotal, 2) }} / person</span>
+            </div>
+        </div>
+    @endif
+    
+    <div class="flex justify-between text-blue-700 font-bold pt-2 border-t border-blue-200 mt-2">
+        <span>Total Per Person:</span>
+        <span>${{ number_format($totalCost, 2) }}</span>
+    </div>
+    
+    <div class="pt-2 border-t border-gray-200 flex justify-between">
+        <span class="text-gray-600">Group Total ({{ count($invites) + 1 }} travelers):</span>
+        <span class="font-bold">${{ number_format($totalCost * (count($invites) + 1), 2) }}</span>
+    </div>
+@else
+    <div class="flex justify-between">
+        <span class="text-gray-600">Total Budget:</span>
+        <span class="font-medium">
+            @if(isset($tripDetails['budget']) && isset($tripDetails['travelers']))
+                ${{ number_format($tripDetails['budget'] * $tripDetails['travelers'], 2) }}
+            @else
+                Not set
+            @endif
+        </span>
+    </div>
+@endif
                 
                 <div class="flex justify-between">
                     <span class="text-gray-600">Activities:</span>
                     <span class="font-medium">
-                        @if($tripType === 'pre_planned' && $tripTemplate)
-                            {{ $tripTemplate->activities->count() }} activities
-                        @else
-                            {{ collect($tripActivities)->flatten(1)->count() }} activities
-                        @endif
+@if($tripType === 'pre_planned' && $tripTemplate && !empty($selectedOptionalActivities))
+    <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="flex justify-between">
+            <h3 class="text-lg font-medium text-gray-900">Selected Optional Activities</h3>
+            <button wire:click="editItinerary" type="button" class="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+        </div>
+        
+        <div class="mt-3 space-y-3">
+            @foreach($selectedOptionalActivities as $activityId => $activityData)
+                <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <div class="flex items-start">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <h4 class="font-medium text-blue-800">{{ $activityData['title'] }}</h4>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">${{ number_format($activityData['cost'], 2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
                     </span>
                 </div>
                 

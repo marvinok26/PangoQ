@@ -4,32 +4,31 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\Response;
 
 class CheckRedisConnection
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next)
     {
-        try {
-            // Test Redis connection
-            Redis::ping();
-        } catch (\Exception $e) {
-            // Log the error
-            Log::error('Redis connection failed: ' . $e->getMessage());
-            
-            // Use file cache driver as fallback
-            config(['cache.default' => 'file']);
-            config(['session.driver' => 'file']);
-            config(['queue.default' => 'database']);
+        // Only run check if Redis is the configured session driver
+        if (config('session.driver') === 'redis') {
+            try {
+                // Attempt to ping Redis
+                \Illuminate\Support\Facades\Redis::connection()->ping();
+            } catch (\Exception $e) {
+                // If Redis connection fails, log the error and switch to file sessions
+                Log::warning('Redis connection failed, switching to file session driver: ' . $e->getMessage());
+                config(['session.driver' => 'file']);
+            }
         }
-
+        
         return $next($request);
     }
 }

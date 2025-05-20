@@ -11,32 +11,20 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Middleware\SaveTripAfterLogin;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Authentication Routes
-|--------------------------------------------------------------------------
-|
-| This file contains all authentication routes for the application,
-| including traditional email/password login and social authentication.
-|
-*/
-
-// Standard authentication routes (already guest-protected with web middleware)
 Route::middleware('guest')->group(function () {
     // Registration routes
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware(SaveTripAfterLogin::class); // Use class name directly
+        ->middleware(SaveTripAfterLogin::class);
 
     // Login routes
-    Route::get('login', function () {
-        return view('auth.login');
-    })->name('login');
+    Route::get('login', [AuthenticatedSessionController::class, 'create'])
+        ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware(SaveTripAfterLogin::class); // Use class name directly
+        ->middleware(SaveTripAfterLogin::class);
 
     // Password reset routes
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
@@ -52,16 +40,16 @@ Route::middleware('guest')->group(function () {
         ->name('password.update');
 
     // Social authentication routes
-    Route::get('auth/redirect/{provider}', [SocialAuthController::class, 'authProviderRedirect'])
+    Route::get('auth/redirect/{provider}', [SocialAuthController::class, 'redirectToProvider'])
         ->name('auth.redirect');
 
-    Route::get('auth/{provider}/callback', [SocialAuthController::class, 'socialAuthentication'])
-        ->middleware(SaveTripAfterLogin::class) // Use class name directly
+    Route::get('auth/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback'])
+        ->middleware(SaveTripAfterLogin::class)
         ->name('auth.callback');
 });
 
-// Routes that require authentication
 Route::middleware('auth')->group(function () {
+
     // Logout route
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

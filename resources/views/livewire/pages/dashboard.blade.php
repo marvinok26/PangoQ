@@ -31,21 +31,21 @@
                     <div class="mt-1 flex justify-between items-baseline">
                         <div class="flex items-baseline">
                             <span class="text-2xl font-semibold text-gray-900" id="balance-amount">
-                                ${{ number_format($wallet['balance'], 2) }}
+                                ${{ number_format($wallet['balance'] ?? 0, 2) }}
                             </span>
                             <span class="ml-2 text-sm text-gray-500">
-                                / ${{ number_format($wallet['target_amount'], 2) }}
+                                / ${{ number_format($wallet['target_amount'] ?? 0, 2) }}
                             </span>
                         </div>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {{ number_format($wallet['progress_percentage']) }}%
+                            {{ number_format($wallet['progress_percentage'] ?? 0) }}%
                         </span>
                     </div>
                     <!-- Progress bar -->
                     <div class="mt-4 w-full bg-gray-200 rounded-full h-2.5">
                         <div 
                             class="bg-blue-600 h-2.5 rounded-full" 
-                            style="width: {{ $wallet['progress_percentage'] }}%"
+                            style="width: {{ $wallet['progress_percentage'] ?? 0 }}%"
                         ></div>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-4">
@@ -71,22 +71,23 @@
             </div>
             
             <!-- Upcoming Trip -->
+            @if(isset($upcomingTrips) && count($upcomingTrips) > 0)
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg leading-6 font-medium text-gray-900">Next Trip</h3>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ $upcomingTrips[0]->progress }}% Funded
+                            {{ $upcomingTrips[0]->progress ?? 0 }}% Funded
                         </span>
                     </div>
                     <div class="mt-2">
-                        <h4 class="text-xl font-semibold text-gray-900">{{ $upcomingTrips[0]->title }}</h4>
+                        <h4 class="text-xl font-semibold text-gray-900">{{ $upcomingTrips[0]->title ?? 'Plan a Trip' }}</h4>
                         <p class="text-sm text-gray-500 mt-1">
                             <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
                             </svg>
-                            {{ $upcomingTrips[0]->destination }}
+                            {{ $upcomingTrips[0]->destination ?? 'Select a destination' }}
                         </p>
                         <p class="text-sm text-gray-500 mt-1">
                             <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -95,7 +96,11 @@
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
-                            {{ $upcomingTrips[0]->start_date->format('M j, Y') }} - {{ $upcomingTrips[0]->end_date->format('M j, Y') }}
+                            @if(isset($upcomingTrips[0]->start_date) && isset($upcomingTrips[0]->end_date))
+                                {{ $upcomingTrips[0]->start_date->format('M j, Y') }} - {{ $upcomingTrips[0]->end_date->format('M j, Y') }}
+                            @else
+                                Set your travel dates
+                            @endif
                         </p>
                         <p class="text-sm text-gray-500 mt-1">
                             <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -104,13 +109,19 @@
                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                             </svg>
-                            {{ $upcomingTrips[0]->members }} travelers
+                            {{ $upcomingTrips[0]->members ?? 1 }} travelers
                         </p>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-4">
-                        <a href="{{ route('trips.show', $upcomingTrips[0]->id) }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                            View Details
-                        </a>
+                        @if($upcomingTrips[0]->id > 0)
+                            <a href="{{ route('trips.show', $upcomingTrips[0]->id) }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                                View Details
+                            </a>
+                        @else
+                            <a href="{{ route('trips.plan') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                                Plan a Trip
+                            </a>
+                        @endif
                         <a href="{{ route('trips.index') }}" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -123,6 +134,7 @@
                     </div>
                 </div>
             </div>
+            @endif
             
             <!-- Action Card -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
@@ -153,7 +165,7 @@
                             </svg>
                             <span class="text-sm text-gray-700">Invite Friends</span>
                         </a>
-                        <a href="{{ route('trips.show', 1) }}" class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-md shadow-sm hover:bg-gray-50">
+                        <a href="{{ route('trips.index') }}" class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-md shadow-sm hover:bg-gray-50">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                                 <line x1="8" y1="2" x2="8" y2="18"></line>
@@ -166,6 +178,7 @@
             </div>
             
             <!-- Trips Overview -->
+            @if(isset($upcomingTrips) && count($upcomingTrips) > 0)
             <div class="col-span-1 sm:col-span-2 bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                     <div class="flex items-center justify-between">
@@ -176,42 +189,50 @@
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                         @foreach($upcomingTrips as $tripItem)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                            <div class="flex justify-between">
-                                <h4 class="text-base font-medium text-gray-900">{{ $tripItem->title }}</h4>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {{ $tripItem->progress }}% Funded
-                                </span>
-                            </div>
-                            <p class="text-sm text-gray-500 mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
-                                </svg>
-                                {{ $tripItem->destination }}
-                            </p>
-                            <p class="text-sm text-gray-500 mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                                {{ $tripItem->start_date->format('M j, Y') }} - {{ $tripItem->end_date->format('M j, Y') }}
-                            </p>
-                            <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                    class="bg-blue-600 h-2 rounded-full" 
-                                    style="width: {{ $tripItem->progress }}%"
-                                ></div>
-                            </div>
-                        </div>
+                            @if($tripItem->id > 0)
+                                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                                    <div class="flex justify-between">
+                                        <h4 class="text-base font-medium text-gray-900">{{ $tripItem->title }}</h4>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ $tripItem->progress }}% Funded
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                                        </svg>
+                                        {{ $tripItem->destination }}
+                                    </p>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 mr-1 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                                        </svg>
+                                        @if(isset($tripItem->start_date) && isset($tripItem->end_date))
+                                            {{ $tripItem->start_date->format('M j, Y') }} - {{ $tripItem->end_date->format('M j, Y') }}
+                                        @else
+                                            Dates not set
+                                        @endif
+                                    </p>
+                                    <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            class="bg-blue-600 h-2 rounded-full" 
+                                            style="width: {{ $tripItem->progress }}%"
+                                        ></div>
+                                    </div>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>
             </div>
+            @endif
             
             <!-- Activity Timeline -->
+            @if(isset($recentActivities) && count($recentActivities) > 0)
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                     <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
@@ -253,15 +274,19 @@
                                             <div>
                                                 <div class="text-sm font-medium text-gray-900">
                                                     @if($activity->type === 'contribution')
-                                                        Contributed ${{ number_format($activity->amount, 2) }}
+                                                        Contributed ${{ number_format($activity->amount ?? 0, 2) }}
                                                     @elseif($activity->type === 'friend_joined')
-                                                        {{ $activity->user }} joined your trip
+                                                        {{ $activity->user ?? 'A friend' }} joined your trip
                                                     @else
                                                         Itinerary updated
                                                     @endif
                                                 </div>
                                                 <p class="mt-0.5 text-sm text-gray-500">
-                                                    {{ $activity->date->format('M j, Y') }} • {{ $activity->trip }}
+                                                    @if(isset($activity->date))
+                                                        {{ $activity->date->format('M j, Y') }} • {{ $activity->trip ?? 'Unknown trip' }}
+                                                    @else
+                                                        Recent • {{ $activity->trip ?? 'Unknown trip' }}
+                                                    @endif
                                                 </p>
                                             </div>
                                         </div>
@@ -273,6 +298,7 @@
                     </div>
                 </div>
             </div>
+            @endif
             
             <!-- Stats Overview -->
             <div class="bg-white overflow-hidden shadow rounded-lg">
@@ -284,14 +310,14 @@
                                 Total Saved
                             </dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                ${{ number_format($wallet['balance'], 2) }}
+                                ${{ number_format($wallet['balance'] ?? 0, 2) }}
                             </dd>
                             <dd class="mt-2 flex items-center text-sm text-green-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="self-center h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                                     <polyline points="17 6 23 6 23 12"></polyline>
                                 </svg>
-                                <span class="ml-2">{{ $wallet['monthly_growth_percentage'] }}% more than last month</span>
+                                <span class="ml-2">{{ $wallet['monthly_growth_percentage'] ?? 0 }}% more than last month</span>
                             </dd>
                         </div>
                         <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
@@ -299,13 +325,13 @@
                                 Trips Planned
                             </dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                {{ $stats['trips_planned'] }}
+                                {{ $stats['trips_planned'] ?? 0 }}
                             </dd>
                             <dd class="mt-2 flex items-center text-sm text-blue-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="self-center h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
-                                <span class="ml-2">{{ $stats['trips_completed'] }} completed, {{ $stats['trips_upcoming'] }} upcoming</span>
+                                <span class="ml-2">{{ $stats['trips_completed'] ?? 0 }} completed, {{ $stats['trips_upcoming'] ?? 0 }} upcoming</span>
                             </dd>
                         </div>
                         <div class="px-4 py-5 bg-gray-50 shadow rounded-lg overflow-hidden sm:p-6">
@@ -313,7 +339,7 @@
                                 Friends Onboarded
                             </dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                {{ $stats['friends_onboarded'] }}
+                                {{ $stats['friends_onboarded'] ?? 0 }}
                             </dd>
                             <dd class="mt-2 flex items-center text-sm text-gray-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="self-center h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -330,15 +356,21 @@
             </div>
             
             <!-- Invitations -->
+            @if(isset($invitations) && count($invitations) > 0)
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
                     <h3 class="text-lg leading-6 font-medium text-gray-900">Trip Invitations</h3>
                     <div class="mt-4 space-y-4">
                         @foreach($invitations as $invitation)
                         <div class="border border-gray-200 rounded-lg p-4">
-                            <h4 class="text-base font-medium text-gray-900">{{ $invitation->title }}</h4>
+                            <h4 class="text-base font-medium text-gray-900">{{ $invitation->title ?? 'Trip Invitation' }}</h4>
                             <p class="text-sm text-gray-500 mt-1">
-                                Invited by {{ $invitation->invited_by }} • Expires {{ $invitation->expires_at->format('M j, Y') }}
+                                Invited by {{ $invitation->invited_by ?? 'Someone' }} • 
+                               @if(isset($invitation->expires_at))
+                                    Expires {{ $invitation->expires_at->format('M j, Y') }}
+                                @else
+                                    Expires soon
+                                @endif
                             </p>
                             <div class="mt-4 flex space-x-3">
                                 <a href="{{ route('trips.index') }}" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
@@ -353,6 +385,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>
@@ -364,7 +397,7 @@ function toggleBalance() {
     const toggleButton = document.getElementById('toggle-balance-btn');
 
     if (balanceAmount.textContent.includes('•')) {
-        balanceAmount.textContent = '${{ number_format($wallet["balance"], 2) }}';
+        balanceAmount.textContent = '${{ number_format($wallet["balance"] ?? 0, 2) }}';
         toggleButton.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -373,12 +406,13 @@ function toggleBalance() {
         `;
     } else {
         balanceAmount.textContent = '••••••';
-    toggleButton.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-            <line x1="1" y1="1" x2="23" y2="23"></line>
-        </svg>
-    `;
+        toggleButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+        `;
+    }
 }
 </script>
 @endsection

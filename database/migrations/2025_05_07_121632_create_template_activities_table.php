@@ -21,6 +21,8 @@ return new class extends Migration
             $table->decimal('cost', 10, 2)->nullable();
             $table->string('category');
             $table->string('image_url')->nullable();
+            $table->boolean('is_highlight')->default(false);
+            $table->boolean('is_optional')->default(false);
             $table->timestamps();
         });
     }

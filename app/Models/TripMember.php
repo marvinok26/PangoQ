@@ -46,4 +46,28 @@ class TripMember extends Model
     {
         return $query->where('invitation_status', 'declined');
     }
+    
+    // Helper to check if user has a specific role
+    public function hasRole($role)
+    {
+        return $this->role === $role;
+    }
+    
+    // Helper to check if invitation is accepted
+    public function isAccepted()
+    {
+        return $this->invitation_status === 'accepted';
+    }
+    
+    // Helper to check if invitation is pending
+    public function isPending()
+    {
+        return $this->invitation_status === 'pending';
+    }
+    
+    // Helper to check if invitation is declined
+    public function isDeclined()
+    {
+        return $this->invitation_status === 'declined';
+    }
 }
