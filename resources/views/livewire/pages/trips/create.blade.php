@@ -1,5 +1,6 @@
-{{-- resources/views/livewire/pages/trips/create.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.page')
+
+@section('title', 'Plan Your Trip')
 
 @section('content')
 <div class="py-12">
@@ -12,3 +13,12 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // Optional: Add any trip planning specific JavaScript here
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Trip planning page loaded');
+    });
+</script>
+@endpush

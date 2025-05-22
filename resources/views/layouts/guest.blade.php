@@ -20,24 +20,26 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="font-sans antialiased text-gray-900 bg-gray-50">
-    <div class="min-h-screen flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8">
-        <div class="mb-8">
-            <a href="{{ route('home') }}" class="flex items-center">
-                <img src="{{ asset('images/logo.png') }}" alt="PangoQ Logo" class="h-12 w-auto">
-            </a>
+    <div class="min-h-screen flex flex-col">
+        <!-- Include the header component -->
+        @include('components.header')
+        
+        <div class="flex-grow flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8">
+            <div class="w-full sm:max-w-md">
+                <div class="bg-white py-8 px-6 shadow-md rounded-lg">
+                    {{ $slot }}
+                </div>
+                
+                @if(isset($footer))
+                    <div class="mt-6 text-center text-sm">
+                        {{ $footer }}
+                    </div>
+                @endif
+            </div>
         </div>
         
-        <div class="w-full sm:max-w-md">
-            <div class="bg-white py-8 px-6 shadow-md rounded-lg">
-                {{ $slot }}
-            </div>
-            
-            @if(isset($footer))
-                <div class="mt-6 text-center text-sm">
-                    {{ $footer }}
-                </div>
-            @endif
-        </div>
+        <!-- Footer -->
+        @include('components.footer')
     </div>
     
     <!-- Toast Notifications -->

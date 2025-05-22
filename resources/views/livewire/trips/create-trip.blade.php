@@ -29,31 +29,31 @@
 
         <!-- Trip Type Selection (Step 0) -->
         @if($currentStep === 0)
-            <livewire:trips.trip-type-selection />
+            @livewire('trips.trip-type-selection')
 
-            <!-- Either Destination Selection or Template Selection (Step 1) -->
+        <!-- Either Destination Selection or Template Selection (Step 1) -->
         @elseif($currentStep === 1)
             @if($tripType === 'pre_planned')
-                <livewire:trips.pre-planned-trip-selection />
+                @livewire('trips.pre-planned-trip-selection')
             @else
-                <livewire:trips.destination-selection />
+                @livewire('trips.destination-selection')
             @endif
 
-            <!-- Trip Details (Step 2) - Only for self-planned trips -->
+        <!-- Trip Details (Step 2) - Only for self-planned trips -->
         @elseif($currentStep === 2 && $tripType === 'self_planned')
-            <livewire:trips.trip-details />
+            @livewire('trips.trip-details')
 
-            <!-- Itinerary Planning (Step 3) - Only for self-planned trips -->
+        <!-- Itinerary Planning (Step 3) - Only for self-planned trips -->
         @elseif($currentStep === 3 && $tripType === 'self_planned')
-            <livewire:trips.itinerary-planning />
+            @livewire('trips.itinerary-planning')
 
-            <!-- Invite Friends (Step 4) -->
+        <!-- Invite Friends (Step 4) -->
         @elseif($currentStep === 4)
-            <livewire:trips.invite-friends />
+            @livewire('trips.invite-friends')
 
-            <!-- Review (Step 5) -->
+        <!-- Review (Step 5) -->
         @elseif($currentStep === 5)
-            <livewire:trips.review />
+            @livewire('trips.review')
 
             <!-- Create Trip Button -->
             <div class="flex justify-center mt-8">
