@@ -27,7 +27,7 @@ class TripController extends Controller
         // IMPROVED APPROACH - Get trips using multiple methods
         // 1. Get trips where user is the creator
         $createdTrips = Trip::where('creator_id', $user->id)->get();
-        
+
         // 2. Get trips where user is a member through the trip_members table
         $memberTrips = Trip::join('trip_members', 'trips.id', '=', 'trip_members.trip_id')
             ->where('trip_members.user_id', $user->id)
@@ -35,7 +35,7 @@ class TripController extends Controller
             ->select('trips.*')
             ->distinct()
             ->get();
-        
+
         // 3. Merge both collections and remove duplicates
         $trips = $createdTrips->merge($memberTrips)->unique('id');
 
@@ -70,6 +70,23 @@ class TripController extends Controller
      */
     public function show(Trip $trip): View
     {
+        $user = Auth::user();
+
+        // Detailed logging for debugging
+        logger()->info('Trip access attempt', [
+            'user_id' => $user->id,
+            'trip_id' => $trip->id,
+            'trip_creator_id' => $trip->creator_id,
+            'is_creator' => $user->id === $trip->creator_id,
+            'trip_members' => $trip->members()->get()->map(function ($member) {
+                return [
+                    'user_id' => $member->user_id,
+                    'role' => $member->role,
+                    'status' => $member->invitation_status
+                ];
+            })
+        ]);
+
         // Check if user is a member of this trip
         if (! Gate::allows('view', $trip)) {
             throw new AuthorizationException('You are not authorized to view this trip.');

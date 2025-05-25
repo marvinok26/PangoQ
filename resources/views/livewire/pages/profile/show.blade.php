@@ -5,11 +5,42 @@
 
 @section('content')
     <div class="relative">
-        <!-- Blue banner section - behind the profile picture -->
-        <div class="absolute top-0 left-0 w-full h-40 bg-gradient-to-r from-blue-500 to-blue-400 z-0">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <h2 class="text-xl text-white">Profile</h2>
-            </div>
+        <!-- Enhanced Liquid Morphing SVG Banner Section -->
+        <div class="absolute top-0 left-0 w-full h-50 overflow-hidden z-0">
+            <svg class="w-full h-full" viewBox="0 0 1200 200" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                    <linearGradient id="liquidGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                        <stop offset="33%" style="stop-color:#764ba2;stop-opacity:1" />
+                        <stop offset="66%" style="stop-color:#fbce93;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+                    </linearGradient>
+                    <radialGradient id="liquidGradient2" cx="30%" cy="30%" r="70%">
+                        <stop offset="0%" style="stop-color:#4facfe;stop-opacity:0.8" />
+                        <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:0.3" />
+                    </radialGradient>
+                    <filter id="liquidGlow">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                        <feMerge> 
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#liquidGradient1)"/>
+                <ellipse cx="200" cy="100" rx="150" ry="80" fill="url(#liquidGradient2)" filter="url(#liquidGlow)">
+                    <animateTransform attributeName="transform" type="rotate" values="0 200 100;360 200 100" dur="20s" repeatCount="indefinite"/>
+                </ellipse>
+                <ellipse cx="600" cy="50" rx="120" ry="60" fill="url(#liquidGradient2)" opacity="0.6" filter="url(#liquidGlow)">
+                    <animateTransform attributeName="transform" type="rotate" values="360 600 50;0 600 50" dur="15s" repeatCount="indefinite"/>
+                </ellipse>
+                <ellipse cx="1000" cy="120" rx="100" ry="70" fill="url(#liquidGradient2)" opacity="0.4" filter="url(#liquidGlow)">
+                    <animateTransform attributeName="transform" type="rotate" values="0 1000 120;360 1000 120" dur="25s" repeatCount="indefinite"/>
+                </ellipse>
+            </svg>
+        </div>
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h2 class="text-xl text-white font-semibold drop-shadow-lg">Profile</h2>
         </div>
 
         <!-- Profile content that overlays the blue section -->

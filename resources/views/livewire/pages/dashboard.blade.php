@@ -165,7 +165,7 @@
                             </svg>
                             <span class="text-sm text-gray-700">Invite Friends</span>
                         </a>
-                        <a href="{{ route('trips.index') }}" class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-md shadow-sm hover:bg-gray-50">
+                        <a href="{{ route('trips.show', $upcomingTrips[0]->id) }}" class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-md shadow-sm hover:bg-gray-50">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
                                 <line x1="8" y1="2" x2="8" y2="18"></line>

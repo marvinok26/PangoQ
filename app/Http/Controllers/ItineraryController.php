@@ -10,15 +10,51 @@ use Illuminate\View\View;
 
 class ItineraryController extends Controller
 {
-    public function __construct()
+    /**
+     * Display the full itinerary for a trip.
+     */
+    public function index(Trip $trip): View
     {
-        $this->middleware('tripmember');
+        // Load all necessary relationships for the comprehensive view
+        $trip->load([
+            'creator',
+            'members.user',
+            'tripTemplate',
+            'savingsWallet',
+            'itineraries' => function ($query) {
+                $query->orderBy('day_number')
+                      ->with(['activities' => function ($activityQuery) {
+                          $activityQuery->orderBy('start_time');
+                      }]);
+            }
+        ]);
+        
+        // Get itineraries separately for easy access in the view
+        $itineraries = $trip->itineraries;
+        
+        return view('livewire.pages.trips.itinerary', compact('trip', 'itineraries'));
+    }
+    
+    /**
+     * Show the form for editing the trip itinerary.
+     */
+    public function edit(Trip $trip): View
+    {
+        // Load itineraries with their activities for editing
+        $trip->load([
+            'itineraries' => function ($query) {
+                $query->orderBy('day_number')
+                      ->with('activities');
+            }
+        ]);
+        
+        return view('livewire.pages.trips.itinerary-edit', compact('trip'));
     }
     
     /**
      * Display the itinerary planner for a trip.
      */
-    public function index(Trip $trip): View
+    public function planner(Trip $trip): View
     {
         // Load itineraries with their activities, ordered by day number
         $itineraries = $trip->itineraries()
@@ -34,6 +70,11 @@ class ItineraryController extends Controller
      */
     public function show(Trip $trip, Itinerary $itinerary): View
     {
+        // Ensure the itinerary belongs to this trip
+        if ($itinerary->trip_id !== $trip->id) {
+            abort(404);
+        }
+        
         // Load the itinerary with its activities
         $itinerary->load('activities');
         
@@ -56,6 +97,11 @@ class ItineraryController extends Controller
      */
     public function update(Request $request, Trip $trip, Itinerary $itinerary)
     {
+        // Ensure the itinerary belongs to this trip
+        if ($itinerary->trip_id !== $trip->id) {
+            abort(404);
+        }
+        
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -71,6 +117,11 @@ class ItineraryController extends Controller
      */
     public function createActivity(Trip $trip, Itinerary $itinerary): View
     {
+        // Ensure the itinerary belongs to this trip
+        if ($itinerary->trip_id !== $trip->id) {
+            abort(404);
+        }
+        
         $activityTypes = [
             'Cultural', 'Beach', 'Adventure', 'Food', 
             'Shopping', 'Nightlife', 'Relaxation', 'Sightseeing'
@@ -84,8 +135,8 @@ class ItineraryController extends Controller
      */
     public function editActivity(Trip $trip, Itinerary $itinerary, Activity $activity): View
     {
-        // Check if the activity belongs to this itinerary
-        if ($activity->itinerary_id !== $itinerary->id) {
+        // Check if the activity belongs to this itinerary and trip
+        if ($activity->itinerary_id !== $itinerary->id || $itinerary->trip_id !== $trip->id) {
             abort(404);
         }
         

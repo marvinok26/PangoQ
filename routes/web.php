@@ -293,7 +293,6 @@ Route::middleware(['auth'])->group(function () {
     // Itinerary routes
     Route::get('/trips/{trip}/itinerary', [ItineraryController::class, 'index'])->name('trips.itinerary');
     Route::get('/trips/{trip}/itinerary/edit', [ItineraryController::class, 'edit'])->name('trips.itinerary.edit');
-
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');

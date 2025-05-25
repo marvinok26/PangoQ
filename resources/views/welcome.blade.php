@@ -35,7 +35,7 @@
             <div class="flex flex-col md:flex-row gap-4 py-8">
                 <!-- Left container - Destination search box with background -->
                 <div class="md:w-2/3 mb-4 md:mb-0">
-                    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('{{ asset('images/image6.jpg') }}'); background-position: left; background-attachment: fixed;">
+                    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
                         <div class="absolute inset-0"></div>
                         <div class="relative z-10 flex">
                             <!-- Background area on the left -->
@@ -69,7 +69,7 @@
                                     </form>
                                     
                                     <!-- Transparent window that shows the main container background -->
-                                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('{{ asset('images/image6.jpg') }}'); background-position: left; background-attachment: fixed;">
+                                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
                                         <div class="absolute inset-0 bg-opacity-20"></div>
                                         <!-- This area shows the same background as the main container -->
                                     </div>
