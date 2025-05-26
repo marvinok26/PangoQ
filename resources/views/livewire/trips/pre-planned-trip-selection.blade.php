@@ -51,7 +51,7 @@
                     <div class="flex flex-col md:flex-row">
                         <div class="md:w-1/3 bg-gray-200">
                             @if($template->destination->image_url)
-                                <img src="{{ asset('images/' . $template->destination->image_url) }}" alt="{{ $template->destination->name }}" class="w-full h-full object-cover">
+                                <img src="{{ asset('images/' . $template->destination->image_url) }}" alt="{{ $template->destination->name }}" class="w-full h-110 object-cover">
                             @else
                                 <div class="w-full h-full min-h-60 flex items-center justify-center bg-blue-100">
                                     <span class="text-blue-600 font-medium text-lg">{{ $template->destination->name }}</span>

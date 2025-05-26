@@ -26,6 +26,19 @@ class PrePlannedTripSelection extends Component
     public function mount()
     {
         $this->destinations = Destination::has('tripTemplates')->get();
+        
+        // Check if there's a pre-selected destination from the welcome page form
+        $sessionDestination = Session::get('selected_destination');
+        if ($sessionDestination && is_string($sessionDestination)) {
+            // If it's a string (from welcome form), find the destination by name
+            $destination = Destination::where('name', 'LIKE', "%{$sessionDestination}%")->first();
+            if ($destination) {
+                $this->selectDestination($destination->id);
+            }
+        } elseif ($sessionDestination && is_array($sessionDestination) && isset($sessionDestination['id'])) {
+            // If it's already an array with ID (from existing flow)
+            $this->selectDestination($sessionDestination['id']);
+        }
     }
 
     public function render()
@@ -77,14 +90,14 @@ class PrePlannedTripSelection extends Component
         $this->totalPrice = $this->selectedTemplate->base_price;
 
         // Parse the highlights field if it exists
-if ($this->selectedTemplate->highlights) {
-    // Check if highlights is already an array
-    $this->templateHighlights = is_array($this->selectedTemplate->highlights) 
-        ? $this->selectedTemplate->highlights 
-        : json_decode($this->selectedTemplate->highlights, true) ?? [];
-} else {
-    $this->templateHighlights = [];
-}
+        if ($this->selectedTemplate->highlights) {
+            // Check if highlights is already an array
+            $this->templateHighlights = is_array($this->selectedTemplate->highlights) 
+                ? $this->selectedTemplate->highlights 
+                : json_decode($this->selectedTemplate->highlights, true) ?? [];
+        } else {
+            $this->templateHighlights = [];
+        }
 
         // Group activities by day and separate optional activities
         $activities = $this->selectedTemplate->activities;
@@ -164,7 +177,13 @@ if ($this->selectedTemplate->highlights) {
         $tripDetails['budget'] = max($tripDetails['budget'] ?? 0, $this->totalPrice);
         Session::put('trip_details', $tripDetails);
 
-        // Dispatch event to parent component
+        // For standalone pre-planned selection, redirect to the next step
+        if (!request()->routeIs('trips.plan')) {
+            // If accessed directly, redirect to invite friends step
+            return redirect()->route('trips.invite-friends');
+        }
+
+        // Dispatch event to parent component (if within trip creation flow)
         $this->dispatch('tripTemplateSelected', tripTemplateId: $this->selectedTemplate->id);
     }
 

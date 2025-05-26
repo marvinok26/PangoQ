@@ -18,12 +18,16 @@ class WalletTransaction extends Model
         'status',
         'payment_method',
         'transaction_reference',
+        // Adding admin tracking fields (optional for future use)
+        'processed_by_admin_id',
+        'admin_notes'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
     ];
 
+    // ============ EXISTING RELATIONSHIPS (PRESERVED) ============
     public function wallet(): BelongsTo
     {
         return $this->belongsTo(SavingsWallet::class, 'wallet_id');
@@ -34,6 +38,7 @@ class WalletTransaction extends Model
         return $this->belongsTo(User::class);
     }
 
+    // ============ EXISTING METHODS (PRESERVED) ============
     public function isDeposit(): bool
     {
         return $this->type === 'deposit';
@@ -47,5 +52,32 @@ class WalletTransaction extends Model
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
+    }
+
+    // ============ NEW ADMIN METHODS (MINIMAL) ============
+    /**
+     * Get admin who processed this transaction
+     */
+    public function processedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'processed_by_admin_id');
+    }
+
+    /**
+     * Log transaction activity
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($transaction) {
+            ActivityLog::log('transaction_created', $transaction, $transaction->toArray());
+        });
+
+        static::updated(function ($transaction) {
+            if ($transaction->isDirty()) {
+                ActivityLog::log('transaction_updated', $transaction, $transaction->getChanges(), $transaction->getOriginal());
+            }
+        });
     }
 }

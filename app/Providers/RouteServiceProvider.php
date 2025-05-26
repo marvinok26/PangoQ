@@ -22,21 +22,35 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // API Rate limiting
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Admin Rate limiting (more generous for admins)
+        RateLimiter::for('admin', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
         $this->routes(function () {
+            // API Routes
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
+            // Web Routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
 
-            // If you have a separate auth.php routes file
-            Route::middleware('web')
-                ->group(base_path('routes/auth.php'));
+            // Auth Routes (if you have a separate auth.php routes file)
+            if (file_exists(base_path('routes/auth.php'))) {
+                Route::middleware('web')
+                    ->group(base_path('routes/auth.php'));
+            }
+
+            // Admin Routes
+            Route::middleware(['web', 'throttle:admin'])
+                ->group(base_path('routes/admin.php'));
         });
     }
 }

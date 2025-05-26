@@ -22,7 +22,14 @@ class Trip extends Model
         'budget',
         'total_cost',
         'selected_optional_activities',
-        'status'
+        'status',
+        // Admin fields (new additions)
+        'admin_status',
+        'reviewed_by',
+        'reviewed_at',
+        'admin_notes',
+        'is_featured',
+        'report_count'
     ];
 
     protected $casts = [
@@ -30,11 +37,18 @@ class Trip extends Model
         'end_date' => 'date',
         'budget' => 'decimal:2',
         'total_cost' => 'decimal:2',
-        'selected_optional_activities' => 'array'
+        'selected_optional_activities' => 'array',
+        // Admin field casts (new additions)
+        'reviewed_at' => 'datetime',
+        'is_featured' => 'boolean',
+        'report_count' => 'integer'
     ];
+
+    // ============ EXISTING FUNCTIONALITY (PRESERVED) ============
 
     /**
      * Create trip itineraries from the template
+     * THIS FUNCTIONALITY IS PRESERVED AS-IS
      */
     public function createItinerariesFromTemplate()
     {
@@ -113,6 +127,8 @@ class Trip extends Model
         }
     }
 
+    // ============ EXISTING RELATIONSHIPS (PRESERVED) ============
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'creator_id');
@@ -124,11 +140,11 @@ class Trip extends Model
     }
 
     public function users()
-{
-    return $this->belongsToMany(User::class, 'trip_members', 'trip_id', 'user_id')
-                ->withPivot('role', 'invitation_status')
-                ->withTimestamps();
-}
+    {
+        return $this->belongsToMany(User::class, 'trip_members', 'trip_id', 'user_id')
+                    ->withPivot('role', 'invitation_status')
+                    ->withTimestamps();
+    }
 
     public function tripTemplate()
     {
@@ -183,5 +199,111 @@ class Trip extends Model
         }
         
         return $this->start_date->format('M d, Y') . ' - ' . $this->end_date->format('M d, Y');
+    }
+
+    // ============ ADMIN-RELATED METHODS (NEW) ============
+    
+    /**
+     * Admin who reviewed this trip
+     */
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * Refund requests for this trip
+     */
+    public function refundRequests()
+    {
+        return $this->hasMany(RefundRequest::class);
+    }
+
+    /**
+     * Check if trip is approved by admin
+     */
+    public function isApproved(): bool
+    {
+        return $this->admin_status === 'approved';
+    }
+
+    /**
+     * Check if trip is under review
+     */
+    public function isUnderReview(): bool
+    {
+        return $this->admin_status === 'under_review';
+    }
+
+    /**
+     * Check if trip is flagged
+     */
+    public function isFlagged(): bool
+    {
+        return $this->admin_status === 'flagged';
+    }
+
+    /**
+     * Check if trip is featured
+     */
+    public function isFeatured(): bool
+    {
+        return $this->is_featured === true;
+    }
+
+    /**
+     * Mark trip as featured
+     */
+    public function markAsFeatured(): void
+    {
+        $this->update(['is_featured' => true]);
+    }
+
+    /**
+     * Remove featured status
+     */
+    public function removeFeatured(): void
+    {
+        $this->update(['is_featured' => false]);
+    }
+
+    /**
+     * Increment report count
+     */
+    public function incrementReports(): void
+    {
+        $this->increment('report_count');
+    }
+
+    /**
+     * Scope for featured trips
+     */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    /**
+     * Scope for approved trips
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('admin_status', 'approved');
+    }
+
+    /**
+     * Scope for flagged trips
+     */
+    public function scopeFlagged($query)
+    {
+        return $query->where('admin_status', 'flagged');
+    }
+
+    /**
+     * Scope for trips under review
+     */
+    public function scopeUnderReview($query)
+    {
+        return $query->where('admin_status', 'under_review');
     }
 }

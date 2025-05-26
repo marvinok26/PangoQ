@@ -33,51 +33,85 @@
             </div>
             
             <div class="flex flex-col md:flex-row gap-4 py-8">
-                <!-- Left container - Destination search box with background -->
-                <div class="md:w-2/3 mb-4 md:mb-0">
-                    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
-                        <div class="absolute inset-0"></div>
-                        <div class="relative z-10 flex">
-                            <!-- Background area on the left -->
-                            <div class="md:w-1/2 p-8">
-                                <!-- This space shows the background image -->
-                            </div>
-                            
-                            <!-- Form container on the right -->
-                            <div class="md:w-1/2 p-6 relative">
-                                <div class="bg-white rounded-lg shadow-lg p-5 mx-4 relative">
-                                    <form action="#" method="GET">
-                                        <div class="mb-4">
-                                            <h3 class="text-sm text-gray-400 mb-2">DESTINATION</h3>
-                                            <div class="border border-gray-200 rounded p-2 mb-4">
-                                                <input type="text" name="destination" placeholder="Bur Dubai" class="w-full outline-none">
-                                            </div>
-                                            
-                                            <h3 class="text-sm text-gray-400 mb-2">LOCATION</h3>
-                                            <div class="border border-gray-200 rounded p-2 mb-4">
-                                                <input type="text" name="location" placeholder="Dubai" class="w-full outline-none">
-                                            </div>
-                                            
-                                            <div class="flex mb-4">
-                                                <button type="button" class="bg-teal-600 text-white text-xs px-2 py-1 rounded mr-2">5 Star Hotel</button>
-                                                <button type="button" class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded mr-2">4 Star Hotel</button>
-                                                <button type="button" class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">3 Star Hotel</button>
-                                            </div>
-                                        </div>
-                                        
-                                        <button type="submit" class="bg-yellow-500 text-white w-full py-2 rounded font-medium mb-4">Search</button>
-                                    </form>
-                                    
-                                    <!-- Transparent window that shows the main container background -->
-                                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
-                                        <div class="absolute inset-0 bg-opacity-20"></div>
-                                        <!-- This area shows the same background as the main container -->
-                                    </div>
+               <!-- Left container - Destination search box with background -->
+<div class="md:w-2/3 mb-4 md:mb-0">
+    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
+        <div class="absolute inset-0"></div>
+        <div class="relative z-10 flex">
+            <!-- Background area on the left -->
+            <div class="md:w-1/2 p-8">
+                <!-- This space shows the background image -->
+            </div>
+            
+            <!-- Form container on the right -->
+            <div class="md:w-1/2 p-6 relative">
+                <div class="bg-white rounded-lg shadow-lg p-5 mx-4 relative">
+                    <form action="{{ route('plan.trip') }}" method="POST" id="trip-planning-form">
+                        @csrf
+                        <div class="mb-4">
+                            <h3 class="text-sm text-gray-400 mb-2">DESTINATION</h3>
+                            <div class="border border-gray-200 rounded p-2 mb-4 relative">
+                                <input type="text" 
+                                       name="destination" 
+                                       id="destination-input"
+                                       placeholder="Where would you like to go?" 
+                                       class="w-full outline-none"
+                                       value="{{ old('destination') }}"
+                                       required>
+                                
+                                <!-- Destination dropdown -->
+                                <div id="destination-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-md shadow-lg z-50 hidden max-h-60 overflow-y-auto">
+                                    <!-- Results will be populated here -->
                                 </div>
                             </div>
+                            
+                            <h3 class="text-sm text-gray-400 mb-2">TRIP TYPE</h3>
+                            <div class="flex mb-4 space-x-2">
+                                <label class="flex-1">
+                                    <input type="radio" name="trip_type" value="pre_planned" class="sr-only trip-type-radio" {{ old('trip_type') === 'pre_planned' ? 'checked' : '' }}>
+                                    <div class="trip-type-btn bg-gray-200 text-gray-700 text-xs px-3 py-2 rounded cursor-pointer text-center transition-colors hover:bg-blue-100">
+                                        Pre-planned Packages
+                                    </div>
+                                </label>
+                                <label class="flex-1">
+                                    <input type="radio" name="trip_type" value="self_planned" class="sr-only trip-type-radio" {{ old('trip_type') === 'self_planned' ? 'checked' : '' }}>
+                                    <div class="trip-type-btn bg-gray-200 text-gray-700 text-xs px-3 py-2 rounded cursor-pointer text-center transition-colors hover:bg-blue-100">
+                                        Custom Planning
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            @if(isset($popularDestinations) && $popularDestinations->count() > 0)
+                            <div class="mb-4">
+                                <h4 class="text-xs text-gray-400 mb-2">POPULAR DESTINATIONS</h4>
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach($popularDestinations->take(3) as $destination)
+                                        <button type="button" 
+                                                class="popular-destination-btn text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                                                data-destination="{{ $destination->name }}">
+                                            {{ $destination->name }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
                         </div>
+                        
+                        <button type="submit" class="bg-yellow-500 text-white w-full py-2 rounded font-medium mb-4 hover:bg-yellow-600 transition-colors">
+                            Start Planning
+                        </button>
+                    </form>
+                    
+                    <!-- Transparent window that shows the main container background -->
+                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
+                        <div class="absolute inset-0 bg-opacity-20"></div>
+                        <!-- This area shows the same background as the main container -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
                 
                 <!-- Right side containers -->
                 <div class="md:w-1/3 flex flex-col gap-4">
@@ -402,5 +436,123 @@
             // Alpine.js functionality can be initialized here
         });
     </script>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const destinationInput = document.getElementById('destination-input');
+    const destinationDropdown = document.getElementById('destination-dropdown');
+    const tripTypeRadios = document.querySelectorAll('.trip-type-radio');
+    const tripTypeBtns = document.querySelectorAll('.trip-type-btn');
+    const popularDestinationBtns = document.querySelectorAll('.popular-destination-btn');
+    let searchTimeout;
+
+    // Handle destination search
+    destinationInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            destinationDropdown.classList.add('hidden');
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`{{ route('destinations.search') }}?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        let html = '';
+                        data.forEach(destination => {
+                            html += `
+                                <div class="destination-result px-4 py-2 hover:bg-gray-100 cursor-pointer" 
+                                     data-destination="${destination.name}">
+                                    <div class="font-medium">${destination.name}</div>
+                                    <div class="text-sm text-gray-500">
+                                        ${destination.city ? destination.city + ', ' : ''}${destination.country || ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        destinationDropdown.innerHTML = html;
+                        destinationDropdown.classList.remove('hidden');
+                        
+                        // Add click handlers to results
+                        document.querySelectorAll('.destination-result').forEach(result => {
+                            result.addEventListener('click', function() {
+                                destinationInput.value = this.dataset.destination;
+                                destinationDropdown.classList.add('hidden');
+                            });
+                        });
+                    } else {
+                        destinationDropdown.classList.add('hidden');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching destinations:', error);
+                    destinationDropdown.classList.add('hidden');
+                });
+        }, 300);
+    });
+
+    // Handle trip type selection
+    tripTypeRadios.forEach((radio, index) => {
+        radio.addEventListener('change', function() {
+            updateTripTypeButtons();
+        });
+    });
+
+    tripTypeBtns.forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            tripTypeRadios[index].checked = true;
+            updateTripTypeButtons();
+        });
+    });
+
+    function updateTripTypeButtons() {
+        tripTypeBtns.forEach((btn, index) => {
+            if (tripTypeRadios[index].checked) {
+                btn.classList.remove('bg-gray-200', 'text-gray-700');
+                btn.classList.add('bg-teal-600', 'text-white');
+            } else {
+                btn.classList.remove('bg-teal-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            }
+        });
+    }
+
+    // Handle popular destination selection
+    popularDestinationBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            destinationInput.value = this.dataset.destination;
+        });
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!destinationInput.contains(e.target) && !destinationDropdown.contains(e.target)) {
+            destinationDropdown.classList.add('hidden');
+        }
+    });
+
+    // Form validation
+    document.getElementById('trip-planning-form').addEventListener('submit', function(e) {
+        const destination = destinationInput.value.trim();
+        const tripType = document.querySelector('.trip-type-radio:checked');
+
+        if (!destination) {
+            e.preventDefault();
+            alert('Please select a destination');
+            return;
+        }
+
+        if (!tripType) {
+            e.preventDefault();
+            alert('Please select a trip type');
+            return;
+        }
+    });
+});
+</script>
 </body>
 </html>

@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "doctrine/dbal": "^4.2",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.1",
         "laravel/socialite": "^5.20",
@@ -34,7 +35,10 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/Helpers/AdminHelper.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -64,6 +68,10 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "fresh-admin": [
+            "@php artisan migrate:fresh --seed",
+            "@php artisan admin:create-super-admin"
         ]
     },
     "extra": {

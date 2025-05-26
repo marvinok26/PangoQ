@@ -44,6 +44,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'account_status',
         'preferred_payment_method',
         'daily_transaction_limit',
+        // Admin fields (new additions)
+        'is_admin',
+        'admin_role',
+        'admin_since',
+        'admin_notes'
     ];
 
     /**
@@ -66,6 +71,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'password' => 'hashed',
         'date_of_birth' => 'date',
         'daily_transaction_limit' => 'decimal:2',
+        // Admin field casts (new additions)
+        'is_admin' => 'boolean',
+        'admin_since' => 'datetime',
+        'last_admin_login' => 'datetime',
     ];
 
     /**
@@ -101,6 +110,140 @@ class User extends Authenticatable implements MustVerifyEmail
         
         return $accountNumber;
     }
+
+    // ============ ADMIN-RELATED METHODS (NEW) ============
+    
+    /**
+     * Check if user is an admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin && $this->account_status === 'active';
+    }
+
+    /**
+     * Check if user is a super admin
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->isAdmin() && $this->admin_role === 'super_admin';
+    }
+
+    /**
+     * Check if user can manage other users
+     */
+    public function canManageUsers(): bool
+    {
+        return $this->isAdmin() && in_array($this->admin_role, ['super_admin', 'admin']);
+    }
+
+    /**
+     * Check if user can manage financial operations
+     */
+    public function canManageFinancials(): bool
+    {
+        return $this->isAdmin() && in_array($this->admin_role, ['super_admin', 'admin']);
+    }
+
+    /**
+     * Check if user can manage trips
+     */
+    public function canManageTrips(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    // ============ ADMIN RELATIONSHIPS (NEW) ============
+    
+    /**
+     * Support tickets assigned to this admin
+     */
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    /**
+     * Support tickets resolved by this admin
+     */
+    public function resolvedTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'resolved_by');
+    }
+
+    /**
+     * Withdrawal requests processed by this admin
+     */
+    public function processedWithdrawals(): HasMany
+    {
+        return $this->hasMany(WithdrawalRequest::class, 'processed_by');
+    }
+
+    /**
+     * Refund requests processed by this admin
+     */
+    public function processedRefunds(): HasMany
+    {
+        return $this->hasMany(RefundRequest::class, 'processed_by');
+    }
+
+    /**
+     * Admin notifications created by this admin
+     */
+    public function adminNotifications(): HasMany
+    {
+        return $this->hasMany(AdminNotification::class, 'created_by');
+    }
+
+    /**
+     * Offers/discounts created by this admin
+     */
+    public function createdOffers(): HasMany
+    {
+        return $this->hasMany(OfferDiscount::class, 'created_by');
+    }
+
+    /**
+     * Activity logs for this user
+     */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
+    /**
+     * Support tickets created by this user (as customer)
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    /**
+     * Withdrawal requests made by this user
+     */
+    public function withdrawalRequests(): HasMany
+    {
+        return $this->hasMany(WithdrawalRequest::class);
+    }
+
+    /**
+     * Refund requests made by this user
+     */
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(RefundRequest::class);
+    }
+
+    /**
+     * Trips reviewed by this admin
+     */
+    public function reviewedTrips(): HasMany
+    {
+        return $this->hasMany(Trip::class, 'reviewed_by');
+    }
+
+    // ============ EXISTING RELATIONSHIPS (PRESERVED) ============
 
     /**
      * The trips that this user has created.
@@ -211,4 +354,5 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return mb_substr($this->name, 0, 2);
     }
+    
 }
