@@ -5,11 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Prunable;
 
 class ActivityLog extends Model
 {
-    use HasFactory, Prunable;
+    use HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -17,20 +16,18 @@ class ActivityLog extends Model
         'model_type',
         'model_id',
         'changes',
-        'original_data',
+        'old_values',
         'ip_address',
         'user_agent',
-        'url',
-        'method'
     ];
 
     protected $casts = [
         'changes' => 'array',
-        'original_data' => 'array',
+        'old_values' => 'array',
     ];
 
     /**
-     * Get the user who performed the action
+     * Get the user that performed the action
      */
     public function user(): BelongsTo
     {
@@ -38,34 +35,7 @@ class ActivityLog extends Model
     }
 
     /**
-     * Get the subject model
-     */
-    public function subject()
-    {
-        return $this->morphTo('model');
-    }
-
-    /**
-     * Log an activity
-     */
-    public static function log($action, $model = null, $changes = null, $originalData = null)
-    {
-        return self::create([
-            'user_id' => auth()->id(),
-            'action' => $action,
-            'model_type' => $model ? get_class($model) : null,
-            'model_id' => $model ? $model->id : null,
-            'changes' => $changes,
-            'original_data' => $originalData,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'url' => request()->fullUrl(),
-            'method' => request()->method()
-        ]);
-    }
-
-    /**
-     * Scope for admin actions
+     * Scope for admin actions only
      */
     public function scopeAdminActions($query)
     {
@@ -79,7 +49,7 @@ class ActivityLog extends Model
      */
     public function scopeForModel($query, $modelType, $modelId = null)
     {
-        $query = $query->where('model_type', $modelType);
+        $query->where('model_type', $modelType);
         
         if ($modelId) {
             $query->where('model_id', $modelId);
@@ -89,11 +59,19 @@ class ActivityLog extends Model
     }
 
     /**
-     * Get the prunable model query.
-     * Keeps logs for 90 days
+     * Log an activity
      */
-    public function prunable()
+    public static function log(string $action, $model = null, array $changes = [], array $oldValues = [])
     {
-        return static::where('created_at', '<=', now()->subDays(90));
+        return self::create([
+            'user_id' => auth()->id(),
+            'action' => $action,
+            'model_type' => $model ? get_class($model) : null,
+            'model_id' => $model ? $model->id : null,
+            'changes' => $changes,
+            'old_values' => $oldValues,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 }

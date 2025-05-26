@@ -26,7 +26,10 @@ class SavingsWallet extends Model
         'currency',
         // Adding admin oversight fields (optional)
         'admin_flagged',
-        'admin_notes'
+        'admin_notes',
+        'flagged_reason',
+        'flagged_at',
+        'flagged_by'
     ];
 
     protected $casts = [
@@ -34,7 +37,8 @@ class SavingsWallet extends Model
         'custom_goal' => 'decimal:2',
         'current_amount' => 'decimal:2',
         'target_date' => 'date',
-        'admin_flagged' => 'boolean'
+        'admin_flagged' => 'boolean',
+        'flagged_at' => 'datetime'
     ];
 
     // ============ EXISTING RELATIONSHIPS (PRESERVED) ============
@@ -53,10 +57,17 @@ class SavingsWallet extends Model
         return $this->belongsTo(User::class, 'user_id')->first() ?: null;
     }
 
-
     public function transactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class, 'wallet_id');
+    }
+
+    /**
+     * Get the admin who flagged this wallet
+     */
+    public function flaggedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'flagged_by');
     }
 
     // ============ EXISTING METHODS (PRESERVED) ============
@@ -83,7 +94,7 @@ class SavingsWallet extends Model
         return max(0, $this->target_amount - $this->current_amount);
     }
 
-    // ============ NEW ADMIN METHODS (MINIMAL) ============
+    // ============ UPDATED ADMIN METHODS ============
     /**
      * Flag wallet for admin review
      */
@@ -91,7 +102,10 @@ class SavingsWallet extends Model
     {
         $this->update([
             'admin_flagged' => true,
-            'admin_notes' => $reason
+            'admin_notes' => $reason,
+            'flagged_reason' => $reason,
+            'flagged_at' => now(),
+            'flagged_by' => auth()->id()
         ]);
 
         ActivityLog::log('wallet_flagged', $this, ['reason' => $reason]);
@@ -104,7 +118,10 @@ class SavingsWallet extends Model
     {
         $this->update([
             'admin_flagged' => false,
-            'admin_notes' => null
+            'admin_notes' => null,
+            'flagged_reason' => null,
+            'flagged_at' => null,
+            'flagged_by' => null
         ]);
 
         ActivityLog::log('wallet_flag_cleared', $this);

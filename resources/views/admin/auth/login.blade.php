@@ -1,3 +1,5 @@
+{{-- resources/views/admin/auth/login.blade.php --}}
+
 @extends('admin.layouts.auth')
 
 @section('title', 'Admin Login')

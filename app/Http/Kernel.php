@@ -69,5 +69,6 @@ class Kernel extends HttpKernel
         'tripmember' => \App\Http\Middleware\CheckTripMembership::class,
         'set.language' => \App\Http\Middleware\SetLanguage::class,
         'trip.step' => \App\Http\Middleware\TripStepMiddleware::class,
+        'admin' => \App\Http\Middleware\AdminMiddleware::class,
     ];
 }

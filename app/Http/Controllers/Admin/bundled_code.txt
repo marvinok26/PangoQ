@@ -1,0 +1,882 @@
+
+
+=== File: AdminController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class AdminController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Show admin dashboard
+     */
+    public function dashboard(): View
+    {
+        $stats = $this->getDashboardStats();
+        
+        return view('admin.dashboard', compact('stats'));
+    }
+
+    /**
+     * Get dashboard statistics
+     */
+    private function getDashboardStats(): array
+    {
+        return [
+            'total_users' => \App\Models\User::count(),
+            'active_users' => \App\Models\User::where('account_status', 'active')->count(),
+            'admin_users' => \App\Models\User::where('is_admin', true)->count(),
+            'total_trips' => \App\Models\Trip::count(),
+            'active_trips' => \App\Models\Trip::where('status', 'active')->count(),
+            'flagged_trips' => \App\Models\Trip::where('admin_status', 'flagged')->count(),
+            'featured_trips' => \App\Models\Trip::where('is_featured', true)->count(),
+            'total_wallets' => \App\Models\SavingsWallet::count(),
+            'flagged_wallets' => \App\Models\SavingsWallet::where('admin_flagged', true)->count(),
+            'total_transactions' => \App\Models\WalletTransaction::count(),
+            'recent_activities' => ActivityLog::with('user')
+                ->adminActions()
+                ->latest()
+                ->take(10)
+                ->get()
+        ];
+    }
+}
+
+=== File: AuthController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
+
+class AuthController extends Controller
+{
+    /**
+     * Show admin login form
+     */
+    public function showLogin(): View
+    {
+        return view('admin.auth.login');
+    }
+
+    /**
+     * Handle admin login
+     */
+    public function login(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+            
+            // Check if user is admin
+            if (!$user->isAdmin()) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Access denied. Admin privileges required.',
+                ]);
+            }
+
+            $request->session()->regenerate();
+            
+            // Log admin login
+            if (class_exists('App\Models\ActivityLog')) {
+                ActivityLog::log('admin_login', $user, [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]);
+            }
+
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->onlyInput('email');
+    }
+
+    /**
+     * Handle admin logout
+     */
+    public function logout(Request $request): RedirectResponse
+    {
+        // Log admin logout
+        if (auth()->check() && class_exists('App\Models\ActivityLog')) {
+            ActivityLog::log('admin_logout', auth()->user());
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('admin.login');
+    }
+}
+
+=== File: ActivityController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class ActivityController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display activity logs
+     */
+    public function index(Request $request): View
+    {
+        $query = ActivityLog::with('user');
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                  ->orWhere('model_type', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by action
+        if ($request->filled('action')) {
+            $query->where('action', $request->action);
+        }
+
+        // Filter by model type
+        if ($request->filled('model_type')) {
+            $query->where('model_type', $request->model_type);
+        }
+
+        // Filter by admin actions only
+        if ($request->filled('admin_only')) {
+            $query->adminActions();
+        }
+
+        $activities = $query->latest()->paginate(20);
+
+        // Get unique actions and model types for filters
+        $actions = ActivityLog::distinct()->pluck('action')->filter();
+        $modelTypes = ActivityLog::distinct()->pluck('model_type')->filter();
+
+        return view('admin.activities.index', compact('activities', 'actions', 'modelTypes'));
+    }
+
+    /**
+     * Show activity details
+     */
+    public function show(ActivityLog $activity): View
+    {
+        $activity->load('user');
+        
+        return view('admin.activities.show', compact('activity'));
+    }
+}
+
+=== File: WalletController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\SavingsWallet;
+use App\Models\WalletTransaction;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class WalletController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display wallets list
+     */
+    public function index(Request $request): View
+    {
+        $query = SavingsWallet::with(['user', 'trip']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('user', function($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('trip', function($tripQuery) use ($search) {
+                    $tripQuery->where('title', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Filter by flagged status
+        if ($request->filled('flagged')) {
+            $query->where('admin_flagged', $request->flagged);
+        }
+
+        // Filter by currency
+        if ($request->filled('currency')) {
+            $query->where('currency', $request->currency);
+        }
+
+        $wallets = $query->latest()->paginate(15);
+
+        return view('admin.wallets.index', compact('wallets'));
+    }
+
+    /**
+     * Show wallet details
+     */
+    public function show(SavingsWallet $wallet): View
+    {
+        $wallet->load(['user', 'trip', 'transactions.user']);
+        
+        $activities = ActivityLog::forModel(SavingsWallet::class, $wallet->id)
+            ->with('user')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return view('admin.wallets.show', compact('wallet', 'activities'));
+    }
+
+    /**
+     * Toggle wallet flag
+     */
+    public function toggleFlag(Request $request, SavingsWallet $wallet): RedirectResponse
+    {
+        if ($wallet->admin_flagged) {
+            $wallet->clearFlag();
+            $message = 'Wallet flag cleared.';
+        } else {
+            $reason = $request->input('reason', 'Flagged for review');
+            $wallet->flagForReview($reason);
+            $message = 'Wallet flagged for review.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Display transactions
+     */
+    public function transactions(Request $request): View
+    {
+        $query = WalletTransaction::with(['user', 'wallet.trip']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('transaction_reference', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $transactions = $query->latest()->paginate(15);
+
+        return view('admin.transactions.index', compact('transactions'));
+    }
+}
+
+=== File: bundled_code.txt ===
+
+
+
+=== File: AdminController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class AdminController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Show admin dashboard
+     */
+    public function dashboard(): View
+    {
+        $stats = $this->getDashboardStats();
+        
+        return view('admin.dashboard', compact('stats'));
+    }
+
+    /**
+     * Get dashboard statistics
+     */
+    private function getDashboardStats(): array
+    {
+        return [
+            'total_users' => \App\Models\User::count(),
+            'active_users' => \App\Models\User::where('account_status', 'active')->count(),
+            'admin_users' => \App\Models\User::where('is_admin', true)->count(),
+            'total_trips' => \App\Models\Trip::count(),
+            'active_trips' => \App\Models\Trip::where('status', 'active')->count(),
+            'flagged_trips' => \App\Models\Trip::where('admin_status', 'flagged')->count(),
+            'featured_trips' => \App\Models\Trip::where('is_featured', true)->count(),
+            'total_wallets' => \App\Models\SavingsWallet::count(),
+            'flagged_wallets' => \App\Models\SavingsWallet::where('admin_flagged', true)->count(),
+            'total_transactions' => \App\Models\WalletTransaction::count(),
+            'recent_activities' => ActivityLog::with('user')
+                ->adminActions()
+                ->latest()
+                ->take(10)
+                ->get()
+        ];
+    }
+}
+
+=== File: AuthController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
+
+class AuthController extends Controller
+{
+    /**
+     * Show admin login form
+     */
+    public function showLogin(): View
+    {
+        return view('admin.auth.login');
+    }
+
+    /**
+     * Handle admin login
+     */
+    public function login(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+            
+            // Check if user is admin
+            if (!$user->isAdmin()) {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Access denied. Admin privileges required.',
+                ]);
+            }
+
+            $request->session()->regenerate();
+            
+            // Log admin login
+            if (class_exists('App\Models\ActivityLog')) {
+                ActivityLog::log('admin_login', $user, [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]);
+            }
+
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->onlyInput('email');
+    }
+
+    /**
+     * Handle admin logout
+     */
+    public function logout(Request $request): RedirectResponse
+    {
+        // Log admin logout
+        if (auth()->check() && class_exists('App\Models\ActivityLog')) {
+            ActivityLog::log('admin_logout', auth()->user());
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('admin.login');
+    }
+}
+
+=== File: ActivityController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class ActivityController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display activity logs
+     */
+    public function index(Request $request): View
+    {
+        $query = ActivityLog::with('user');
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                  ->orWhere('model_type', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by action
+        if ($request->filled('action')) {
+            $query->where('action', $request->action);
+        }
+
+        // Filter by model type
+        if ($request->filled('model_type')) {
+            $query->where('model_type', $request->model_type);
+        }
+
+        // Filter by admin actions only
+        if ($request->filled('admin_only')) {
+            $query->adminActions();
+        }
+
+        $activities = $query->latest()->paginate(20);
+
+        // Get unique actions and model types for filters
+        $actions = ActivityLog::distinct()->pluck('action')->filter();
+        $modelTypes = ActivityLog::distinct()->pluck('model_type')->filter();
+
+        return view('admin.activities.index', compact('activities', 'actions', 'modelTypes'));
+    }
+
+    /**
+     * Show activity details
+     */
+    public function show(ActivityLog $activity): View
+    {
+        $activity->load('user');
+        
+        return view('admin.activities.show', compact('activity'));
+    }
+}
+
+=== File: WalletController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\SavingsWallet;
+use App\Models\WalletTransaction;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class WalletController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display wallets list
+     */
+    public function index(Request $request): View
+    {
+        $query = SavingsWallet::with(['user', 'trip']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('user', function($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->orWhereHas('trip', function($tripQuery) use ($search) {
+                    $tripQuery->where('title', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Filter by flagged status
+        if ($request->filled('flagged')) {
+            $query->where('admin_flagged', $request->flagged);
+        }
+
+        // Filter by currency
+        if ($request->filled('currency')) {
+            $query->where('currency', $request->currency);
+        }
+
+        $wallets = $query->latest()->paginate(15);
+
+        return view('admin.wallets.index', compact('wallets'));
+    }
+
+    /**
+     * Show wallet details
+     */
+    public function show(SavingsWallet $wallet): View
+    {
+        $wallet->load(['user', 'trip', 'transactions.user']);
+        
+        $activities = ActivityLog::forModel(SavingsWallet::class, $wallet->id)
+            ->with('user')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return view('admin.wallets.show', compact('wallet', 'activities'));
+    }
+
+    /**
+     * Toggle wallet flag
+     */
+    public function toggleFlag(Request $request, SavingsWallet $wallet): RedirectResponse
+    {
+        if ($wallet->admin_flagged) {
+            $wallet->clearFlag();
+            $message = 'Wallet flag cleared.';
+        } else {
+            $reason = $request->input('reason', 'Flagged for review');
+            $wallet->flagForReview($reason);
+            $message = 'Wallet flagged for review.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Display transactions
+     */
+    public function transactions(Request $request): View
+    {
+        $query = WalletTransaction::with(['user', 'wallet.trip']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('transaction_reference', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $transactions = $query->latest()->paginate(15);
+
+        return view('admin.transactions.index', compact('transactions'));
+    }
+}
+
+=== File: TripController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Trip;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class TripController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display trips list
+     */
+    public function index(Request $request): View
+    {
+        $query = Trip::with(['creator', 'tripTemplate']);
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('destination', 'like', "%{$search}%")
+                  ->orWhereHas('creator', function($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by admin status
+        if ($request->filled('admin_status')) {
+            $query->where('admin_status', $request->admin_status);
+        }
+
+        // Filter by featured
+        if ($request->filled('is_featured')) {
+            $query->where('is_featured', $request->is_featured);
+        }
+
+        $trips = $query->latest()->paginate(15);
+
+        return view('admin.trips.index', compact('trips'));
+    }
+
+    /**
+     * Show trip details
+     */
+    public function show(Trip $trip): View
+    {
+        $trip->load(['creator', 'members.user', 'itineraries.activities', 'savingsWallet']);
+        
+        $activities = ActivityLog::forModel(Trip::class, $trip->id)
+            ->with('user')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return view('admin.trips.show', compact('trip', 'activities'));
+    }
+
+    /**
+     * Update trip admin status
+     */
+    public function updateAdminStatus(Request $request, Trip $trip): RedirectResponse
+    {
+        $request->validate([
+            'admin_status' => 'required|in:approved,under_review,flagged,restricted',
+            'admin_notes' => 'nullable|string|max:1000'
+        ]);
+
+        $oldStatus = $trip->admin_status;
+        
+        $trip->update([
+            'admin_status' => $request->admin_status,
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
+            'admin_notes' => $request->admin_notes
+        ]);
+
+        ActivityLog::log('trip_admin_status_updated', $trip, [
+            'old_status' => $oldStatus,
+            'new_status' => $request->admin_status,
+            'notes' => $request->admin_notes
+        ]);
+
+        return back()->with('success', 'Trip status updated successfully.');
+    }
+
+    /**
+     * Toggle featured status
+     */
+    public function toggleFeatured(Trip $trip): RedirectResponse
+    {
+        $newStatus = !$trip->is_featured;
+        $trip->update(['is_featured' => $newStatus]);
+
+        ActivityLog::log('trip_featured_toggled', $trip, [
+            'is_featured' => $newStatus
+        ]);
+
+        $message = $newStatus ? 'Trip marked as featured.' : 'Trip removed from featured.';
+        return back()->with('success', $message);
+    }
+}
+
+
+=== File: UserController.php ===
+
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Models\ActivityLog;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class UserController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
+    /**
+     * Display users list
+     */
+    public function index(Request $request): View
+    {
+        $query = User::query();
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('account_number', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by account status
+        if ($request->filled('status')) {
+            $query->where('account_status', $request->status);
+        }
+
+        // Filter by admin status
+        if ($request->filled('is_admin')) {
+            $query->where('is_admin', $request->is_admin);
+        }
+
+        $users = $query->latest()->paginate(15);
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    /**
+     * Show user details
+     */
+    public function show(User $user): View
+    {
+        $user->load(['createdTrips', 'savingsWallets', 'walletTransactions']);
+        
+        $activities = ActivityLog::forModel(User::class, $user->id)
+            ->with('user')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        return view('admin.users.show', compact('user', 'activities'));
+    }
+
+    /**
+     * Update user status
+     */
+    public function updateStatus(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'account_status' => 'required|in:active,inactive,suspended'
+        ]);
+
+        $oldStatus = $user->account_status;
+        $user->update(['account_status' => $request->account_status]);
+
+        ActivityLog::log('user_status_updated', $user, [
+            'old_status' => $oldStatus,
+            'new_status' => $request->account_status
+        ]);
+
+        return back()->with('success', 'User status updated successfully.');
+    }
+}

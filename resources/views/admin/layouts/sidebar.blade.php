@@ -1,8 +1,13 @@
+{{-- resources/views/admin/layouts/sidebar.blade.php --}}
+
 <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
     <div class="position-sticky pt-3">
         <div class="text-center mb-4">
-            <h4 class="text-white">{{ config('app.name') }}</h4>
-            <small class="text-white-50">{{ auth()->user()->name }}</small>
+            <div class="logo-container mb-2">
+                <img src="{{ asset('images/logo.png') }}" 
+                     alt="{{ config('app.name') }}" 
+                     class="admin-logo img-fluid">
+            </div>
         </div>
         
         <ul class="nav flex-column">
@@ -54,3 +59,32 @@
         </ul>
     </div>
 </nav>
+
+<style>
+.admin-logo {
+    max-height: 60px;
+    max-width: 120px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+}
+
+.logo-container {
+    padding: 0.5rem;
+}
+
+/* Optional: Add a subtle border or background to make logo stand out */
+.logo-container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Alternative: Simple white background for logo */
+.admin-logo {
+    
+    border-radius: 6px;
+    padding: 0.25rem;
+}
+</style>
