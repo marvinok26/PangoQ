@@ -17,28 +17,103 @@
         </form>
     </div>
     <div class="col-md-6">
-        <div class="btn-group float-end" role="group">
-            <a href="{{ route('admin.trips.index') }}" 
-               class="btn btn-outline-secondary {{ !request()->hasAny(['status', 'admin_status', 'is_featured']) ? 'active' : '' }}">
-                All Trips
-            </a>
-            <a href="{{ route('admin.trips.index', ['status' => 'active']) }}" 
-               class="btn btn-outline-success {{ request('status') === 'active' ? 'active' : '' }}">
-                Active
-            </a>
-            <a href="{{ route('admin.trips.index', ['admin_status' => 'flagged']) }}" 
-               class="btn btn-outline-danger {{ request('admin_status') === 'flagged' ? 'active' : '' }}">
-                Flagged
-            </a>
-            <a href="{{ route('admin.trips.index', ['is_featured' => '1']) }}" 
-               class="btn btn-outline-warning {{ request('is_featured') === '1' ? 'active' : '' }}">
-                Featured
-            </a>
+        <div class="d-flex justify-content-end gap-2">
+            <!-- Quick Access to Template Management -->
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-plus-lg"></i> Create
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.trip-templates.create') }}">
+                            <i class="bi bi-map"></i> New Trip Template
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.destinations.create') }}">
+                            <i class="bi bi-geo-alt"></i> New Destination
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.trip-templates.index') }}">
+                            <i class="bi bi-collection"></i> Manage Templates
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.destinations.index') }}">
+                            <i class="bi bi-globe"></i> Manage Destinations
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Filter Buttons -->
+            <div class="btn-group" role="group">
+                <a href="{{ route('admin.trips.index') }}" 
+                   class="btn btn-outline-secondary {{ !request()->hasAny(['status', 'admin_status', 'is_featured']) ? 'active' : '' }}">
+                    All Trips
+                </a>
+                <a href="{{ route('admin.trips.index', ['status' => 'active']) }}" 
+                   class="btn btn-outline-success {{ request('status') === 'active' ? 'active' : '' }}">
+                    Active
+                </a>
+                <a href="{{ route('admin.trips.index', ['admin_status' => 'flagged']) }}" 
+                   class="btn btn-outline-danger {{ request('admin_status') === 'flagged' ? 'active' : '' }}">
+                    Flagged
+                </a>
+                <a href="{{ route('admin.trips.index', ['is_featured' => '1']) }}" 
+                   class="btn btn-outline-warning {{ request('is_featured') === '1' ? 'active' : '' }}">
+                    Featured
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title">{{ $trips->total() }}</h5>
+                <p class="card-text text-muted">Total Trips</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">{{ $trips->where('status', 'active')->count() }}</h5>
+                <p class="card-text text-muted">Active Trips</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">{{ $trips->where('admin_status', 'flagged')->count() }}</h5>
+                <p class="card-text text-muted">Flagged Trips</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">{{ $trips->where('is_featured', true)->count() }}</h5>
+                <p class="card-text text-muted">Featured Trips</p>
+            </div>
         </div>
     </div>
 </div>
 
 <div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">User Trips Monitor</h5>
+            <small class="text-muted">Monitoring user-created trips</small>
+        </div>
+    </div>
     <div class="card-body">
         @if($trips->count() > 0)
             <div class="table-responsive">
@@ -66,7 +141,9 @@
                                         <small class="badge bg-warning ms-1">Featured</small>
                                     @endif
                                     @if($trip->trip_template_id)
-                                        <small class="badge bg-info ms-1">Template</small>
+                                        <small class="badge bg-info ms-1">
+                                            <i class="bi bi-map"></i> Template
+                                        </small>
                                     @endif
                                 </div>
                                 <small class="text-muted">{{ Str::limit($trip->description, 50) }}</small>
@@ -116,6 +193,13 @@
                                             <i class="bi bi-star{{ $trip->is_featured ? '-fill' : '' }}"></i>
                                         </button>
                                     </form>
+                                    @if($trip->trip_template_id)
+                                    <a href="{{ route('admin.trip-templates.show', $trip->tripTemplate) }}" 
+                                       class="btn btn-outline-info btn-sm" 
+                                       title="View Source Template">
+                                        <i class="bi bi-map"></i>
+                                    </a>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -160,13 +244,28 @@
             </div>
 
             <div class="d-flex justify-content-center">
-                {{ $trips->links() }}
+                {{ $trips->withQueryString()->links() }}
             </div>
         @else
-            <div class="text-center py-4">
+            <div class="text-center py-5">
                 <i class="bi bi-map display-1 text-muted"></i>
                 <h4 class="text-muted">No trips found</h4>
-                <p class="text-muted">Try adjusting your search criteria.</p>
+                @if(request()->hasAny(['search', 'status', 'admin_status', 'is_featured']))
+                    <p class="text-muted">Try adjusting your search criteria.</p>
+                    <a href="{{ route('admin.trips.index') }}" class="btn btn-outline-primary">
+                        Clear Filters
+                    </a>
+                @else
+                    <p class="text-muted">Users haven't created any trips yet.</p>
+                    <div class="mt-3">
+                        <a href="{{ route('admin.trip-templates.create') }}" class="btn btn-primary me-2">
+                            <i class="bi bi-plus-lg"></i> Create Trip Template
+                        </a>
+                        <a href="{{ route('admin.destinations.create') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-geo-alt"></i> Add Destination
+                        </a>
+                    </div>
+                @endif
             </div>
         @endif
     </div>

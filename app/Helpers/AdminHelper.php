@@ -95,17 +95,22 @@ if (!function_exists('admin_status_badge')) {
 
 if (!function_exists('format_currency')) {
     /**
-     * Format currency for admin display
+     * Format currency for admin display - FIXED
      */
     function format_currency(float $amount, string $currency = 'USD'): string
     {
-        return match($currency) {
-            'USD' => '$' . number_format($amount, 2),
-            'KES' => 'KSh ' . number_format($amount, 2),
-            'EUR' => '€' . number_format($amount, 2),
-            'GBP' => '£' . number_format($amount, 2),
-            default => $currency . ' ' . number_format($amount, 2)
-        };
+        switch ($currency) {
+            case 'USD':
+                return '$' . number_format($amount, 2);
+            case 'KES':
+                return 'KSh ' . number_format($amount, 2);
+            case 'EUR':
+                return '€' . number_format($amount, 2);
+            case 'GBP':
+                return '£' . number_format($amount, 2);
+            default:
+                return $currency . ' ' . number_format($amount, 2);
+        }
     }
 }
 
@@ -201,5 +206,177 @@ if (!function_exists('get_model_icon')) {
         
         $basename = class_basename($modelType);
         return $icons[$basename] ?? 'bi-file';
+    }
+}
+
+// NEW HELPERS FOR TRIP TEMPLATE MANAGEMENT
+
+if (!function_exists('activity_time_badge')) {
+    /**
+     * Get Bootstrap badge class for activity time of day
+     */
+    function activity_time_badge(string $timeOfDay): string
+    {
+        return match($timeOfDay) {
+            'morning' => 'badge bg-info',
+            'afternoon' => 'badge bg-warning',
+            'evening' => 'badge bg-dark',
+            default => 'badge bg-secondary'
+        };
+    }
+}
+
+if (!function_exists('difficulty_badge')) {
+    /**
+     * Get Bootstrap badge class for difficulty level
+     */
+    function difficulty_badge(string $level): string
+    {
+        return match($level) {
+            'easy' => 'badge bg-success',
+            'moderate' => 'badge bg-warning',
+            'challenging' => 'badge bg-danger',
+            default => 'badge bg-secondary'
+        };
+    }
+}
+
+if (!function_exists('trip_style_badge')) {
+    /**
+     * Get Bootstrap badge class for trip style
+     */
+    function trip_style_badge(string $style): string
+    {
+        return match(strtolower($style)) {
+            'safari' => 'badge bg-success',
+            'cultural' => 'badge bg-info',
+            'adventure' => 'badge bg-danger',
+            'beach' => 'badge bg-primary',
+            'luxury' => 'badge bg-warning',
+            'budget' => 'badge bg-secondary',
+            default => 'badge bg-light text-dark'
+        };
+    }
+}
+
+if (!function_exists('template_completeness_badge')) {
+    /**
+     * Get Bootstrap badge class for template completeness score
+     */
+    function template_completeness_badge(int $score): string
+    {
+        return match(true) {
+            $score >= 90 => 'badge bg-success',
+            $score >= 70 => 'badge bg-warning',
+            $score >= 50 => 'badge bg-danger',
+            default => 'badge bg-dark'
+        };
+    }
+}
+
+if (!function_exists('activity_category_icon')) {
+    /**
+     * Get Bootstrap icon for activity category
+     */
+    function activity_category_icon(string $category): string
+    {
+        return match(strtolower($category)) {
+            'safari', 'wildlife' => 'bi-binoculars',
+            'cultural', 'culture' => 'bi-building',
+            'adventure', 'sports' => 'bi-activity',
+            'food', 'dining' => 'bi-cup-hot',
+            'beach', 'water' => 'bi-water',
+            'shopping' => 'bi-bag',
+            'transport', 'transfer' => 'bi-car-front',
+            'accommodation' => 'bi-house',
+            'entertainment' => 'bi-music-note',
+            'nature' => 'bi-tree',
+            'historical' => 'bi-clock-history',
+            'religious' => 'bi-brightness-high',
+            default => 'bi-calendar-event'
+        };
+    }
+}
+
+if (!function_exists('format_duration')) {
+    /**
+     * Format duration from minutes to human readable
+     */
+    function format_duration(int $minutes): string
+    {
+        if ($minutes < 60) {
+            return "{$minutes} min";
+        }
+        
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+        
+        if ($remainingMinutes === 0) {
+            return "{$hours} hr" . ($hours > 1 ? 's' : '');
+        }
+        
+        return "{$hours}h {$remainingMinutes}m";
+    }
+}
+
+if (!function_exists('calculate_activity_duration')) {
+    /**
+     * Calculate duration between start and end time
+     */
+    function calculate_activity_duration(string $startTime, string $endTime): int
+    {
+        $start = \Carbon\Carbon::parse($startTime);
+        $end = \Carbon\Carbon::parse($endTime);
+        
+        return $start->diffInMinutes($end);
+    }
+}
+
+if (!function_exists('get_time_of_day_from_time')) {
+    /**
+     * Determine time of day from time string
+     */
+    function get_time_of_day_from_time(string $time): string
+    {
+        $hour = (int) \Carbon\Carbon::parse($time)->format('H');
+        
+        return match(true) {
+            $hour >= 5 && $hour < 12 => 'morning',
+            $hour >= 12 && $hour < 18 => 'afternoon',
+            default => 'evening'
+        };
+    }
+}
+
+if (!function_exists('format_time_range')) {
+    /**
+     * Format time range for display
+     */
+    function format_time_range(string $startTime, string $endTime): string
+    {
+        $start = \Carbon\Carbon::parse($startTime);
+        $end = \Carbon\Carbon::parse($endTime);
+        
+        return $start->format('g:i A') . ' - ' . $end->format('g:i A');
+    }
+}
+
+if (!function_exists('get_trip_template_status_badge')) {
+    /**
+     * Get status badge for trip template based on completeness
+     */
+    function get_trip_template_status_badge(\App\Models\TripTemplate $template): string
+    {
+        $activitiesCount = $template->activities()->count();
+        
+        if ($activitiesCount === 0) {
+            return '<span class="badge bg-danger">Incomplete</span>';
+        }
+        
+        if ($template->is_featured) {
+            return '<span class="badge bg-warning"><i class="bi bi-star-fill"></i> Featured</span>';
+        }
+        
+        return '<span class="badge bg-success">Active</span>';
     }
 }

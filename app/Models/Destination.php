@@ -24,4 +24,23 @@ class Destination extends Model
     {
         return $this->hasMany(TripTemplate::class);
     }
+
+
+    /**
+     * Get the full URL for the destination image
+     */
+    public function getImageUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // If it starts with 'image', it's in public/images (seeded data)
+        if (str_starts_with($value, 'image')) {
+            return asset('images/' . $value);
+        }
+
+        // Otherwise, it's in storage/app/public (uploaded files)
+        return asset('storage/' . $value);
+    }
 }

@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\TripController;
 use App\Http\Controllers\Admin\WalletController;
 use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\TransactionController;
+use App\Http\Controllers\Admin\DestinationController;
+use App\Http\Controllers\Admin\TripTemplateController;
+use App\Http\Controllers\Admin\TripManagement\TemplateActivityController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +60,42 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{trip}', [TripController::class, 'show'])->name('show');
             Route::patch('/{trip}/admin-status', [TripController::class, 'updateAdminStatus'])->name('update-admin-status');
             Route::patch('/{trip}/toggle-featured', [TripController::class, 'toggleFeatured'])->name('toggle-featured');
+        });
+
+        // Destinations Management
+        Route::prefix('destinations')->name('destinations.')->group(function () {
+            Route::get('/', [DestinationController::class, 'index'])->name('index');
+            Route::get('/create', [DestinationController::class, 'create'])->name('create');
+            Route::post('/', [DestinationController::class, 'store'])->name('store');
+            Route::get('/{destination}', [DestinationController::class, 'show'])->name('show');
+            Route::get('/{destination}/edit', [DestinationController::class, 'edit'])->name('edit');
+            Route::put('/{destination}', [DestinationController::class, 'update'])->name('update');
+            Route::delete('/{destination}', [DestinationController::class, 'destroy'])->name('destroy');
+        });
+
+        // Trip Templates Management
+        Route::prefix('trip-templates')->name('trip-templates.')->group(function () {
+            Route::get('/', [TripTemplateController::class, 'index'])->name('index');
+            Route::get('/create', [TripTemplateController::class, 'create'])->name('create');
+            Route::post('/', [TripTemplateController::class, 'store'])->name('store');
+            Route::get('/{tripTemplate}', [TripTemplateController::class, 'show'])->name('show');
+            Route::get('/{tripTemplate}/edit', [TripTemplateController::class, 'edit'])->name('edit');
+            Route::put('/{tripTemplate}', [TripTemplateController::class, 'update'])->name('update');
+            Route::delete('/{tripTemplate}', [TripTemplateController::class, 'destroy'])->name('destroy');
+            Route::post('/{tripTemplate}/duplicate', [TripTemplateController::class, 'duplicate'])->name('duplicate');
+            Route::patch('/{tripTemplate}/toggle-featured', [TripTemplateController::class, 'toggleFeatured'])->name('toggle-featured');
+            Route::post('/bulk-action', [TripTemplateController::class, 'bulkAction'])->name('bulk-action');
+            
+            // Template Activities Management - nested under templates
+            Route::prefix('{tripTemplate}/activities')->name('activities.')->group(function () {
+                Route::get('/create', [TemplateActivityController::class, 'create'])->name('create');
+                Route::post('/', [TemplateActivityController::class, 'store'])->name('store');
+                Route::get('/{activity}/edit', [TemplateActivityController::class, 'edit'])->name('edit');
+                Route::put('/{activity}', [TemplateActivityController::class, 'update'])->name('update');
+                Route::delete('/{activity}', [TemplateActivityController::class, 'destroy'])->name('destroy');
+                Route::post('/{activity}/duplicate', [TemplateActivityController::class, 'duplicate'])->name('duplicate');
+                Route::post('/bulk-action', [TemplateActivityController::class, 'bulkAction'])->name('bulk-action');
+            });
         });
 
         // Wallets Management - points to admin/financial/wallets/

@@ -1,3 +1,5 @@
+{{-- resources/views/admin/financial/wallets/index.blade.php --}}
+
 @extends('admin.layouts.app')
 
 @section('title', 'Wallets Management')
