@@ -39,7 +39,7 @@
                         <option value="">All Actions</option>
                         @foreach($actions as $action)
                             <option value="{{ $action }}" {{ request('action') === $action ? 'selected' : '' }}>
-                                {{ ucwords(str_replace('_', ' ', $action)) }}
+                                {{ format_activity_action($action) }}
                             </option>
                         @endforeach
                     </select>
@@ -63,6 +63,52 @@
         </div>
     </div>
 </div>
+
+<!-- Statistics Cards -->
+@if(isset($stats))
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-1">Total</h6>
+                <h5 class="text-primary mb-0">{{ number_format($stats['total_activities']) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-1">Admin</h6>
+                <h5 class="text-info mb-0">{{ number_format($stats['admin_activities']) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-1">Users</h6>
+                <h5 class="text-success mb-0">{{ number_format($stats['unique_users']) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-1">IPs</h6>
+                <h5 class="text-warning mb-0">{{ number_format($stats['unique_ips']) }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="card-title mb-1">Today</h6>
+                <h5 class="text-secondary mb-0">{{ number_format($stats['today_activities']) }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 <div class="card">
     <div class="card-body">
@@ -111,16 +157,21 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="badge bg-{{ $this->getActionBadgeColor($activity->action) }}">
-                                    {{ ucwords(str_replace('_', ' ', $activity->action)) }}
+                                <span class="badge bg-{{ get_action_badge_color($activity->action) }}">
+                                    {{ format_activity_action($activity->action) }}
                                 </span>
                             </td>
                             <td>
                                 @if($activity->model_type)
-                                    <strong>{{ class_basename($activity->model_type) }}</strong>
-                                    @if($activity->model_id)
-                                        <small class="text-muted d-block">#{{ $activity->model_id }}</small>
-                                    @endif
+                                    <div class="d-flex align-items-center">
+                                        <i class="{{ get_model_icon($activity->model_type) }} me-2"></i>
+                                        <div>
+                                            <strong>{{ class_basename($activity->model_type) }}</strong>
+                                            @if($activity->model_id)
+                                                <small class="text-muted d-block">#{{ $activity->model_id }}</small>
+                                            @endif
+                                        </div>
+                                    </div>
                                 @else
                                     <span class="text-muted">General</span>
                                 @endif
@@ -160,7 +211,7 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        <h6>Action: {{ ucwords(str_replace('_', ' ', $activity->action)) }}</h6>
+                                        <h6>Action: {{ format_activity_action($activity->action) }}</h6>
                                         <hr>
                                         @if(is_array($activity->changes))
                                             <div class="table-responsive">
@@ -215,29 +266,4 @@
         @endif
     </div>
 </div>
-
-@php
-    function getActionBadgeColor($action) {
-        $colors = [
-            'created' => 'success',
-            'updated' => 'info',
-            'deleted' => 'danger',
-            'login' => 'primary',
-            'logout' => 'secondary',
-            'approved' => 'success',
-            'rejected' => 'danger',
-            'flagged' => 'warning',
-            'admin_login' => 'info',
-            'admin_logout' => 'secondary',
-        ];
-        
-        foreach ($colors as $keyword => $color) {
-            if (str_contains($action, $keyword)) {
-                return $color;
-            }
-        }
-        
-        return 'secondary';
-    }
-@endphp
 @endsection

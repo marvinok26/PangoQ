@@ -60,8 +60,8 @@
                     <tr>
                         <td><strong>Action:</strong></td>
                         <td>
-                            <span class="badge bg-{{ $this->getActionBadgeColor($activity->action) }} fs-6">
-                                {{ ucwords(str_replace('_', ' ', $activity->action)) }}
+                            <span class="badge bg-{{ get_action_badge_color($activity->action) }} fs-6">
+                                {{ format_activity_action($activity->action) }}
                             </span>
                         </td>
                     </tr>
@@ -69,10 +69,15 @@
                         <td><strong>Target:</strong></td>
                         <td>
                             @if($activity->model_type)
-                                <strong>{{ class_basename($activity->model_type) }}</strong>
-                                @if($activity->model_id)
-                                    <small class="text-muted">#{{ $activity->model_id }}</small>
-                                @endif
+                                <div class="d-flex align-items-center">
+                                    <i class="{{ get_model_icon($activity->model_type) }} me-2"></i>
+                                    <div>
+                                        <strong>{{ class_basename($activity->model_type) }}</strong>
+                                        @if($activity->model_id)
+                                            <small class="text-muted d-block">#{{ $activity->model_id }}</small>
+                                        @endif
+                                    </div>
+                                </div>
                             @else
                                 <span class="text-muted">General Action</span>
                             @endif
@@ -113,6 +118,50 @@
                 </table>
             </div>
         </div>
+
+        <!-- Related Activities -->
+        @if($relatedActivities && $relatedActivities->count() > 0)
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Related Activities</h5>
+                <small class="text-muted">Activities on the same model within 24 hours</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>User</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($relatedActivities as $relatedActivity)
+                            <tr>
+                                <td>
+                                    <span class="badge bg-{{ get_action_badge_color($relatedActivity->action) }}">
+                                        {{ format_activity_action($relatedActivity->action) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($relatedActivity->user)
+                                        {{ $relatedActivity->user->name }}
+                                    @else
+                                        <span class="text-muted">System</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <small>{{ $relatedActivity->created_at->diffForHumans() }}</small>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     <div class="col-lg-4">
@@ -174,7 +223,7 @@
 
         <!-- Original Data Card -->
         @if($activity->original_data)
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">Original Data</h5>
             </div>
@@ -227,6 +276,40 @@
             </div>
         </div>
         @endif
+
+        <!-- User Recent Activities -->
+        @if($activity->user && $userRecentActivities && $userRecentActivities->count() > 0)
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">User's Recent Activities</h5>
+                <small class="text-muted">Last 10 activities by {{ $activity->user->name }}</small>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    @foreach($userRecentActivities as $recentActivity)
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-{{ get_action_badge_color($recentActivity->action) }} me-2">
+                                    {{ format_activity_action($recentActivity->action) }}
+                                </span>
+                                @if($recentActivity->model_type)
+                                    <small class="text-muted">
+                                        {{ class_basename($recentActivity->model_type) }}
+                                        @if($recentActivity->model_id)
+                                            #{{ $recentActivity->model_id }}
+                                        @endif
+                                    </small>
+                                @endif
+                            </div>
+                            <small class="text-muted">{{ $recentActivity->created_at->diffForHumans() }}</small>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -245,29 +328,4 @@
         </div>
     </div>
 </div>
-
-@php
-    function getActionBadgeColor($action) {
-        $colors = [
-            'created' => 'success',
-            'updated' => 'info',
-            'deleted' => 'danger',
-            'login' => 'primary',
-            'logout' => 'secondary',
-            'approved' => 'success',
-            'rejected' => 'danger',
-            'flagged' => 'warning',
-            'admin_login' => 'info',
-            'admin_logout' => 'secondary',
-        ];
-        
-        foreach ($colors as $keyword => $color) {
-            if (str_contains($action, $keyword)) {
-                return $color;
-            }
-        }
-        
-        return 'secondary';
-    }
-@endphp
 @endsection

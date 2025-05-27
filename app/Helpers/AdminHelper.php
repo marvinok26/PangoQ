@@ -133,3 +133,73 @@ if (!function_exists('admin_breadcrumb')) {
         return $html;
     }
 }
+
+// Activity Log Helpers
+if (!function_exists('get_action_badge_color')) {
+    /**
+     * Get Bootstrap badge color for activity actions
+     */
+    function get_action_badge_color(string $action): string
+    {
+        $colors = [
+            'created' => 'success',
+            'updated' => 'info',
+            'deleted' => 'danger',
+            'login' => 'primary',
+            'logout' => 'secondary',
+            'approved' => 'success',
+            'rejected' => 'danger',
+            'flagged' => 'warning',
+            'admin_login' => 'info',
+            'admin_logout' => 'secondary',
+            'failed' => 'danger',
+            'blocked' => 'dark',
+            'suspended' => 'warning',
+            'restored' => 'success',
+            'exported' => 'info',
+            'imported' => 'primary',
+        ];
+        
+        foreach ($colors as $keyword => $color) {
+            if (str_contains(strtolower($action), $keyword)) {
+                return $color;
+            }
+        }
+        
+        return 'secondary';
+    }
+}
+
+if (!function_exists('format_activity_action')) {
+    /**
+     * Format activity action for display
+     */
+    function format_activity_action(string $action): string
+    {
+        return ucwords(str_replace('_', ' ', $action));
+    }
+}
+
+if (!function_exists('get_model_icon')) {
+    /**
+     * Get icon for model type
+     */
+    function get_model_icon(string $modelType): string
+    {
+        $icons = [
+            'User' => 'bi-person',
+            'TripTemplate' => 'bi-map',
+            'Destination' => 'bi-geo-alt',
+            'TemplateActivity' => 'bi-list-check',
+            'Trip' => 'bi-airplane',
+            'Booking' => 'bi-calendar-check',
+            'Payment' => 'bi-credit-card',
+            'Review' => 'bi-star',
+            'Message' => 'bi-chat',
+            'ActivityLog' => 'bi-activity',
+        ];
+        
+        $basename = class_basename($modelType);
+        return $icons[$basename] ?? 'bi-file';
+    }
+}

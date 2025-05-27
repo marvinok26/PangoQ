@@ -9,7 +9,6 @@ use Illuminate\View\View;
 
 class ActivityController extends Controller
 {
-
     /**
      * Display activity logs
      */
@@ -201,5 +200,13 @@ class ActivityController extends Controller
         ]);
 
         return back()->with('info', 'Export functionality will be implemented soon.');
+    }
+
+    /**
+     * Helper method to get action badge color (for reference)
+     */
+    public function getActionBadgeColor(string $action): string
+    {
+        return get_action_badge_color($action);
     }
 }

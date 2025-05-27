@@ -16,14 +16,16 @@ class ActivityLog extends Model
         'model_type',
         'model_id',
         'changes',
-        'old_values',
+        'original_data', // Changed from 'old_values' to match your table
         'ip_address',
         'user_agent',
+        'url',
+        'method',
     ];
 
     protected $casts = [
         'changes' => 'array',
-        'old_values' => 'array',
+        'original_data' => 'array', // Changed from 'old_values'
     ];
 
     /**
@@ -69,9 +71,11 @@ class ActivityLog extends Model
             'model_type' => $model ? get_class($model) : null,
             'model_id' => $model ? $model->id : null,
             'changes' => $changes,
-            'old_values' => $oldValues,
+            'original_data' => $oldValues, // Changed from 'old_values' to 'original_data'
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
+            'url' => request()->url(),
+            'method' => request()->method(),
         ]);
     }
 }
