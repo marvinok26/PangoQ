@@ -213,10 +213,10 @@
         </div>
     </div>
     
-    <!-- Daily Itinerary -->
+    <!-- Daily Itinerary - Scrollable Container -->
     <div class="lg:col-span-2">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col" style="height: calc(100vh - 200px); min-height: 1000px;">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
                 <h5 class="text-lg font-medium text-gray-900">Daily Itinerary ({{ $tripTemplate->duration_days }} Days)</h5>
                 <a href="{{ route('admin.trip-templates.activities.create', $tripTemplate) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,172 +225,176 @@
                     Add Activity
                 </a>
             </div>
-            <div class="p-6">
+            <div class="flex-1 overflow-hidden">
                 @if($stats['total_activities'] > 0)
-                    <div class="space-y-6">
-                        @for($day = 1; $day <= $tripTemplate->duration_days; $day++)
-                            <div class="border border-gray-200 rounded-lg p-4" id="day-{{ $day }}">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h6 class="flex items-center">
-                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-3">{{ $day }}</span>
-                                        <span class="text-lg font-medium text-gray-900">Day {{ $day }}</span>
-                                        @if(isset($activitiesByDay[$day]))
-                                            <span class="ml-2 text-sm text-gray-500">({{ $activitiesByDay[$day]->count() }} activities)</span>
-                                        @endif
-                                    </h6>
-                                    <a href="{{ route('admin.trip-templates.activities.create', ['tripTemplate' => $tripTemplate, 'day' => $day]) }}" 
-                                       class="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                        </svg>
-                                        Add Activity
-                                    </a>
-                                </div>
-                                
-                                @if(isset($activitiesByDay[$day]) && $activitiesByDay[$day]->count() > 0)
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        @foreach($activitiesByDay[$day] as $activity)
-                                        <div class="border {{ $activity->is_optional ? 'border-yellow-300' : 'border-gray-200' }} rounded-lg">
-                                            <div class="p-4">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h6 class="text-sm font-medium text-gray-900">{{ $activity->title }}</h6>
-                                                    <div class="flex space-x-1 ml-2">
-                                                        <a href="{{ route('admin.trip-templates.activities.edit', [$tripTemplate, $activity]) }}" 
-                                                           class="inline-flex items-center p-1 border border-yellow-300 rounded text-yellow-600 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                            </svg>
-                                                        </a>
-                                                        <button type="button" 
-                                                                onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.remove('hidden')"
-                                                                class="inline-flex items-center p-1 border border-red-300 rounded text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                
-                                                <p class="text-xs text-gray-600 mb-3">{{ $activity->description }}</p>
-                                                
-                                                <div class="space-y-2 text-xs">
-                                                    <div class="grid grid-cols-2 gap-2">
-                                                        <div class="flex items-center">
-                                                            <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <span class="text-gray-600">
-                                                                {{ date('g:i A', strtotime($activity->start_time)) }} - 
-                                                                {{ date('g:i A', strtotime($activity->end_time)) }}
-                                                            </span>
-                                                        </div>
-                                                        <div class="flex items-center">
-                                                            <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            </svg>
-                                                            <span class="text-gray-600">{{ $activity->location }}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="grid grid-cols-2 gap-2">
-                                                        <div class="flex items-center">
-                                                            <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                                                            </svg>
-                                                            <span class="text-gray-600">{{ ucfirst($activity->category) }}</span>
-                                                        </div>
-                                                        <div class="flex items-center">
-                                                            @if($activity->cost > 0)
-                                                                <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                                                                </svg>
-                                                                <span class="text-gray-600">${{ number_format($activity->cost, 2) }}</span>
-                                                            @else
-                                                                <span class="text-green-600">Included</span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="flex flex-wrap gap-1 mt-3">
-                                                    @if($activity->is_optional)
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Optional</span>
-                                                    @endif
-                                                    @if($activity->is_highlight)
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Highlight</span>
-                                                    @endif
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{{ ucfirst($activity->time_of_day) }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Delete Activity Modal -->
-                                        <div id="deleteActivityModal{{ $activity->id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
-                                            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                                                <div class="mt-3">
-                                                    <div class="flex items-center justify-between mb-4">
-                                                        <h3 class="text-lg font-medium text-gray-900">Delete Activity</h3>
-                                                        <button type="button" onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-                                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                    <div class="text-center">
-                                                        <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                                                        </svg>
-                                                        <h4 class="text-lg font-medium text-gray-900 mt-4">Delete Activity</h4>
-                                                        <p class="text-sm text-gray-500 mt-2">
-                                                            Are you sure you want to delete <strong>{{ $activity->title }}</strong>?
-                                                        </p>
-                                                        <p class="text-xs text-gray-400 mt-1">This action cannot be undone.</p>
-                                                    </div>
-                                                    <div class="flex justify-end space-x-3 mt-6">
-                                                        <button type="button" onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.add('hidden')" class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                                                            Cancel
-                                                        </button>
-                                                        <form method="POST" action="{{ route('admin.trip-templates.activities.destroy', [$tripTemplate, $activity]) }}" class="inline">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                                                Delete Activity
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="text-center py-8 text-gray-500">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        </svg>
-                                        <p class="mt-2 text-sm font-medium text-gray-900">No activities scheduled for this day</p>
+                    <div class="h-full overflow-y-auto custom-scrollbar p-6">
+                        <div class="space-y-6">
+                            @for($day = 1; $day <= $tripTemplate->duration_days; $day++)
+                                <div class="border border-gray-200 rounded-lg p-4" id="day-{{ $day }}">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h6 class="flex items-center">
+                                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mr-3">{{ $day }}</span>
+                                            <span class="text-lg font-medium text-gray-900">Day {{ $day }}</span>
+                                            @if(isset($activitiesByDay[$day]))
+                                                <span class="ml-2 text-sm text-gray-500">({{ $activitiesByDay[$day]->count() }} activities)</span>
+                                            @endif
+                                        </h6>
                                         <a href="{{ route('admin.trip-templates.activities.create', ['tripTemplate' => $tripTemplate, 'day' => $day]) }}" 
-                                           class="inline-flex items-center mt-3 px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                                            Add First Activity
+                                           class="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                            </svg>
+                                            Add Activity
                                         </a>
                                     </div>
-                                @endif
-                            </div>
-                        @endfor
+                                    
+                                    @if(isset($activitiesByDay[$day]) && $activitiesByDay[$day]->count() > 0)
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            @foreach($activitiesByDay[$day] as $activity)
+                                            <div class="border {{ $activity->is_optional ? 'border-yellow-300' : 'border-gray-200' }} rounded-lg">
+                                                <div class="p-4">
+                                                    <div class="flex justify-between items-start mb-2">
+                                                        <h6 class="text-sm font-medium text-gray-900">{{ $activity->title }}</h6>
+                                                        <div class="flex space-x-1 ml-2">
+                                                            <a href="{{ route('admin.trip-templates.activities.edit', [$tripTemplate, $activity]) }}" 
+                                                               class="inline-flex items-center p-1 border border-yellow-300 rounded text-yellow-600 hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                                </svg>
+                                                            </a>
+                                                            <button type="button" 
+                                                                    onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.remove('hidden')"
+                                                                    class="inline-flex items-center p-1 border border-red-300 rounded text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <p class="text-xs text-gray-600 mb-3">{{ $activity->description }}</p>
+                                                    
+                                                    <div class="space-y-2 text-xs">
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div class="flex items-center">
+                                                                <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                                </svg>
+                                                                <span class="text-gray-600">
+                                                                    {{ date('g:i A', strtotime($activity->start_time)) }} - 
+                                                                    {{ date('g:i A', strtotime($activity->end_time)) }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                                </svg>
+                                                                <span class="text-gray-600">{{ $activity->location }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="grid grid-cols-2 gap-2">
+                                                            <div class="flex items-center">
+                                                                <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                                                </svg>
+                                                                <span class="text-gray-600">{{ ucfirst($activity->category) }}</span>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                @if($activity->cost > 0)
+                                                                    <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                                                    </svg>
+                                                                    <span class="text-gray-600">${{ number_format($activity->cost, 2) }}</span>
+                                                                @else
+                                                                    <span class="text-green-600">Included</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="flex flex-wrap gap-1 mt-3">
+                                                        @if($activity->is_optional)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Optional</span>
+                                                        @endif
+                                                        @if($activity->is_highlight)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Highlight</span>
+                                                        @endif
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{{ ucfirst($activity->time_of_day) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Delete Activity Modal -->
+                                            <div id="deleteActivityModal{{ $activity->id }}" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+                                                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                                                    <div class="mt-3">
+                                                        <div class="flex items-center justify-between mb-4">
+                                                            <h3 class="text-lg font-medium text-gray-900">Delete Activity</h3>
+                                                            <button type="button" onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                                                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                        <div class="text-center">
+                                                            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                                            </svg>
+                                                            <h4 class="text-lg font-medium text-gray-900 mt-4">Delete Activity</h4>
+                                                            <p class="text-sm text-gray-500 mt-2">
+                                                                Are you sure you want to delete <strong>{{ $activity->title }}</strong>?
+                                                            </p>
+                                                            <p class="text-xs text-gray-400 mt-1">This action cannot be undone.</p>
+                                                        </div>
+                                                        <div class="flex justify-end space-x-3 mt-6">
+                                                            <button type="button" onclick="document.getElementById('deleteActivityModal{{ $activity->id }}').classList.add('hidden')" class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                                                Cancel
+                                                            </button>
+                                                            <form method="POST" action="{{ route('admin.trip-templates.activities.destroy', [$tripTemplate, $activity]) }}" class="inline">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                                                    Delete Activity
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="text-center py-8 text-gray-500">
+                                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                            <p class="mt-2 text-sm font-medium text-gray-900">No activities scheduled for this day</p>
+                                            <a href="{{ route('admin.trip-templates.activities.create', ['tripTemplate' => $tripTemplate, 'day' => $day]) }}" 
+                                               class="inline-flex items-center mt-3 px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                                                Add First Activity
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endfor
+                        </div>
                     </div>
                 @else
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <h5 class="mt-4 text-lg font-medium text-gray-900">No Activities Added</h5>
-                        <p class="mt-2 text-gray-600">Start building your itinerary by adding activities for each day.</p>
-                        <a href="{{ route('admin.trip-templates.activities.create', $tripTemplate) }}" class="inline-flex items-center mt-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center py-12">
+                            <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
-                            Add First Activity
-                        </a>
+                            <h5 class="mt-4 text-lg font-medium text-gray-900">No Activities Added</h5>
+                            <p class="mt-2 text-gray-600">Start building your itinerary by adding activities for each day.</p>
+                            <a href="{{ route('admin.trip-templates.activities.create', $tripTemplate) }}" class="inline-flex items-center mt-4 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                </svg>
+                                Add First Activity
+                            </a>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -470,4 +474,43 @@
         </div>
     </div>
 </div>
+
+<style>
+/* Custom Professional Scrollbar for Daily Itinerary */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.5);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background: rgba(156, 163, 175, 0.7);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.custom-scrollbar {
+    scroll-behavior: smooth;
+}
+</style>
 @endsection
