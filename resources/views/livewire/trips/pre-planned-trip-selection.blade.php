@@ -9,7 +9,7 @@
                     class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                     <div class="relative h-48 bg-gray-200">
                         @if($destination->image_url)
-                            <img src="{{ asset('images/' . $destination->image_url) }}" alt="{{ $destination->name }}" class="w-full h-full object-cover">
+                            <img src="{{ $destination->image_url }}" alt="{{ $destination->name }}" class="w-full h-full object-cover">
                         @else
                             <div class="w-full h-full flex items-center justify-center bg-blue-100">
                                 <span class="text-blue-600 font-medium text-lg">{{ $destination->name }}</span>
@@ -33,6 +33,7 @@
                 </div>
             @endforeach
         </div>
+        
     
     <!-- Step 2: Select Trip Template -->
     @elseif($selectedDestination && !$showTemplateDetails)
@@ -51,7 +52,7 @@
                     <div class="flex flex-col md:flex-row">
                         <div class="md:w-1/3 bg-gray-200">
                             @if($template->destination->image_url)
-                                <img src="{{ asset('images/' . $template->destination->image_url) }}" alt="{{ $template->destination->name }}" class="w-full h-110 object-cover">
+                                <img src="{{ $template->destination->image_url }}" alt="{{ $template->destination->name }}" class="w-full h-110 object-cover">
                             @else
                                 <div class="w-full h-full min-h-60 flex items-center justify-center bg-blue-100">
                                     <span class="text-blue-600 font-medium text-lg">{{ $template->destination->name }}</span>
@@ -160,7 +161,7 @@
                 <div class="flex flex-col md:flex-row gap-6">
                     <div class="md:w-1/3">
                         @if($selectedTemplate->destination->image_url)
-                            <img src="{{ asset('images/' . $selectedTemplate->destination->image_url) }}" alt="{{ $selectedTemplate->destination->name }}" class="w-full h-48 object-cover rounded-lg">
+                            <img src="{{ $selectedTemplate->destination->image_url }}" alt="{{ $selectedTemplate->destination->name }}" class="w-full h-48 object-cover rounded-lg">
                         @else
                             <div class="w-full h-48 flex items-center justify-center bg-blue-100 rounded-lg">
                                 <span class="text-blue-600 font-medium text-lg">{{ $selectedTemplate->destination->name }}</span>

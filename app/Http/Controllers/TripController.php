@@ -121,6 +121,7 @@ class TripController extends Controller
 
     /**
      * Update the specified trip in storage.
+     * Replace this method in your TripController
      */
     public function update(Request $request, Trip $trip)
     {
@@ -129,25 +130,80 @@ class TripController extends Controller
             throw new AuthorizationException('You are not authorized to update this trip.');
         }
 
-        // Validate the request
+        // Store the old budget for comparison
+        $oldBudget = $trip->budget;
+
+        // Validate the request with improved budget validation
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'destination' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'budget' => 'nullable|numeric|min:' . ($trip->total_cost ?? 0),
+            'budget' => [
+                'nullable',
+                'numeric',
+                'min:' . ($trip->budget ?? 0), // Budget can only be increased, not decreased
+            ],
             'status' => 'required|in:planning,active,completed',
         ], [
-            'budget.min' => 'Budget cannot be less than the trip\'s total cost of $' .
-                number_format($trip->total_cost ?? 0, 2)
+            'budget.min' => 'Budget cannot be decreased below the current amount of $' .
+                number_format($trip->budget ?? 0, 2) . '. You can only increase your budget.',
+            'end_date.after_or_equal' => 'End date must be on or after the start date.',
         ]);
+
+        // Additional business logic validation
+        $errors = [];
+
+        // Check if budget is being decreased (extra safety check)
+        if ($request->filled('budget') && $request->budget < ($trip->budget ?? 0)) {
+            $errors['budget'] = 'Budget cannot be decreased below $' . number_format($trip->budget ?? 0, 2);
+        }
+
+        // Check if budget is less than total cost (if total cost exists)
+        if ($request->filled('budget') && $trip->total_cost && $request->budget < $trip->total_cost) {
+            $errors['budget'] = 'Budget cannot be less than the trip\'s total cost of $' .
+                number_format($trip->total_cost, 2);
+        }
+
+        // If there are business logic errors, return with errors
+        if (!empty($errors)) {
+            return redirect()->back()
+                ->withErrors($errors)
+                ->withInput();
+        }
 
         // Update trip
         $trip->update($validated);
 
+        // **NEW: Sync budget with savings wallet if budget changed**
+        if ($request->filled('budget') && $validated['budget'] != $oldBudget) {
+            $this->syncBudgetWithSavingsWallet($trip, $validated['budget']);
+        }
+
         return redirect()->route('trips.show', $trip)
             ->with('success', 'Trip updated successfully!');
+    }
+
+    /**
+     * Sync trip budget with savings wallet minimum goal
+     */
+    private function syncBudgetWithSavingsWallet(Trip $trip, $newBudget)
+    {
+        if ($trip->savingsWallet && $newBudget) {
+            // Only update if the new budget is higher than current minimum_goal
+            if ($newBudget > $trip->savingsWallet->minimum_goal) {
+                $trip->savingsWallet->update([
+                    'minimum_goal' => $newBudget
+                ]);
+
+                Log::info("Budget updated - Savings wallet synced", [
+                    'trip_id' => $trip->id,
+                    'old_minimum_goal' => $trip->savingsWallet->getOriginal('minimum_goal'),
+                    'new_minimum_goal' => $newBudget
+                ]);
+            }
+        }
     }
 
     /**

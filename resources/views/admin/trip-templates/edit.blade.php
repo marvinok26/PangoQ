@@ -7,7 +7,7 @@
 @section('page-description', 'Update and refine your trip template to make it even more amazing.')
 
 @section('content')
-<div class="h-full w-full flex flex-col space-y-6">
+<div class="h-full flex flex-col space-y-6">
     <!-- Template Overview Cards -->
     <div class="flex-shrink-0">
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

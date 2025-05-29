@@ -354,5 +354,32 @@ class User extends Authenticatable implements MustVerifyEmail
 
         return mb_substr($this->name, 0, 2);
     }
+
+
+    // Add this method after your existing trips() method around line 200+
+/**
+ * Get all trips where the user is either creator or member (including pending)
+ * This method gets ALL trips for the trips index page
+ */
+public function allTrips()
+{
+    // Get trips where user is creator
+    $createdTripIds = $this->createdTrips()->pluck('id');
+    
+    // Get trips where user is a member (accepted invitations)
+    $memberTripIds = $this->trips()->pluck('id');
+    
+    // Combine both sets of IDs
+    $allTripIds = $createdTripIds->merge($memberTripIds)->unique();
+    
+    // Return trips query with all necessary relationships
+    return Trip::whereIn('id', $allTripIds)
+        ->with([
+            'tripTemplate.destination',
+            'members', 
+            'savingsWallet'
+        ]);
+}
+    
     
 }

@@ -125,40 +125,19 @@ class TripTemplate extends Model
         ];
     }
 
-    // ============ ADDITIONAL METHODS FOR ADMIN INTERFACE ============
-
     /**
-     * Set highlights from array (mutator for admin forms)
+     * Process highlights before saving
      */
-    // public function setHighlightsAttribute($value): void
-    // {
-    //     if (is_array($value)) {
-    //         // Filter out empty values and encode
-    //         $filtered = array_filter($value, function ($item) {
-    //             return !empty(trim($item ?? ''));
-    //         });
-    //         $this->attributes['highlights'] = json_encode(array_values($filtered));
-    //     } elseif (is_string($value)) {
-    //         // If it's already a JSON string, keep it as is
-    //         $this->attributes['highlights'] = $value;
-    //     } else {
-    //         $this->attributes['highlights'] = null;
-    //     }
-    // }
-
-    /**
- * Process highlights before saving
- */
-public function processHighlights($highlights)
-{
-    if (is_array($highlights)) {
-        $filtered = array_filter($highlights, function($item) {
-            return !empty(trim($item ?? ''));
-        });
-        return json_encode(array_values($filtered));
+    public function processHighlights($highlights)
+    {
+        if (is_array($highlights)) {
+            $filtered = array_filter($highlights, function($item) {
+                return !empty(trim($item ?? ''));
+            });
+            return json_encode(array_values($filtered));
+        }
+        return $highlights;
     }
-    return $highlights;
-}
 
     /**
      * Get the total cost including base price and all regular activities
@@ -320,7 +299,7 @@ public function processHighlights($highlights)
     }
 
     /**
-     * Get formatted price range including optional activities - FIXED
+     * Get formatted price range including optional activities
      */
     public function getPriceRangeAttribute(): string
     {
@@ -334,21 +313,34 @@ public function processHighlights($highlights)
         return '$' . number_format($minPrice, 0) . ' - $' . number_format($maxPrice, 0);
     }
 
-/**
- * Get the full URL for the featured image
- */
-public function getFeaturedImageUrlAttribute()
-{
-    if (!$this->featured_image) {
-        return null;
+    /**
+     * Get the full URL for the featured image
+     */
+    public function getFeaturedImageUrlAttribute()
+    {
+        if (!$this->featured_image) {
+            return null;
+        }
+        
+        // If it starts with 'image', it's in public/images (seeded data)
+        if (str_starts_with($this->featured_image, 'image')) {
+            return asset('images/' . $this->featured_image);
+        }
+        
+        // If it starts with 'http', it's already a full URL
+        if (str_starts_with($this->featured_image, 'http')) {
+            return $this->featured_image;
+        }
+        
+        // Otherwise, it's in storage/app/public (uploaded files)
+        return asset('storage/' . $this->featured_image);
     }
-    
-    // If it starts with 'image', it's in public/images (seeded data)
-    if (str_starts_with($this->featured_image, 'image')) {
-        return asset('images/' . $this->featured_image);
+
+    /**
+     * Get the raw featured image from database (for admin forms)
+     */
+    public function getRawFeaturedImage()
+    {
+        return $this->attributes['featured_image'] ?? null;
     }
-    
-    // Otherwise, it's in storage/app/public
-    return asset('storage/' . $this->featured_image);
-}
 }

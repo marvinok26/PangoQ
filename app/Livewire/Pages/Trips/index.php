@@ -12,9 +12,11 @@ class Index extends Component
     #[Title('My Trips')]
     public function render()
     {
-        $trips = Auth::check() 
-            ? Auth::user()->trips()->latest()->get() 
-            : collect();
+        $trips = collect();
+        
+        if (Auth::check()) {
+            $trips = Auth::user()->allTrips()->latest()->get();
+        }
             
         return view('livewire.pages.trips.index', [
             'trips' => $trips
