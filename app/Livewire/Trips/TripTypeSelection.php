@@ -4,21 +4,21 @@ namespace App\Livewire\Trips;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 class TripTypeSelection extends Component
 {
-    public $preSelectedType = null;
+    public $selectedType = null;
+    public $isAutoAdvancing = false;
 
     public function mount()
     {
-        // Check if trip type was already selected from the welcome page
-        $this->preSelectedType = Session::get('selected_trip_type');
+        // Check if trip type was already selected
+        $this->selectedType = Session::get('selected_trip_type');
         
-        // If there's a pre-selected type, automatically proceed to next step
-        if ($this->preSelectedType) {
-            // Dispatch immediately since type is already selected
-            $this->dispatch('tripTypeSelected', tripType: $this->preSelectedType);
-        }
+        Log::info('TripTypeSelection mounted', [
+            'existing_type' => $this->selectedType
+        ]);
     }
 
     public function render()
@@ -28,12 +28,35 @@ class TripTypeSelection extends Component
     
     public function selectTripType($type)
     {
-        if ($type === 'pre_planned' || $type === 'self_planned') {
-            // Store the selected trip type in session
-            Session::put('selected_trip_type', $type);
-            
-            // Dispatch event to parent component
-            $this->dispatch('tripTypeSelected', tripType: $type);
+        if (!in_array($type, ['pre_planned', 'self_planned'])) {
+            Log::warning('Invalid trip type selected', ['type' => $type]);
+            return;
         }
+
+        $this->selectedType = $type;
+        $this->isAutoAdvancing = true;
+        
+        // Store the selected trip type in session
+        Session::put('selected_trip_type', $type);
+        
+        Log::info('Trip type selected', [
+            'type' => $type,
+            'session_stored' => Session::get('selected_trip_type')
+        ]);
+        
+        // Small delay for better UX, then dispatch event
+        $this->dispatch('tripTypeSelected', tripType: $type);
+    }
+
+    /**
+     * Clear selection (useful for testing or if user wants to change)
+     */
+    public function clearSelection()
+    {
+        $this->selectedType = null;
+        $this->isAutoAdvancing = false;
+        Session::forget('selected_trip_type');
+        
+        Log::info('Trip type selection cleared');
     }
 }

@@ -457,42 +457,87 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        searchTimeout = setTimeout(() => {
-            fetch(`{{ route('destinations.search') }}?query=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        let html = '';
-                        data.forEach(destination => {
-                            html += `
-                                <div class="destination-result px-4 py-2 hover:bg-gray-100 cursor-pointer" 
-                                     data-destination="${destination.name}">
-                                    <div class="font-medium">${destination.name}</div>
-                                    <div class="text-sm text-gray-500">
-                                        ${destination.city ? destination.city + ', ' : ''}${destination.country || ''}
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        destinationDropdown.innerHTML = html;
-                        destinationDropdown.classList.remove('hidden');
-                        
-                        // Add click handlers to results
-                        document.querySelectorAll('.destination-result').forEach(result => {
-                            result.addEventListener('click', function() {
-                                destinationInput.value = this.dataset.destination;
-                                destinationDropdown.classList.add('hidden');
-                            });
-                        });
-                    } else {
-                        destinationDropdown.classList.add('hidden');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error searching destinations:', error);
-                    destinationDropdown.classList.add('hidden');
-                });
-        }, 300);
+// Replace the problematic fetch call in your welcome.blade.php with this:
+
+document.addEventListener('DOMContentLoaded', function() {
+    const destinationInput = document.getElementById('destination-input');
+    const destinationDropdown = document.getElementById('destination-dropdown');
+    const tripTypeRadios = document.querySelectorAll('.trip-type-radio');
+    const tripTypeBtns = document.querySelectorAll('.trip-type-btn');
+    const popularDestinationBtns = document.querySelectorAll('.popular-destination-btn');
+    let searchTimeout;
+
+    // Handle destination search - DISABLED FOR NOW
+    destinationInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        // Hide dropdown for now since we don't have the search route
+        destinationDropdown.classList.add('hidden');
+        
+        // TODO: Implement search when route is ready
+        console.log('Search disabled - need to create destinations.search route');
+    });
+
+    // Handle trip type selection
+    tripTypeRadios.forEach((radio, index) => {
+        radio.addEventListener('change', function() {
+            updateTripTypeButtons();
+        });
+    });
+
+    tripTypeBtns.forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            tripTypeRadios[index].checked = true;
+            updateTripTypeButtons();
+        });
+    });
+
+    function updateTripTypeButtons() {
+        tripTypeBtns.forEach((btn, index) => {
+            if (tripTypeRadios[index].checked) {
+                btn.classList.remove('bg-gray-200', 'text-gray-700');
+                btn.classList.add('bg-teal-600', 'text-white');
+            } else {
+                btn.classList.remove('bg-teal-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            }
+        });
+    }
+
+    // Handle popular destination selection
+    popularDestinationBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            destinationInput.value = this.dataset.destination;
+        });
+    });
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!destinationInput.contains(e.target) && !destinationDropdown.contains(e.target)) {
+            destinationDropdown.classList.add('hidden');
+        }
+    });
+
+    // Form validation
+    document.getElementById('trip-planning-form').addEventListener('submit', function(e) {
+        const destination = destinationInput.value.trim();
+        const tripType = document.querySelector('.trip-type-radio:checked');
+
+        if (!destination) {
+            e.preventDefault();
+            alert('Please select a destination');
+            return;
+        }
+
+        if (!tripType) {
+            e.preventDefault();
+            alert('Please select a trip type');
+            return;
+        }
+    });
+});
     });
 
     // Handle trip type selection

@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Destination;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
 
 class DestinationSelection extends Component
 {
@@ -14,14 +15,22 @@ class DestinationSelection extends Component
     public $destinationResults = [];
     public $recentSearches = [];
     public $popularDestinations = [];
+    public $isLoading = false;
    
     public function mount()
     {
-        // Load popular destinations from database
         $this->loadPopularDestinations();
-        
-        // Load recent searches if available
         $this->loadRecentSearches();
+        
+        // Check if there's a pre-selected destination from the welcome page form
+        $sessionDestination = Session::get('selected_destination');
+        if ($sessionDestination && is_string($sessionDestination)) {
+            // If it's a string (from welcome form), find the destination by name
+            $destination = Destination::where('name', 'LIKE', "%{$sessionDestination}%")->first();
+            if ($destination) {
+                $this->selectDestination($destination->name);
+            }
+        }
     }
 
     public function render()
@@ -29,17 +38,32 @@ class DestinationSelection extends Component
         return view('livewire.trips.destination-selection');
     }
 
+    public function updatedDestinationQuery()
+    {
+        $this->searchDestinations();
+    }
+
     public function searchDestinations()
     {
         if (strlen($this->destinationQuery) >= 2) {
-            $this->destinationResults = Destination::where('name', 'like', '%' . $this->destinationQuery . '%')
-                ->orWhere('country', 'like', '%' . $this->destinationQuery . '%')
-                ->orWhere('city', 'like', '%' . $this->destinationQuery . '%')
-                ->take(5)
-                ->get()
-                ->toArray();
+            $this->isLoading = true;
+            
+            try {
+                $this->destinationResults = Destination::search($this->destinationQuery)
+                    ->take(5)
+                    ->get()
+                    ->map(function($destination) {
+                        return $destination->toSearchResult();
+                    })
+                    ->toArray();
 
-            $this->showDestinationDropdown = true;
+                $this->showDestinationDropdown = true;
+            } catch (\Exception $e) {
+                Log::error('Error searching destinations: ' . $e->getMessage());
+                $this->destinationResults = [];
+            } finally {
+                $this->isLoading = false;
+            }
         } else {
             $this->resetDestinationResults();
         }
@@ -49,6 +73,7 @@ class DestinationSelection extends Component
     {
         $this->destinationResults = [];
         $this->showDestinationDropdown = false;
+        $this->isLoading = false;
     }
     
     public function selectDestination($name)
@@ -62,52 +87,112 @@ class DestinationSelection extends Component
             // Add to recent searches if authenticated
             $this->saveRecentSearch($destination);
             
+            // Clear search
+            $this->destinationQuery = '';
+            $this->resetDestinationResults();
+            
             // Dispatch event to parent component
             $this->dispatch('destinationSelected', destination: $destination->toArray());
+            
+            Log::info('Destination selected', [
+                'destination_id' => $destination->id,
+                'destination_name' => $destination->name
+            ]);
+        } else {
+            Log::warning('Destination not found', ['name' => $name]);
         }
-        
-        $this->resetDestinationResults();
     }
 
     private function loadPopularDestinations()
     {
-        // In a real implementation, you might load trending or featured destinations
-        // For now, we'll just get a random selection
-        $this->popularDestinations = Destination::inRandomOrder()->take(6)->get();
+        try {
+            // Load destinations that have trip templates, prioritizing featured ones
+            $this->popularDestinations = Destination::withTripTemplates()
+                ->with(['tripTemplates' => function($query) {
+                    $query->select('id', 'destination_id', 'title', 'base_price', 'is_featured')
+                          ->orderBy('is_featured', 'desc')
+                          ->take(3);
+                }])
+                ->inRandomOrder()
+                ->take(6)
+                ->get();
+        } catch (\Exception $e) {
+            Log::error('Error loading popular destinations: ' . $e->getMessage());
+            $this->popularDestinations = collect([]);
+        }
     }
 
     private function loadRecentSearches()
     {
-        // Get recent searches from session if authenticated
-        if (Auth::check()) {
-            $this->recentSearches = Session::get('recent_searches', []);
-        } else {
-            $this->recentSearches = []; // Ensure it's always an array
+        try {
+            if (Auth::check()) {
+                $recentSearches = Session::get('recent_searches', []);
+                // Ensure we have valid destination data
+                $this->recentSearches = array_filter($recentSearches, function($search) {
+                    return is_array($search) && isset($search['name']) && isset($search['id']);
+                });
+            } else {
+                $this->recentSearches = [];
+            }
+        } catch (\Exception $e) {
+            Log::error('Error loading recent searches: ' . $e->getMessage());
+            $this->recentSearches = [];
         }
     }
 
     private function saveRecentSearch($destination)
     {
         if (Auth::check()) {
-            $recentSearches = Session::get('recent_searches', []);
-            
-            // Check if already in recent searches
-            $exists = false;
-            foreach ($recentSearches as $search) {
-                if (isset($search['id']) && $search['id'] == $destination->id) {
-                    $exists = true;
-                    break;
-                }
-            }
-            
-            // Add to recent searches if not already present
-            if (!$exists) {
+            try {
+                $recentSearches = Session::get('recent_searches', []);
+                
+                // Remove if already exists (to avoid duplicates)
+                $recentSearches = array_filter($recentSearches, function($search) use ($destination) {
+                    return !isset($search['id']) || $search['id'] != $destination->id;
+                });
+                
+                // Add to beginning of array
                 array_unshift($recentSearches, $destination->toArray());
+                
                 // Keep only last 4 searches
                 $recentSearches = array_slice($recentSearches, 0, 4);
+                
                 Session::put('recent_searches', $recentSearches);
                 $this->recentSearches = $recentSearches;
+            } catch (\Exception $e) {
+                Log::error('Error saving recent search: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Clear recent searches
+     */
+    public function clearRecentSearches()
+    {
+        Session::forget('recent_searches');
+        $this->recentSearches = [];
+    }
+
+    /**
+     * Remove a specific recent search
+     */
+    public function removeRecentSearch($destinationId)
+    {
+        $recentSearches = Session::get('recent_searches', []);
+        $recentSearches = array_filter($recentSearches, function($search) use ($destinationId) {
+            return !isset($search['id']) || $search['id'] != $destinationId;
+        });
+        
+        Session::put('recent_searches', array_values($recentSearches));
+        $this->recentSearches = array_values($recentSearches);
+    }
+
+    /**
+     * Handle clicking outside dropdown to close it
+     */
+    public function closeDropdown()
+    {
+        $this->showDestinationDropdown = false;
     }
 }

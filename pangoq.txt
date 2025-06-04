@@ -145,6 +145,7 @@
 │   │   ├── Component
 │   │   │   ├── DestinationSelection.php
 │   │   │   └── TripList.php
+│   │   ├── Components
 │   │   ├── Dashboard
 │   │   │   ├── TripSummary.php
 │   │   │   └── UserDashboard.php
@@ -522,6 +523,7 @@
 │       ├── csrf-test-form.blade.php
 │       ├── layouts
 │       │   ├── app.blade.php
+│       │   ├── auth.blade.php
 │       │   ├── dashboard.blade.php
 │       │   ├── guest.blade.php
 │       │   └── page.blade.php
@@ -529,6 +531,8 @@
 │       │   ├── auth
 │       │   │   ├── inline-login.blade.php
 │       │   │   └── inline-register.blade.php
+│       │   ├── components
+│       │   │   └── price-breakdown.blade.php
 │       │   ├── itinerary
 │       │   │   ├── activity-details.blade.php
 │       │   │   ├── activity-form.blade.php
@@ -657,7 +661,8 @@
 │   ├── csrf-debug.php
 │   └── web.php
 ├── tailwind.config.js
+├── ts' => $trip->tripTemplate ? 'yes' : 'no',
 ├── vercel.json
 └── vite.config.js
 
-147 directories, 514 files
+149 directories, 517 files

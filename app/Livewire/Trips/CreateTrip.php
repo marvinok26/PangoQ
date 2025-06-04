@@ -11,9 +11,11 @@ class CreateTrip extends Component
 {
     public $currentStep = 0;
     public $totalSteps = 5;
-    public $showNavButtons = false;
     public $tripType = null;
     public $tripTemplateId = null;
+    public $destination = null;
+    public $stepNames = [];
+    public $canProceed = false;
 
     protected $listeners = [
         'tripTypeSelected' => 'selectTripType',
@@ -22,24 +24,22 @@ class CreateTrip extends Component
         'completeDetailsStep' => 'moveToItinerary',
         'completeItineraryStep' => 'moveToInvites',
         'completeInvitesStep' => 'moveToReview',
-        'goToPreviousStep' => 'previousStep'
+        'goToPreviousStep' => 'previousStep',
+        'goToStep' => 'goToStep'
     ];
 
     public function mount()
     {
-        // Reset step to 0 for the trip type selection
-        $this->currentStep = 0;
-
-        // Check if we already have a trip type selected in session
-        $this->tripType = session('selected_trip_type');
-        $this->tripTemplateId = session('selected_trip_template');
-
-        // If trip type is already selected, start at step 1 (destination or template selection)
-        if ($this->tripType) {
-            $this->currentStep = 1;
-        }
-
-        Log::info("CreateTrip component mounted with step: {$this->currentStep}, trip type: {$this->tripType}");
+        $this->initializeSteps();
+        $this->loadSessionData();
+        $this->validateCurrentStep();
+        
+        Log::info("CreateTrip mounted", [
+            'step' => $this->currentStep,
+            'trip_type' => $this->tripType,
+            'has_destination' => !is_null($this->destination),
+            'can_proceed' => $this->canProceed
+        ]);
     }
 
     public function render()
@@ -47,14 +47,138 @@ class CreateTrip extends Component
         return view('livewire.trips.create-trip');
     }
 
+    /**
+     * Initialize step configuration based on trip type
+     */
+    private function initializeSteps()
+    {
+        // Check if we have a trip type from session to determine step configuration
+        $sessionTripType = Session::get('selected_trip_type');
+        
+        if ($sessionTripType === 'pre_planned') {
+            $this->stepNames = [
+                0 => 'Trip Type',
+                1 => 'Choose Template', 
+                2 => 'Invite Friends',
+                3 => 'Review & Create'
+            ];
+            $this->totalSteps = 4;
+        } else {
+            $this->stepNames = [
+                0 => 'Trip Type',
+                1 => 'Destination',
+                2 => 'Trip Details', 
+                3 => 'Plan Itinerary',
+                4 => 'Invite Friends',
+                5 => 'Review & Create'
+            ];
+            $this->totalSteps = 6;
+        }
+    }
+
+    /**
+     * Load existing session data and determine current step
+     */
+    private function loadSessionData()
+    {
+        $this->tripType = Session::get('selected_trip_type');
+        $this->tripTemplateId = Session::get('selected_trip_template');
+        $this->destination = Session::get('selected_destination');
+
+        // Determine current step based on completed data
+        if (!$this->tripType) {
+            $this->currentStep = 0; // Trip Type Selection
+        } elseif ($this->tripType === 'pre_planned') {
+            if (!$this->tripTemplateId) {
+                $this->currentStep = 1; // Template Selection
+            } elseif (!Session::has('trip_invites')) {
+                $this->currentStep = 2; // Invite Friends
+            } else {
+                $this->currentStep = 3; // Review
+            }
+        } else { // self_planned
+            if (!$this->destination) {
+                $this->currentStep = 1; // Destination Selection
+            } elseif (!Session::has('trip_details')) {
+                $this->currentStep = 2; // Trip Details
+            } elseif (!Session::has('trip_activities')) {
+                $this->currentStep = 3; // Itinerary Planning
+            } elseif (!Session::has('trip_invites')) {
+                $this->currentStep = 4; // Invite Friends
+            } else {
+                $this->currentStep = 5; // Review
+            }
+        }
+
+        // Re-initialize steps if trip type changed
+        if ($this->tripType) {
+            $this->initializeSteps();
+        }
+    }
+
+    /**
+     * Validate if current step requirements are met
+     */
+    private function validateCurrentStep()
+    {
+        $this->canProceed = false;
+
+        switch ($this->currentStep) {
+            case 0: // Trip Type Selection
+                $this->canProceed = !is_null($this->tripType);
+                break;
+                
+            case 1: // Destination or Template Selection
+                if ($this->tripType === 'pre_planned') {
+                    $this->canProceed = !is_null($this->tripTemplateId);
+                } else {
+                    $this->canProceed = !is_null($this->destination);
+                }
+                break;
+                
+            case 2: // Trip Details (self-planned) or Invite Friends (pre-planned)
+                if ($this->tripType === 'pre_planned') {
+                    $this->canProceed = true; // Can always proceed to invites
+                } else {
+                    $this->canProceed = Session::has('trip_details');
+                }
+                break;
+                
+            case 3: // Itinerary (self-planned) or Review (pre-planned)
+                if ($this->tripType === 'pre_planned') {
+                    $this->canProceed = true; // Can always proceed to review
+                } else {
+                    $this->canProceed = true; // Can proceed with or without activities
+                }
+                break;
+                
+            case 4: // Invite Friends (self-planned)
+                $this->canProceed = true; // Can proceed with or without invites
+                break;
+                
+            case 5: // Review (self-planned)
+                $this->canProceed = true;
+                break;
+        }
+    }
+
     public function selectTripType($tripType)
     {
         $this->tripType = $tripType;
         Session::put('selected_trip_type', $tripType);
 
-        $this->currentStep = 1; // Move to either destination selection or template selection
+        // Reset steps configuration
+        $this->initializeSteps();
+        
+        // Move to next step
+        $this->currentStep = 1;
+        $this->validateCurrentStep();
 
-        Log::info("Trip type selected: {$tripType}, moved to step 1");
+        Log::info("Trip type selected", [
+            'type' => $tripType,
+            'new_step' => $this->currentStep,
+            'total_steps' => $this->totalSteps
+        ]);
     }
 
     public function selectTripTemplate($tripTemplateId)
@@ -62,148 +186,223 @@ class CreateTrip extends Component
         $this->tripTemplateId = $tripTemplateId;
         Session::put('selected_trip_template', $tripTemplateId);
 
-        // Pre-planned trips skip steps 1-3 since the template already has them
-        // Move directly to invites (step 4)
-        $this->currentStep = 4;
+        // For pre-planned trips, move to invite friends
+        $this->currentStep = 2;
+        $this->validateCurrentStep();
 
-        Log::info("Trip template selected: {$tripTemplateId}, moved to step 4 (invites)");
+        Log::info("Trip template selected", [
+            'template_id' => $tripTemplateId,
+            'new_step' => $this->currentStep
+        ]);
     }
 
     public function selectDestination($destination)
     {
-        // Store destination (for self-planned trips)
+        $this->destination = $destination;
         Session::put('selected_destination', $destination);
 
-        // Go to Trip Details
-        $oldStep = $this->currentStep;
+        // Move to trip details
         $this->currentStep = 2;
-        Log::info("Selected destination, moved from step {$oldStep} to 2");
+        $this->validateCurrentStep();
+
+        Log::info("Destination selected", [
+            'destination' => $destination['name'] ?? 'Unknown',
+            'new_step' => $this->currentStep
+        ]);
     }
 
-    // Specific transition methods for each step
     public function moveToItinerary()
     {
-        Log::info("Moving to Itinerary (step 3) from step: {$this->currentStep}");
-        $this->currentStep = 3;
+        if ($this->tripType === 'self_planned' && $this->currentStep === 2) {
+            $this->currentStep = 3;
+            $this->validateCurrentStep();
+            Log::info("Moved to itinerary planning step");
+        }
     }
 
     public function moveToInvites()
     {
-        Log::info("Moving to Invites (step 4) from step: {$this->currentStep}");
-        $this->currentStep = 4;
+        if ($this->tripType === 'pre_planned' && $this->currentStep === 1) {
+            $this->currentStep = 2;
+        } elseif ($this->tripType === 'self_planned' && $this->currentStep === 3) {
+            $this->currentStep = 4;
+        }
+        $this->validateCurrentStep();
+        Log::info("Moved to invites step");
     }
 
     public function moveToReview()
     {
-        Log::info("Moving to Review (step 5) from step: {$this->currentStep}");
-        $this->currentStep = 5;
+        if ($this->tripType === 'pre_planned' && $this->currentStep === 2) {
+            $this->currentStep = 3;
+        } elseif ($this->tripType === 'self_planned' && $this->currentStep === 4) {
+            $this->currentStep = 5;
+        }
+        $this->validateCurrentStep();
+        Log::info("Moved to review step");
     }
 
     public function previousStep()
     {
-        $oldStep = $this->currentStep;
-
-        // Special handling for pre-planned trips
-        if ($this->tripType === 'pre_planned' && $this->currentStep === 4) {
-            // Go back to template selection
-            $this->currentStep = 1;
-        } else if ($this->currentStep > 0) {
-            // Normal step backwards
+        if ($this->currentStep > 0) {
+            $oldStep = $this->currentStep;
             $this->currentStep--;
+            $this->validateCurrentStep();
+            
+            Log::info("Moved back", [
+                'from' => $oldStep,
+                'to' => $this->currentStep
+            ]);
         }
+    }
 
-        Log::info("Moved back from step {$oldStep} to {$this->currentStep}");
+    public function nextStep()
+    {
+        if ($this->canProceed && $this->currentStep < ($this->totalSteps - 1)) {
+            $oldStep = $this->currentStep;
+            $this->currentStep++;
+            $this->validateCurrentStep();
+            
+            Log::info("Moved forward", [
+                'from' => $oldStep,
+                'to' => $this->currentStep
+            ]);
+        }
     }
 
     public function goToStep($step)
     {
-        $oldStep = $this->currentStep;
-
-        // Only allow valid steps and consider trip type
-        if ($step >= 0 && $step <= $this->totalSteps) {
-            // For pre-planned trips, only allow steps 0, 1, 4 and 5
-            if ($this->tripType === 'pre_planned') {
-                if ($step == 0 || $step == 1 || $step == 4 || $step == 5) {
-                    $this->currentStep = $step;
-                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
-                }
-            }
-            // For self-planned trips or initial selection, allow normal flow
-            else {
-                // Only allow backward navigation or one step forward
-                if ($step < $this->currentStep || $step == $this->currentStep + 1) {
-                    $this->currentStep = $step;
-                    Log::info("Manually navigated from step {$oldStep} to {$this->currentStep}");
-                }
+        // Only allow going to previous steps or current step + 1 if requirements are met
+        if ($step >= 0 && $step < $this->totalSteps) {
+            if ($step <= $this->currentStep || ($step === $this->currentStep + 1 && $this->canProceed)) {
+                $this->currentStep = $step;
+                $this->validateCurrentStep();
+                
+                Log::info("Navigated to step", ['step' => $step]);
             }
         }
     }
 
     public function skipToSummary()
     {
-        $oldStep = $this->currentStep;
-
+        // Only allow skipping if we have minimum required data
+        $hasMinimumData = false;
+        
         if ($this->tripType === 'pre_planned' && $this->tripTemplateId) {
-            $this->currentStep = $this->totalSteps; // Go to review
-            Log::info("Skipped from step {$oldStep} to summary (step 5) for pre-planned trip");
-        } else if ($this->tripType === 'self_planned' && session('selected_destination') && session('trip_details')) {
-            $this->currentStep = $this->totalSteps; // Go to review
-            Log::info("Skipped from step {$oldStep} to summary (step 5) for self-planned trip");
+            $hasMinimumData = true;
+            $this->currentStep = 3; // Review for pre-planned
+        } elseif ($this->tripType === 'self_planned' && $this->destination && Session::has('trip_details')) {
+            $hasMinimumData = true;
+            $this->currentStep = 5; // Review for self-planned
+        }
+        
+        if ($hasMinimumData) {
+            $this->validateCurrentStep();
+            Log::info("Skipped to summary");
         }
     }
 
-       /**
+    /**
+     * Get progress percentage for the progress bar
+     */
+    public function getProgressPercentageProperty()
+    {
+        if ($this->totalSteps <= 1) return 100;
+        
+        return min(100, round(($this->currentStep / ($this->totalSteps - 1)) * 100));
+    }
+
+    /**
+     * Get current step name for display
+     */
+    public function getCurrentStepNameProperty()
+    {
+        return $this->stepNames[$this->currentStep] ?? 'Step ' . ($this->currentStep + 1);
+    }
+
+    /**
+     * Check if we can show the skip to summary option
+     */
+    public function getCanSkipToSummaryProperty()
+    {
+        if ($this->currentStep >= ($this->totalSteps - 1)) return false;
+        
+        if ($this->tripType === 'pre_planned') {
+            return $this->tripTemplateId && $this->currentStep < 3;
+        } else {
+            return $this->destination && Session::has('trip_details') && $this->currentStep < 5;
+        }
+    }
+
+    /**
      * Handle the create trip button click
-     * Saves trip data to session and redirects to login
      */
     public function createTrip()
     {
-        // Mark session data as "new" so it will be saved after login
-        session(['trip_data_not_saved' => true]);
+        // Mark session data as ready to be saved
+        Session::put('trip_data_not_saved', true);
 
-        // Ensure total cost and budget are properly set in session
-        $tripDetails = session('trip_details', []);
-        $totalPrice = session('trip_total_price', 0);
+        // Ensure we have all required data
+        $this->ensureCompleteSessionData();
 
-        // Make sure we have a total cost value
-        if (!isset($tripDetails['total_cost'])) {
-            if ($totalPrice > 0) {
-                $tripDetails['total_cost'] = $totalPrice;
-            } elseif (isset($tripDetails['budget'])) {
-                $tripDetails['total_cost'] = $tripDetails['budget'];
-            } else {
-                $tripDetails['total_cost'] = 0;
-            }
-
-            // Make sure budget is at least equal to total cost
-            if (!isset($tripDetails['budget']) || $tripDetails['budget'] < $tripDetails['total_cost']) {
-                $tripDetails['budget'] = $tripDetails['total_cost'];
-            }
-
-            session(['trip_details' => $tripDetails]);
-        }
-
-        // Log session data before redirect
-        Log::info('Trip data before redirect to login', [
-            'trip_data_not_saved' => session('trip_data_not_saved'),
-            'selected_trip_type' => session('selected_trip_type'),
-            'selected_destination' => session('selected_destination'),
-            'trip_details' => session('trip_details'),
-            'selected_optional_activities' => session('selected_optional_activities'),
-            'trip_total_price' => session('trip_total_price'),
-            'session_id' => session()->getId()
+        // Log session data for debugging
+        Log::info('Trip creation initiated', [
+            'trip_type' => Session::get('selected_trip_type'),
+            'destination' => Session::get('selected_destination'),
+            'template_id' => Session::get('selected_trip_template'),
+            'has_details' => Session::has('trip_details'),
+            'has_activities' => Session::has('trip_activities'),
+            'has_invites' => Session::has('trip_invites'),
+            'user_authenticated' => Auth::check()
         ]);
 
-        // Add a flash message for the login/register page
-        session()->flash('message', 'Please login or create an account to save your trip plans.');
+        // Flash message for login page
+        Session::flash('message', 'Please login or create an account to save your trip plans.');
 
-        // Check if user is authenticated
+        // Redirect based on authentication status
         if (Auth::check()) {
-            // User is already logged in, redirect to trips index for middleware to handle
             return redirect()->route('trips.index');
         } else {
-            // User is not logged in, redirect to login
             return redirect()->route('login');
         }
+    }
+
+    /**
+     * Ensure all required session data is complete before saving
+     */
+    private function ensureCompleteSessionData()
+    {
+        $tripDetails = Session::get('trip_details', []);
+        $totalPrice = Session::get('trip_total_price', 0);
+
+        // Set default dates if missing
+        if (!isset($tripDetails['start_date'])) {
+            $tripDetails['start_date'] = now()->addWeeks(2)->format('Y-m-d');
+        }
+        if (!isset($tripDetails['end_date'])) {
+            $tripDetails['end_date'] = now()->addWeeks(3)->format('Y-m-d');
+        }
+
+        // Set default title if missing
+        if (!isset($tripDetails['title'])) {
+            $destination = Session::get('selected_destination');
+            $tripDetails['title'] = 'Trip to ' . ($destination['name'] ?? 'Amazing Destination');
+        }
+
+        // Ensure budget and total cost are set
+        if (!isset($tripDetails['total_cost'])) {
+            $tripDetails['total_cost'] = $totalPrice > 0 ? $totalPrice : ($tripDetails['budget'] ?? 0);
+        }
+        if (!isset($tripDetails['budget']) || $tripDetails['budget'] < $tripDetails['total_cost']) {
+            $tripDetails['budget'] = $tripDetails['total_cost'];
+        }
+
+        // Set default travelers if missing
+        if (!isset($tripDetails['travelers'])) {
+            $invites = Session::get('trip_invites', []);
+            $tripDetails['travelers'] = count($invites) + 1; // +1 for organizer
+        }
+
+        Session::put('trip_details', $tripDetails);
     }
 }
