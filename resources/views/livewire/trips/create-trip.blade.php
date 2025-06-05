@@ -169,16 +169,4 @@
             </div>
         @endif
     </div>
-
-    <!-- Debug Info (only in local environment) -->
-    @if(app()->environment('local'))
-        <div class="max-w-7xl mx-auto mt-4 p-4 bg-gray-100 rounded-lg text-xs">
-            <strong>Debug Info:</strong>
-            Current Step: {{ $currentStep }} |
-            Trip Type: {{ $tripType ?? 'None' }} |
-            Can Proceed: {{ $canProceed ? 'Yes' : 'No' }} |
-            Has Destination: {{ $destination ? 'Yes' : 'No' }} |
-            Has Template: {{ $tripTemplateId ? 'Yes' : 'No' }}
-        </div>
-    @endif
 </div>
