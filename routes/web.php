@@ -303,6 +303,17 @@ Route::middleware(['auth', HandleTripSessionData::class])->group(function () {
         Route::patch('/account', [ProfileController::class, 'updateAccount'])->name('account.update');
     });
 
+    // Trip routes
+Route::get('/trips', [TripController::class, 'index'])->name('trips.index');
+Route::post('/trips', [TripController::class, 'store'])->name('trips.store');
+
+// Trip detail routes
+Route::get('/trips/{trip}', [TripController::class, 'show'])->name('trips.show');
+Route::get('/trips/{trip}/edit', [TripController::class, 'edit'])->name('trips.edit');
+Route::put('/trips/{trip}', [TripController::class, 'update'])->name('trips.update');
+Route::delete('/trips/{trip}', [TripController::class, 'destroy'])->name('trips.destroy');
+Route::post('/trips/{trip}/invite', [TripController::class, 'invite'])->name('trips.invite');
+
     // ==================== SETTINGS ====================
     
     Route::prefix('settings')->name('settings.')->group(function () {
@@ -461,32 +472,3 @@ Route::bind('activity', function ($value) {
 Route::bind('itinerary', function ($value) {
     return App\Models\Itinerary::findOrFail($value);
 });
-
-// ==================== ROUTE CACHING OPTIMIZATION ====================
-
-// In production, routes should be cached using: php artisan route:cache
-// Clear route cache with: php artisan route:clear
-
-/*
-|--------------------------------------------------------------------------
-| Route Summary
-|--------------------------------------------------------------------------
-| 
-| This routing file provides:
-| 
-| ✅ Public trip browsing and planning
-| ✅ Secure invitation system with tokens
-| ✅ Complete authenticated trip management
-| ✅ API endpoints for mobile/SPA integration
-| ✅ Profile and settings management
-| ✅ Wallet and savings functionality
-| ✅ Social authentication integration
-| ✅ Development and debugging tools
-| ✅ Proper middleware and security
-| ✅ SEO-friendly URLs
-| ✅ Fallback handling
-| 
-| All routes are properly organized, secured, and documented.
-| The routing structure supports both web and API usage patterns.
-|
-*/

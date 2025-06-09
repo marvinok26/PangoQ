@@ -138,7 +138,11 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-3xl xl:text-4xl font-bold text-white">{{ config('app.name', 'Admin Panel') }}</h1>
+                            <div class="flex-shrink-0">
+                    <a href="/">
+                        <img src="{{ asset('images/logo.png') }}" alt="PangoQ Logo" class="h-10 w-auto">
+                    </a>
+                </div>
                             <p class="text-white/80 text-lg">Secure Administrative Portal</p>
                         </div>
                     </div>

@@ -136,7 +136,7 @@
                                             <div>
                                                 <div class="font-medium text-lg">{{ $trip->budget ? '$' . number_format($trip->budget, 0) : 'Not specified' }}</div>
                                                 @if($trip->budget)
-                                                <div class="text-sm text-gray-500">${{ number_format($trip->budget / $trip->duration, 0) }} per day</div>
+                                                <div class="text-sm text-gray-500">${{ $trip->duration > 0 ? number_format($trip->budget / $trip->duration, 0) : '0' }} per day</div>
                                                 @endif
                                             </div>
                                         </div>
@@ -189,7 +189,7 @@
                         </div>
                         
                         <div class="flex gap-4">
-                            <a href="{{ route('trips.savings', $trip) }}" 
+                            <a href="{{ route('wallet.index', $trip) }}" 
                                class="flex-1 inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
                                 <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
@@ -214,7 +214,7 @@
                                 </svg>
                                 Itinerary Preview
                             </h2>
-                            <a href="{{ route('trips.itinerary', $trip) }}" 
+                            <a href="{{ route('trips.show', $trip) }}" 
                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors duration-200">
                                 <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
@@ -451,11 +451,11 @@
                             </div>
                             <div class="text-center p-3 bg-orange-50 rounded-lg">
                                 <div class="text-2xl font-bold text-orange-600">
-                                    @if($trip->budget)
-                                        ${{ number_format($trip->budget / $trip->duration, 0) }}
-                                    @else
-                                        --
-                                    @endif
+                                    @if($trip->budget && $trip->duration > 0)
+    ${{ number_format($trip->budget / $trip->duration, 0) }}
+@else
+    --
+@endif
                                 </div>
                                 <div class="text-sm text-orange-800">Per Day</div>
                             </div>

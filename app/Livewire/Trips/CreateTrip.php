@@ -339,9 +339,9 @@ class CreateTrip extends Component
      */
     public function createTrip()
     {
-        // Mark session data as ready to be saved
-        Session::put('trip_data_not_saved', true);
-
+        // Store trip data in session for later use
+        Session::put('trip_creation_pending', true);
+        
         // Ensure we have all required data
         $this->ensureCompleteSessionData();
 
@@ -356,14 +356,19 @@ class CreateTrip extends Component
             'user_authenticated' => Auth::check()
         ]);
 
-        // Flash message for login page
-        Session::flash('message', 'Please login or create an account to save your trip plans.');
+        // Set flash message for the login page
+        Session::flash('login_message', 'Please login or create an account to save your trip plans.');
+        
+        // Set intended URL after login
+        Session::put('url.intended', route('trips.create'));
 
-        // Redirect based on authentication status
+        // Check if user is authenticated
         if (Auth::check()) {
-            return redirect()->route('trips.index');
+            // User is logged in, redirect to trips index or create trip logic
+            return $this->redirect(route('trips.index'));
         } else {
-            return redirect()->route('login');
+            // User is not logged in, redirect to login page
+            return $this->redirect(route('login'));
         }
     }
 

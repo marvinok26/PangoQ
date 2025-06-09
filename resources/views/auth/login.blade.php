@@ -196,9 +196,9 @@
                 <div class="text-center mt-4">
                     <p class="text-xs text-gray-500">
                         By signing in, you agree to our
-                        <a href="{{ route('terms') }}" class="text-accent-600 hover:text-[#166fe5] hover:underline">Terms of Service</a> 
+                        <a href="{{ route('pages.terms') }}" class="text-accent-600 hover:text-[#166fe5] hover:underline">Terms of Service</a> 
                         and 
-                        <a href="{{ route('privacy') }}" class="text-accent-600 hover:text-[#166fe5] hover:underline">Privacy Policy</a>
+                        <a href="{{ route('pages.privacy') }}" class="text-accent-600 hover:text-[#166fe5] hover:underline">Privacy Policy</a>
                     </p>
                 </div>
             </div>

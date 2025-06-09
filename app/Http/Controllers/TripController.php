@@ -38,7 +38,7 @@ class TripController extends Controller
 
         // User's trips and invited trips
         $query = Trip::where(function($q) use ($user) {
-            $q->where('user_id', $user->id)
+            $q->where('creator_id', $user->id)
               ->orWhereHas('members', function($memberQuery) use ($user) {
                   $memberQuery->where('user_id', $user->id)
                              ->where('invitation_status', 'accepted');
@@ -64,19 +64,19 @@ class TripController extends Controller
             });
         }
 
-        $trips = $query->with(['user', 'destinationModel', 'members', 'savingsWallet'])
+        $trips = $query->with(['creator', 'destinationModel', 'members', 'savingsWallet'])
                       ->orderBy('start_date', 'desc')
                       ->paginate(12);
 
         // Get summary statistics
-        $stats = [
-            'total' => Trip::where('user_id', $user->id)->count(),
-            'upcoming' => Trip::where('user_id', $user->id)->upcoming()->count(),
-            'completed' => Trip::where('user_id', $user->id)->past()->count(),
-            'planning' => Trip::where('user_id', $user->id)->byStatus('planning')->count(),
-        ];
+$stats = [
+    'total' => Trip::where('creator_id', $user->id)->count(),
+    'upcoming' => Trip::where('creator_id', $user->id)->upcoming()->count(),
+    'completed' => Trip::where('creator_id', $user->id)->past()->count(),
+    'planning' => Trip::where('creator_id', $user->id)->byStatus('planning')->count(),
+];
 
-        return view('trips.index', compact('trips', 'stats'));
+        return view('livewire.pages.trips.index', compact('trips', 'stats'));
     }
 
     /**
@@ -184,7 +184,7 @@ class TripController extends Controller
                                   ->first();
         }
 
-        return view('trips.show', compact('trip', 'pendingInvitations', 'userMembership'));
+        return view('livewire.pages.trips.show', compact('trip', 'pendingInvitations', 'userMembership'));
     }
 
     /**

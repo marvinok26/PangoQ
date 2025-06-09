@@ -36,27 +36,13 @@
                             </svg>
                         </button>
                         
-                        <div class="flex-shrink-0">
-                            <a href="{{ route('home') }}" class="flex items-center space-x-3">
-                                <div class="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <span class="text-white font-bold text-sm">P</span>
-                                </div>
-                                <span class="hidden sm:block font-bold text-xl text-gray-900">PangoQ</span>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Search Bar - Hidden on mobile -->
-                    <div class="hidden lg:flex flex-1 max-w-lg mx-8">
-                        <div class="relative w-full">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                            </div>
-                            <input type="text" placeholder="Search trips, destinations..." 
-                                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
-                        </div>
+                        <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <a href="/">
+                        <img src="{{ asset('images/logo.png') }}" alt="PangoQ Logo" class="h-10 w-auto">
+                    </a>
+                </div>
+            </div>
                     </div>
                     
                     <!-- Right side items -->

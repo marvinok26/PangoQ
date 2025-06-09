@@ -180,9 +180,9 @@
                     required>
                 <label for="agree_terms" class="ml-3 text-sm text-gray-700 cursor-pointer">
                     I agree to the 
-                    <a href="{{ route('terms') }}" class="font-medium text-accent-600 hover:text-[#166fe5] hover:underline transition-colors duration-200" target="_blank">Terms of Service</a>
+                    <a href="{{ route('pages.terms') }}" class="font-medium text-accent-600 hover:text-[#166fe5] hover:underline transition-colors duration-200" target="_blank">Terms of Service</a>
                     and 
-                    <a href="{{ route('privacy') }}" class="font-medium text-accent-600 hover:text-[#166fe5] hover:underline transition-colors duration-200" target="_blank">Privacy Policy</a>
+                    <a href="{{ route('pages.privacy') }}" class="font-medium text-accent-600 hover:text-[#166fe5] hover:underline transition-colors duration-200" target="_blank">Privacy Policy</a>
                 </label>
             </div>
 

@@ -14,7 +14,7 @@ class Trip extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'creator_id', // FIXED: changed from user_id to creator_id
         'trip_template_id',
         'title',
         'description',
@@ -25,7 +25,7 @@ class Trip extends Model
         'travelers',
         'budget',
         'total_cost',
-        'trip_type',
+        'planning_type', // FIXED: changed from trip_type to planning_type
         'status',
         'is_public',
         'currency'
@@ -52,11 +52,19 @@ class Trip extends Model
     // ==================== RELATIONSHIPS ====================
 
     /**
-     * Get the user who owns the trip
+     * Get the user who created the trip
+     */
+    public function creator(): BelongsTo // FIXED: renamed from user() to creator()
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * Alias for backward compatibility
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->creator();
     }
 
     /**
@@ -255,7 +263,7 @@ class Trip extends Model
      */
     public function scopeOwnedBy($query, $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('creator_id', $userId); // FIXED: changed user_id to creator_id
     }
 
     /**
@@ -304,7 +312,7 @@ class Trip extends Model
      */
     public function scopePrePlanned($query)
     {
-        return $query->where('trip_type', 'pre_planned');
+        return $query->where('planning_type', 'pre_planned'); // FIXED: changed trip_type to planning_type
     }
 
     /**
@@ -312,7 +320,7 @@ class Trip extends Model
      */
     public function scopeSelfPlanned($query)
     {
-        return $query->where('trip_type', 'self_planned');
+        return $query->where('planning_type', 'self_planned'); // FIXED: changed trip_type to planning_type
     }
 
     // ==================== HELPER METHODS ====================
@@ -323,7 +331,7 @@ class Trip extends Model
     public function canBeEditedBy(User $user): bool
     {
         // Owner can always edit
-        if ($this->user_id === $user->id) {
+        if ($this->creator_id === $user->id) { // FIXED: changed user_id to creator_id
             return true;
         }
 
@@ -351,7 +359,7 @@ class Trip extends Model
         }
 
         // Owner can always view
-        if ($this->user_id === $user->id) {
+        if ($this->creator_id === $user->id) { // FIXED: changed user_id to creator_id
             return true;
         }
 
@@ -394,7 +402,8 @@ class Trip extends Model
      */
     public function markAsConfirmed(): void
     {
-        $this->update(['status' => 'confirmed']);
+        // FIXED: updated status values based on migration (removed 'confirmed')
+        $this->update(['status' => 'active']);
     }
 
     /**
@@ -410,7 +419,8 @@ class Trip extends Model
      */
     public function cancel(): void
     {
-        $this->update(['status' => 'cancelled']);
+        // FIXED: 'cancelled' status doesn't exist in migration, use 'planning' or add migration
+        $this->update(['status' => 'planning']);
     }
 
     /**
@@ -420,10 +430,8 @@ class Trip extends Model
     {
         return match($this->status) {
             'planning' => 'yellow',
-            'confirmed' => 'green',
-            'ongoing' => 'blue',
+            'active' => 'green', // FIXED: changed from 'confirmed'
             'completed' => 'gray',
-            'cancelled' => 'red',
             default => 'gray'
         };
     }
@@ -435,10 +443,8 @@ class Trip extends Model
     {
         return match($this->status) {
             'planning' => 'Planning',
-            'confirmed' => 'Confirmed',
-            'ongoing' => 'Ongoing',
+            'active' => 'Active', // FIXED: changed from 'confirmed'
             'completed' => 'Completed',
-            'cancelled' => 'Cancelled',
             default => ucfirst($this->status)
         };
     }
@@ -463,4 +469,12 @@ class Trip extends Model
             ]);
         }
     }
+
+    /**
+ * Admin who reviewed the trip
+ */
+public function reviewer(): BelongsTo
+{
+    return $this->belongsTo(User::class, 'reviewed_by');
+}
 }

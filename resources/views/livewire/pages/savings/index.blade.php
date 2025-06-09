@@ -263,7 +263,7 @@
                             
                             <!-- Action Buttons -->
                             <div class="flex gap-3">
-                                <a href="{{ route('trips.savings', $wallet->trip) }}" 
+                                <a href="{{ route('wallet.transactions', $wallet->trip) }}" 
                                    class="flex-1 inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200">
                                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
