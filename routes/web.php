@@ -12,8 +12,6 @@ use App\Http\Controllers\TripInvitationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Middleware\HandleTripSessionData;
-use App\Services\LanguageService;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 
