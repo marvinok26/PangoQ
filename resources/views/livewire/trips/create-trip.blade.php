@@ -151,7 +151,7 @@
 
                 <!-- Next Button -->
                 @if($canProceed)
-                    <button wire:click="nextStep" type="button"
+                    <button wire:click="nextStep"
                         class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
                         Continue
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">

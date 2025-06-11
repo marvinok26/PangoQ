@@ -35,7 +35,7 @@
             <div class="flex flex-col md:flex-row gap-4 py-8">
                <!-- Left container - Destination search box with background -->
 <div class="md:w-2/3 mb-4 md:mb-0">
-    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
+    <div class="relative rounded-lg overflow-hidden shadow-lg min-h-96" style="background-image: url('https://cdn.pixabay.com/photo/2015/09/14/17/31/dubai-939844_1280.jpg'); background-size: cover; background-position: centre; background-attachment: fixed; background-repeat: no-repeat;">
         <div class="absolute inset-0"></div>
         <div class="relative z-10 flex">
             <!-- Background area on the left -->
@@ -103,7 +103,7 @@
                     </form>
                     
                     <!-- Transparent window that shows the main container background -->
-                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('{{ asset('images/image26.jpg') }}'); background-position: left; background-attachment: fixed;">
+                    <div class="h-30 rounded-lg relative overflow-hidden" style="background-image: url('https://cdn.pixabay.com/photo/2015/09/14/17/31/dubai-939844_1280.jpg'); background-size: cover; background-position: centre; background-attachment: fixed; background-repeat: no-repeat;">
                         <div class="absolute inset-0 bg-opacity-20"></div>
                         <!-- This area shows the same background as the main container -->
                     </div>
@@ -115,22 +115,26 @@
                 
                 <!-- Right side containers -->
                 <div class="md:w-1/3 flex flex-col gap-4">
-                    <!-- Taller top container -->
-                    <div class="h-90 rounded-lg overflow-hidden shadow-lg">
-                        <img src="{{ asset('images/image18.jpg') }}" alt="Hotel interior" class="w-full h-full object-cover"
-                             onerror="this.src='https://via.placeholder.com/500x200?text=Hotel+Interior';">
-                    </div>
-                    
-                    <!-- Smaller bottom container -->
-                    <div class="h-24 rounded-lg overflow-hidden shadow-lg relative">
-                        <img src="{{ asset('images/image19.jpg') }}" alt="Background" class="w-full h-full object-cover"
-                             onerror="this.src='https://via.placeholder.com/500x100?text=Background';">
-                        <div class="absolute inset-0 flex items-center justify-center space-x-4">
-                            <a href="{{ route('trips.plan') }}" class="bg-yellow-500 text-white px-4 py-2 rounded-full font-medium text-sm">Explore</a>
-                            <a href="{{ route('login') }}" class="bg-teal-600 text-white px-4 py-2 rounded-full font-medium text-sm">Account</a>
-                        </div>
-                    </div>
-                </div>
+    <!-- Taller top container -->
+    <div class="h-90 rounded-lg overflow-hidden shadow-lg relative">
+        <div class="w-full h-full" style="background-image: url('{{ asset('images/image27.png') }}'); background-size: fit; background-position: center; background-repeat: no-repeat;">
+            <!-- Optional overlay content -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <!-- Add any content you want overlaid on the image -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Smaller bottom container -->
+    <div class="h-29 rounded-lg overflow-hidden shadow-lg relative">
+        <div class="w-full h-full" style="background-image: url('{{ asset('images/image27.png') }}'); background-size: fit; background-position: bottom; background-repeat: no-repeat;">
+            <div class="absolute inset-0 flex items-center justify-center space-x-4">
+                <a href="{{ route('trips.plan') }}" class="bg-yellow-500 text-white px-4 py-2 rounded-full font-medium text-sm hover:bg-yellow-600 transition-colors">Explore</a>
+                <a href="{{ route('login') }}" class="bg-teal-600 text-white px-4 py-2 rounded-full font-medium text-sm hover:bg-teal-700 transition-colors">Account</a>
+            </div>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </div>
@@ -197,7 +201,7 @@
             <div class="flex flex-wrap justify-center items-end gap-8 mb-8">
                 <!-- Left image - slanted diagonally to the right -->
                 <div class="relative w-full md:w-96 h-80 rounded-lg overflow-hidden transform -rotate-6 translate-y-4 translate-x-15">
-                    <img src="{{ asset('images/image20.jpg') }}" alt="Nairobi Fashion Week" class="w-full h-full object-cover" 
+                    <img src="https://cdn.pixabay.com/photo/2023/02/08/06/33/fashion-7775827_1280.jpg" alt="Nairobi Fashion Week" class="w-full h-full object-cover" 
                          onerror="this.src='https://via.placeholder.com/384x320?text=Fashion+Week';">
                     <div class="absolute bottom-0 left-0 bg-gradient-to-t from-black to-transparent w-full p-4">
                         <span class="bg-pink-500 text-white text-xs px-4 py-1 rounded-full">Fashion Event</span>
@@ -207,7 +211,7 @@
                 
                 <!-- Center image - displayed above and larger -->
                 <div class="relative w-full md:w-112 h-96 rounded-lg overflow-hidden z-10 -translate-y-8">
-                    <img src="{{ asset('images/image21.jpg') }}" alt="Kigali Cultural Fest" class="w-full h-full object-cover"
+                    <img src="https://cdn.pixabay.com/photo/2020/01/05/00/01/lady-4742032_1280.jpg" alt="Kigali Cultural Fest" class="w-full h-full object-cover"
                          onerror="this.src='https://via.placeholder.com/448x384?text=Cultural+Fest';">
                     <div class="absolute bottom-0 left-0 bg-gradient-to-t from-black to-transparent w-full p-4">
                         <span class="bg-orange-500 text-white text-xs px-4 py-1 rounded-full">Cultural Event</span>
@@ -217,7 +221,7 @@
                 
                 <!-- Right image - slanted diagonally to the left -->
                 <div class="relative w-full md:w-96 h-80 rounded-lg overflow-hidden transform rotate-6 translate-y-4 -translate-x-15">
-                    <img src="{{ asset('images/image22.jpg') }}" alt="Boston Jazz Fest" class="w-full h-full object-cover"
+                    <img src="https://cdn.pixabay.com/photo/2023/02/07/17/02/trumpet-7774590_1280.jpg" alt="Boston Jazz Fest" class="w-full h-full object-cover"
                          onerror="this.src='https://via.placeholder.com/384x320?text=Jazz+Fest';">
                     <div class="absolute bottom-0 left-0 bg-gradient-to-t from-black to-transparent w-full p-4">
                         <span class="bg-purple-500 text-white text-xs px-4 py-1 rounded-full">Music Event</span>
@@ -231,10 +235,10 @@
     </section>
 
     <!-- Experience Section -->
-    <section class="py-16">
+    <section class="py-16 ml-50">
         <div class="container mx-auto px-4 lg:px-8 flex flex-col md:flex-row items-center gap-12">
             <div class="md:w-2/5">
-                <img src="{{ asset('images/image23.jpg') }}" alt="Experience moments" class="rounded-lg shadow-lg w-300"
+                <img src="https://cdn.pixabay.com/photo/2018/08/14/16/10/art-3605909_1280.jpg" alt="Experience moments" class="rounded-lg shadow-lg w-300"
                      onerror="this.src='https://via.placeholder.com/600x400?text=Experience';">
             </div>
             <div class="md:w-2/5">
@@ -302,7 +306,7 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white rounded-lg overflow-hidden shadow relative h-80" style="background-image: url('{{ asset('images/image11.jpg') }}'); background-size: cover; background-position: center;">
+                <div class="bg-white rounded-lg overflow-hidden shadow relative h-80" style="background-image: url('https://cdn.pixabay.com/photo/2019/04/24/14/03/map-4152197_1280.jpg'); background-size: cover; background-position: center;">
                     <div class="absolute inset-0"></div>
                     <div class="relative z-10 p-4 text-center h-full flex flex-col justify-end">
                         <h3 class="font-bold mb-2 text-white">Travel Insurance</h3>
@@ -317,7 +321,7 @@
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-lg overflow-hidden shadow relative h-80" style="background-image: url('{{ asset('images/image12.jpg') }}'); background-size: cover; background-position: center;">
+                <div class="bg-white rounded-lg overflow-hidden shadow relative h-80" style="background-image: url('https://cdn.pixabay.com/photo/2023/01/15/22/48/lake-7721285_1280.jpg'); background-size: cover; background-position: center;">
                     <div class="absolute inset-0"></div>
                     <div class="relative z-10 p-4 text-center h-full flex flex-col justify-end ">
                         <h3 class="font-bold mb-2 text-white text-xl">Event Insurance</h3>
@@ -355,7 +359,7 @@
                     </div>
                 </div>
                 <div class="md:w-2/5">
-                    <img src="{{ asset('images/image24.jpg') }}" alt="Testimonial" class="rounded-lg shadow-lg w-full h-55 object-cover"
+                    <img src="https://cdn.pixabay.com/photo/2020/02/23/11/00/globe-4872998_1280.jpg" alt="Testimonial" class="rounded-lg shadow-lg w-full h-55 object-cover"
                          onerror="this.src='https://via.placeholder.com/280x192?text=Testimonial';">
                 </div>
             </div>
