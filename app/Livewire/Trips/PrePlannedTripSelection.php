@@ -159,6 +159,7 @@ class PrePlannedTripSelection extends Component
 
         // Store template selection in session
         Session::put('selected_trip_template', $this->selectedTemplate->id);
+        Session::put('selected_trip_type', 'pre_planned');
         Session::put('selected_destination', [
             'id' => $this->selectedDestination->id,
             'name' => $this->selectedDestination->name,
@@ -177,14 +178,14 @@ class PrePlannedTripSelection extends Component
         $tripDetails['budget'] = max($tripDetails['budget'] ?? 0, $this->totalPrice);
         Session::put('trip_details', $tripDetails);
 
-        // For standalone pre-planned selection, redirect to the next step
-        if (!request()->routeIs('trips.plan')) {
-            // If accessed directly, redirect to invite friends step
-            return redirect()->route('trips.invite-friends');
-        }
+        // Mark that user has trip data to save
+        Session::put('trip_data_not_saved', true);
 
-        // Dispatch event to parent component (if within trip creation flow)
-        $this->dispatch('tripTemplateSelected', tripTemplateId: $this->selectedTemplate->id);
+        // Always dispatch event to parent component to proceed to next step
+        $this->dispatch('tripTemplateSelected', [
+            'tripTemplateId' => $this->selectedTemplate->id,
+            'proceedToNext' => true
+        ]);
     }
 
     public function backToTemplates()

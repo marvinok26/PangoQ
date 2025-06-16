@@ -35,7 +35,8 @@ class SocialAuthController extends Controller
                 'trip_activities',
                 'trip_invites',
                 'selected_optional_activities',
-                'trip_total_price'
+                'trip_total_price',
+                'trip_current_step'
             ];
             
             $tripData = [];
@@ -83,6 +84,12 @@ class SocialAuthController extends Controller
                     'profile_photo_path' => $providerUser->getAvatar(),
                     'email_verified_at' => now() // Social accounts are considered verified
                 ]);
+                
+                Log::info('New user created via social auth', [
+                    'user_id' => $user->id,
+                    'provider' => $provider,
+                    'has_trip_data' => session()->has('social_auth_trip_data')
+                ]);
             } 
             // If user exists but not linked to this provider, update provider info
             else if (!$user->auth_provider_id || $user->auth_provider_id !== $providerUser->getId()) {
@@ -95,6 +102,11 @@ class SocialAuthController extends Controller
                 if (!$user->profile_photo_path) {
                     $user->update(['profile_photo_path' => $providerUser->getAvatar()]);
                 }
+                
+                Log::info('Existing user linked to social provider', [
+                    'user_id' => $user->id,
+                    'provider' => $provider
+                ]);
             }
             
             // Login the user
@@ -109,12 +121,44 @@ class SocialAuthController extends Controller
                 }
                 
                 session()->forget('social_auth_trip_data');
-                Log::info('Restored trip data in social auth callback');
+                Log::info('Restored trip data in social auth callback', [
+                    'user_id' => $user->id,
+                    'restored_keys' => array_keys($tripData)
+                ]);
+                
+                // Set flash message to inform user their data was preserved
+                session()->flash('success', 'Welcome! Your trip planning progress has been preserved.');
             }
             
-            return redirect()->intended(RouteServiceProvider::HOME);
+            // Determine redirect URL
+            $redirectUrl = session()->pull('url.intended', RouteServiceProvider::HOME);
+            
+            // If user has trip data, redirect to trip planning page
+            if (session()->has('selected_trip_type')) {
+                $redirectUrl = route('trips.plan');
+            }
+            
+            return redirect($redirectUrl);
+            
         } catch (\Exception $e) {
-            Log::error('Social authentication error: ' . $e->getMessage());
+            Log::error('Social authentication error: ' . $e->getMessage(), [
+                'provider' => $provider,
+                'error' => $e->getMessage(),
+                'has_trip_data' => session()->has('social_auth_trip_data')
+            ]);
+            
+            // If we have trip data, preserve it even on error
+            if (session()->has('social_auth_trip_data')) {
+                $tripData = session('social_auth_trip_data');
+                foreach ($tripData as $key => $value) {
+                    session([$key => $value]);
+                }
+                session()->forget('social_auth_trip_data');
+                
+                return redirect()->route('trips.plan')
+                    ->with('error', 'Authentication failed, but your trip planning progress has been preserved. Please try logging in again.');
+            }
+            
             return redirect()->route('login')->with('error', 'Authentication failed. Please try again.');
         }
     }

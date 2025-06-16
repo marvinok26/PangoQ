@@ -1,3 +1,5 @@
+{{-- resources/views/livewire/pages/trips/create.blade.php --}}
+
 @extends('layouts.page')
 
 @section('title', 'Plan Your Trip')

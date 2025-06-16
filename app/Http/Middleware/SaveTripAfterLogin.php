@@ -51,8 +51,15 @@ class SaveTripAfterLogin
                 
                 Log::info('Trip creation deferred for user', ['user_id' => $user->id]);
             } else {
-                // Clear the flag if no data to save
+                // Clear the flag if no data to save but preserve the data for manual creation
                 session()->forget('trip_data_not_saved');
+                
+                // If user has trip data but no flag set, set a notification
+                if ($hasMinimumTripData && !session()->has('trip_restoration_notified')) {
+                    session()->flash('info', 'Your trip planning progress has been preserved. You can continue where you left off.');
+                    session(['trip_restoration_notified' => true]);
+                    Log::info('Trip data preserved for user after login', ['user_id' => $user->id]);
+                }
             }
         }
 

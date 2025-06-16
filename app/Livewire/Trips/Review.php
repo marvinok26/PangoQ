@@ -33,21 +33,25 @@ class Review extends Component
         if ($this->tripType === 'pre_planned') {
             $templateId = session('selected_trip_template');
             if ($templateId) {
-                $this->tripTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
+                // Ensure we get a single model instance, not a collection
+                $this->tripTemplate = TripTemplate::with(['activities', 'destination'])
+                    ->where('id', $templateId)
+                    ->first();
 
                 if ($this->tripTemplate) {
-                    // Parse the highlights JSON field if it exists
-                    if ($this->tripTemplate->highlights) {
+                    // Parse the highlights JSON field if it exists - using direct property access
+                    $highlightsData = $this->tripTemplate->highlights;
+                    if ($highlightsData) {
                         // Check if highlights is already an array
-                        $this->templateHighlights = is_array($this->tripTemplate->highlights)
-                            ? $this->tripTemplate->highlights
-                            : json_decode($this->tripTemplate->highlights, true) ?? [];
+                        $this->templateHighlights = is_array($highlightsData)
+                            ? $highlightsData
+                            : json_decode($highlightsData, true) ?? [];
                     } else {
                         $this->templateHighlights = [];
                     }
 
-                    // Get base price
-                    $this->basePrice = $this->tripTemplate->base_price;
+                    // Get base price - using direct property access
+                    $this->basePrice = $this->tripTemplate->base_price ?? 0;
 
                     // Get optional activities
                     $this->optionalActivities = $this->tripTemplate->activities()

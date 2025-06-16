@@ -470,3 +470,11 @@ Route::bind('activity', function ($value) {
 Route::bind('itinerary', function ($value) {
     return App\Models\Itinerary::findOrFail($value);
 });
+
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'healthy',
+        'timestamp' => now(),
+        'app' => config('app.name')
+    ]);
+});

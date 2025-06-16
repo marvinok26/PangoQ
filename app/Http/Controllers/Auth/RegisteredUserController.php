@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rules;
 
 class RegisteredUserController extends Controller
@@ -43,14 +44,16 @@ class RegisteredUserController extends Controller
         // Log registration step for debugging
         Log::info('User registration initiated', [
             'email' => $request->email,
-            'has_trip_data' => session()->has('trip_data_not_saved')
+            'has_trip_data' => session()->has('selected_trip_type')
         ]);
 
+        // Check if we have trip data in session
+        $hasTripData = session()->has('selected_trip_type') || 
+                      session()->has('selected_destination') || 
+                      session()->has('trip_details');
+
         // If we have trip data in session, mark it for saving after login
-        if (
-            session()->has('selected_trip_type') || 
-            session()->has('selected_destination')
-        ) {
+        if ($hasTripData) {
             session(['trip_data_not_saved' => true]);
 
             Log::info('Trip data marked for saving after registration', [
@@ -68,7 +71,19 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-         return redirect()->route('login')
-            ->with('status', 'Your account has been created successfully! Please log in.');
+        Log::info('User registered successfully', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'has_trip_data' => $hasTripData
+        ]);
+
+        // Always redirect to login page after registration
+        if ($hasTripData) {
+            return redirect()->route('login')
+                ->with('status', 'Your account has been created successfully! Please log in to continue your trip planning.');
+        } else {
+            return redirect()->route('login')
+                ->with('status', 'Your account has been created successfully! Please log in.');
+        }
     }
 }
