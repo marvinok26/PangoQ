@@ -44,7 +44,28 @@ class CreateTrip extends Component
 
     public function render()
     {
-        return view('livewire.trips.create-trip');
+        return view('livewire.trips.create-trip', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'selected_trip_type' => Session::get('selected_trip_type'),
+            'selected_destination' => Session::get('selected_destination'),
+            'selected_trip_template' => Session::get('selected_trip_template'),
+            'trip_details' => Session::get('trip_details'),
+            'trip_activities' => Session::get('trip_activities'),
+            'trip_invites' => Session::get('trip_invites'),
+            'trip_base_price' => Session::get('trip_base_price'),
+            'trip_total_price' => Session::get('trip_total_price'),
+            'selected_optional_activities' => Session::get('selected_optional_activities'),
+            'current_step' => $this->currentStep
+        ];
     }
 
     /**
@@ -174,6 +195,9 @@ class CreateTrip extends Component
         $this->currentStep = 1;
         $this->validateCurrentStep();
 
+        // Sync with Alpine.js
+        $this->dispatch('syncTripData', $this->getTripDataForAlpine());
+
         Log::info("Trip type selected", [
             'type' => $tripType,
             'new_step' => $this->currentStep,
@@ -190,6 +214,9 @@ class CreateTrip extends Component
         $this->currentStep = 2;
         $this->validateCurrentStep();
 
+        // Sync with Alpine.js
+        $this->dispatch('syncTripData', $this->getTripDataForAlpine());
+
         Log::info("Trip template selected", [
             'template_id' => $tripTemplateId,
             'new_step' => $this->currentStep
@@ -205,6 +232,9 @@ class CreateTrip extends Component
         $this->currentStep = 2;
         $this->validateCurrentStep();
 
+        // Sync with Alpine.js
+        $this->dispatch('syncTripData', $this->getTripDataForAlpine());
+
         Log::info("Destination selected", [
             'destination' => $destination['name'] ?? 'Unknown',
             'new_step' => $this->currentStep
@@ -216,6 +246,7 @@ class CreateTrip extends Component
         if ($this->tripType === 'self_planned' && $this->currentStep === 2) {
             $this->currentStep = 3;
             $this->validateCurrentStep();
+            $this->dispatch('syncTripData', $this->getTripDataForAlpine());
             Log::info("Moved to itinerary planning step");
         }
     }
@@ -228,6 +259,7 @@ class CreateTrip extends Component
             $this->currentStep = 4;
         }
         $this->validateCurrentStep();
+        $this->dispatch('syncTripData', $this->getTripDataForAlpine());
         Log::info("Moved to invites step");
     }
 
@@ -239,6 +271,7 @@ class CreateTrip extends Component
             $this->currentStep = 5;
         }
         $this->validateCurrentStep();
+        $this->dispatch('syncTripData', $this->getTripDataForAlpine());
         Log::info("Moved to review step");
     }
 
@@ -248,6 +281,7 @@ class CreateTrip extends Component
             $oldStep = $this->currentStep;
             $this->currentStep--;
             $this->validateCurrentStep();
+            $this->dispatch('syncTripData', $this->getTripDataForAlpine());
             
             Log::info("Moved back", [
                 'from' => $oldStep,
@@ -262,6 +296,7 @@ class CreateTrip extends Component
             $oldStep = $this->currentStep;
             $this->currentStep++;
             $this->validateCurrentStep();
+            $this->dispatch('syncTripData', $this->getTripDataForAlpine());
             
             Log::info("Moved forward", [
                 'from' => $oldStep,
@@ -277,6 +312,7 @@ class CreateTrip extends Component
             if ($step <= $this->currentStep || ($step === $this->currentStep + 1 && $this->canProceed)) {
                 $this->currentStep = $step;
                 $this->validateCurrentStep();
+                $this->dispatch('syncTripData', $this->getTripDataForAlpine());
                 
                 Log::info("Navigated to step", ['step' => $step]);
             }
@@ -298,6 +334,7 @@ class CreateTrip extends Component
         
         if ($hasMinimumData) {
             $this->validateCurrentStep();
+            $this->dispatch('syncTripData', $this->getTripDataForAlpine());
             Log::info("Skipped to summary");
         }
     }

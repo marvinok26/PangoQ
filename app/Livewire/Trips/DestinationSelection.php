@@ -16,6 +16,10 @@ class DestinationSelection extends Component
     public $recentSearches = [];
     public $popularDestinations = [];
     public $isLoading = false;
+
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
    
     public function mount()
     {
@@ -35,7 +39,40 @@ class DestinationSelection extends Component
 
     public function render()
     {
-        return view('livewire.trips.destination-selection');
+        return view('livewire.trips.destination-selection', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'selected_destination' => Session::get('selected_destination'),
+            'recent_searches' => $this->recentSearches,
+            'step' => 'destination_selection'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['selected_destination']) && !Session::has('selected_destination')) {
+            Session::put('selected_destination', $data['selected_destination']);
+            
+            Log::info('Destination restored from storage', [
+                'destination' => $data['selected_destination']['name'] ?? 'Unknown'
+            ]);
+        }
+
+        if (isset($data['recent_searches']) && empty($this->recentSearches)) {
+            $this->recentSearches = $data['recent_searches'];
+            Session::put('recent_searches', $this->recentSearches);
+        }
     }
 
     public function updatedDestinationQuery()
@@ -90,6 +127,12 @@ class DestinationSelection extends Component
             // Clear search
             $this->destinationQuery = '';
             $this->resetDestinationResults();
+
+            // Sync with Alpine.js
+            $this->dispatch('syncStepData', [
+                'step' => 'destination_selection',
+                'data' => $this->getTripDataForAlpine()
+            ]);
             
             // Dispatch event to parent component
             $this->dispatch('destinationSelected', destination: $destination->toArray());
@@ -159,6 +202,12 @@ class DestinationSelection extends Component
                 
                 Session::put('recent_searches', $recentSearches);
                 $this->recentSearches = $recentSearches;
+
+                // Sync recent searches with Alpine.js
+                $this->dispatch('syncStepData', [
+                    'step' => 'destination_selection',
+                    'data' => $this->getTripDataForAlpine()
+                ]);
             } catch (\Exception $e) {
                 Log::error('Error saving recent search: ' . $e->getMessage());
             }
@@ -172,6 +221,12 @@ class DestinationSelection extends Component
     {
         Session::forget('recent_searches');
         $this->recentSearches = [];
+
+        // Clear from Alpine.js storage
+        $this->dispatch('syncStepData', [
+            'step' => 'destination_selection',
+            'data' => $this->getTripDataForAlpine()
+        ]);
     }
 
     /**
@@ -186,6 +241,12 @@ class DestinationSelection extends Component
         
         Session::put('recent_searches', array_values($recentSearches));
         $this->recentSearches = array_values($recentSearches);
+
+        // Sync with Alpine.js
+        $this->dispatch('syncStepData', [
+            'step' => 'destination_selection',
+            'data' => $this->getTripDataForAlpine()
+        ]);
     }
 
     /**

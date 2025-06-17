@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\NotificationService;
+use App\Services\TripPlanningStore;
 use App\Services\TripService;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,6 +20,11 @@ class TripServiceProvider extends ServiceProvider
         
         $this->app->singleton(NotificationService::class, function ($app) {
             return new NotificationService();
+        });
+
+        // Register TripPlanningStore service
+        $this->app->singleton(TripPlanningStore::class, function ($app) {
+            return new TripPlanningStore();
         });
     }
 

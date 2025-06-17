@@ -170,3 +170,53 @@
         @endif
     </div>
 </div>
+
+@pushOnce('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for authentication events from the server
+    window.addEventListener('user-authenticated', function(event) {
+        // Handle user authentication
+        console.log('User authenticated:', event.detail);
+    });
+
+    // Handle page unload warning if user has unsaved data
+    window.addEventListener('beforeunload', function(event) {
+        // Check if there's unsaved trip data
+        const hasUnsavedData = localStorage.getItem('tripPlanningData');
+        if (hasUnsavedData) {
+            event.preventDefault();
+            event.returnValue = 'You have unsaved trip planning progress. Are you sure you want to leave?';
+            return event.returnValue;
+        }
+    });
+
+    // Listen for storage events from other tabs
+    window.addEventListener('storage', function(event) {
+        if (event.key === 'tripPlanningData') {
+            // Handle changes from other tabs
+            console.log('Trip data changed in another tab');
+        }
+    });
+
+    // Auto-save reminder
+    let reminderTimeout;
+    function showSaveReminder() {
+        const hasUnsavedData = localStorage.getItem('tripPlanningData');
+        if (hasUnsavedData) {
+            console.log('Reminder: Your progress is saved locally. Create an account to save permanently!');
+        }
+    }
+
+    // Set reminder for 5 minutes
+    function resetSaveReminder() {
+        clearTimeout(reminderTimeout);
+        reminderTimeout = setTimeout(showSaveReminder, 300000); // 5 minutes
+    }
+
+    // Reset reminder on any form change
+    document.addEventListener('change', resetSaveReminder);
+    resetSaveReminder();
+});
+</script>
+@endPushOnce

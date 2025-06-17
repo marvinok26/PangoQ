@@ -23,6 +23,11 @@ class PrePlannedTripSelection extends Component
     public $selectedOptionalActivities = [];
     public $totalPrice = 0;
 
+    protected $listeners = [
+        'viewTemplate' => 'handleViewTemplate',
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
+
     public function mount()
     {
         $this->destinations = Destination::has('tripTemplates')->get();
@@ -43,55 +48,123 @@ class PrePlannedTripSelection extends Component
 
     public function render()
     {
-        return view('livewire.trips.pre-planned-trip-selection');
+        return view('livewire.trips.pre-planned-trip-selection', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
     }
 
-    public function selectDestination($destinationId)
-    {
-        $this->selectedDestination = Destination::find($destinationId);
-        $this->tripTemplates = TripTemplate::where('destination_id', $destinationId)
-            ->with('destination')
-            ->get();
-
-        // Reset template selection
-        $this->selectedTemplate = null;
-        $this->showTemplateDetails = false;
-        $this->templateActivities = [];
-        $this->templateHighlights = [];
-        $this->selectedOptionalActivities = [];
-        $this->totalPrice = 0;
-    }
-
-    protected function getListeners()
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
     {
         return [
-            'viewTemplate' => 'handleViewTemplate',
+            'selected_trip_template' => $this->selectedTemplate ? $this->selectedTemplate->id : null,
+            'selected_destination' => $this->selectedDestination ? [
+                'id' => $this->selectedDestination->id,
+                'name' => $this->selectedDestination->name,
+                'country' => $this->selectedDestination->country,
+                'city' => $this->selectedDestination->city,
+            ] : null,
+            'selected_optional_activities' => $this->selectedOptionalActivities,
+            'trip_pricing' => [
+                'base_price' => $this->selectedTemplate ? $this->selectedTemplate->base_price : 0,
+                'total_price' => $this->totalPrice
+            ],
+            'template_state' => [
+                'show_details' => $this->showTemplateDetails,
+                'template_highlights' => $this->templateHighlights
+            ],
+            'step' => 'pre_planned_trip_selection'
         ];
     }
 
-    public function handleViewTemplate($data)
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
     {
-        \Illuminate\Support\Facades\Log::info('handleViewTemplate called with data: ', $data);
-        $this->viewTemplateDetails($data['templateId']);
+        // Restore destination selection
+        if (isset($data['selected_destination']) && !$this->selectedDestination) {
+            $destinationData = $data['selected_destination'];
+            $this->selectedDestination = Destination::find($destinationData['id']);
+            
+            if ($this->selectedDestination) {
+                $this->tripTemplates = TripTemplate::where('destination_id', $destinationData['id'])
+                    ->with('destination')
+                    ->get();
+                    
+                Session::put('selected_destination', $destinationData);
+            }
+        }
+
+        // Restore template selection
+        if (isset($data['selected_trip_template']) && !$this->selectedTemplate && $data['selected_trip_template']) {
+            $templateId = $data['selected_trip_template'];
+            $this->selectedTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
+            
+            if ($this->selectedTemplate) {
+                Session::put('selected_trip_template', $templateId);
+                $this->loadTemplateDetails();
+            }
+        }
+
+        // Restore optional activities
+        if (isset($data['selected_optional_activities']) && !Session::has('selected_optional_activities')) {
+            $this->selectedOptionalActivities = $data['selected_optional_activities'];
+            Session::put('selected_optional_activities', $this->selectedOptionalActivities);
+        }
+
+        // Restore pricing
+        if (isset($data['trip_pricing'])) {
+            $pricing = $data['trip_pricing'];
+            
+            if (isset($pricing['total_price'])) {
+                $this->totalPrice = $pricing['total_price'];
+                Session::put('trip_total_price', $this->totalPrice);
+            }
+            
+            if (isset($pricing['base_price'])) {
+                Session::put('trip_base_price', $pricing['base_price']);
+            }
+        }
+
+        // Restore template view state
+        if (isset($data['template_state'])) {
+            $state = $data['template_state'];
+            
+            if (isset($state['show_details'])) {
+                $this->showTemplateDetails = $state['show_details'];
+            }
+            
+            if (isset($state['template_highlights'])) {
+                $this->templateHighlights = $state['template_highlights'];
+            }
+        }
+
+        \Illuminate\Support\Facades\Log::info('Pre-planned trip data restored from storage');
     }
 
-    public function viewTemplateDetails($templateId)
+    /**
+     * Sync current data to Alpine.js
+     */
+    private function syncDataToAlpine()
     {
-        // Debug information
-        \Illuminate\Support\Facades\Log::info('viewTemplateDetails called with ID: ' . $templateId);
+        $this->dispatch('syncStepData', [
+            'step' => 'pre_planned_trip_selection',
+            'data' => $this->getTripDataForAlpine()
+        ]);
+    }
 
-        $this->selectedTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
-        $this->showTemplateDetails = true;
-
-        // Reset selected optional activities
-        $this->selectedOptionalActivities = [];
-        
-        // Set initial total price to base price
-        $this->totalPrice = $this->selectedTemplate->base_price;
+    /**
+     * Load template details (extracted for reuse)
+     */
+    private function loadTemplateDetails()
+    {
+        if (!$this->selectedTemplate) return;
 
         // Parse the highlights field if it exists
         if ($this->selectedTemplate->highlights) {
-            // Check if highlights is already an array
             $this->templateHighlights = is_array($this->selectedTemplate->highlights) 
                 ? $this->selectedTemplate->highlights 
                 : json_decode($this->selectedTemplate->highlights, true) ?? [];
@@ -123,6 +196,57 @@ class PrePlannedTripSelection extends Component
 
         $this->templateActivities = $groupedActivities;
         $this->optionalActivities = $optionalActivities;
+
+        // Set initial total price if not already set
+        if (!$this->totalPrice) {
+            $this->totalPrice = $this->selectedTemplate->base_price;
+        }
+    }
+
+    public function selectDestination($destinationId)
+    {
+        $this->selectedDestination = Destination::find($destinationId);
+        $this->tripTemplates = TripTemplate::where('destination_id', $destinationId)
+            ->with('destination')
+            ->get();
+
+        // Reset template selection
+        $this->selectedTemplate = null;
+        $this->showTemplateDetails = false;
+        $this->templateActivities = [];
+        $this->templateHighlights = [];
+        $this->selectedOptionalActivities = [];
+        $this->totalPrice = 0;
+
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
+    }
+
+    public function handleViewTemplate($data)
+    {
+        \Illuminate\Support\Facades\Log::info('handleViewTemplate called with data: ', $data);
+        $this->viewTemplateDetails($data['templateId']);
+    }
+
+    public function viewTemplateDetails($templateId)
+    {
+        // Debug information
+        \Illuminate\Support\Facades\Log::info('viewTemplateDetails called with ID: ' . $templateId);
+
+        $this->selectedTemplate = TripTemplate::with(['activities', 'destination'])->find($templateId);
+        $this->showTemplateDetails = true;
+
+        // Reset selected optional activities
+        $this->selectedOptionalActivities = [];
+        
+        // Set initial total price to base price
+        $this->totalPrice = $this->selectedTemplate->base_price;
+
+        // Load template details
+        $this->loadTemplateDetails();
+
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
     }
 
     // Toggle optional activity selection
@@ -149,6 +273,9 @@ class PrePlannedTripSelection extends Component
         // Debug information
         \Illuminate\Support\Facades\Log::info('Optional activity toggled. New total price: ' . $this->totalPrice);
         \Illuminate\Support\Facades\Log::info('Selected optional activities: ', $this->selectedOptionalActivities);
+
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
     }
 
     public function selectTripTemplate()
@@ -181,6 +308,9 @@ class PrePlannedTripSelection extends Component
         // Mark that user has trip data to save
         Session::put('trip_data_not_saved', true);
 
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
+
         // Always dispatch event to parent component to proceed to next step
         $this->dispatch('tripTemplateSelected', [
             'tripTemplateId' => $this->selectedTemplate->id,
@@ -191,11 +321,13 @@ class PrePlannedTripSelection extends Component
     public function backToTemplates()
     {
         $this->showTemplateDetails = false;
+        $this->syncDataToAlpine();
     }
 
     public function backToDestinations()
     {
         $this->selectedDestination = null;
         $this->tripTemplates = [];
+        $this->syncDataToAlpine();
     }
 }

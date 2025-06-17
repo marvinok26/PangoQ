@@ -19,6 +19,10 @@ class TripDetails extends Component
     public $tripPace = 5;
     public $destination;
 
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
+
     public function mount()
     {
         // Set default dates (two weeks from now for one week)
@@ -54,7 +58,67 @@ class TripDetails extends Component
 
     public function render()
     {
-        return view('livewire.trips.trip-details');
+        return view('livewire.trips.trip-details', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'trip_details' => [
+                'title' => $this->title,
+                'start_date' => $this->start_date,
+                'end_date' => $this->end_date,
+                'travelers' => $this->travelers,
+                'budget' => $this->budget,
+                'activity_interests' => $this->activityInterests,
+                'accommodation_type' => $this->accommodationType,
+                'trip_type' => $this->tripType,
+                'trip_pace' => $this->tripPace,
+                'destination' => $this->destination
+            ],
+            'step' => 'trip_details'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['trip_details']) && !Session::has('trip_details')) {
+            $details = $data['trip_details'];
+            
+            $this->title = $details['title'] ?? $this->title;
+            $this->start_date = $details['start_date'] ?? $this->start_date;
+            $this->end_date = $details['end_date'] ?? $this->end_date;
+            $this->travelers = $details['travelers'] ?? $this->travelers;
+            $this->budget = $details['budget'] ?? $this->budget;
+            $this->activityInterests = $details['activity_interests'] ?? $this->activityInterests;
+            $this->accommodationType = $details['accommodation_type'] ?? $this->accommodationType;
+            $this->tripType = $details['trip_type'] ?? $this->tripType;
+            $this->tripPace = $details['trip_pace'] ?? $this->tripPace;
+            $this->destination = $details['destination'] ?? $this->destination;
+            
+            // Also restore to session
+            Session::put('trip_details', [
+                'title' => $this->title,
+                'start_date' => $this->start_date,
+                'end_date' => $this->end_date,
+                'travelers' => $this->travelers,
+                'budget' => $this->budget,
+                'activity_interests' => $this->activityInterests,
+                'accommodation_type' => $this->accommodationType,
+                'trip_type' => $this->tripType,
+                'trip_pace' => $this->tripPace,
+            ]);
+            
+            Log::info('Trip details restored from storage');
+        }
     }
 
     public function updated($field)
@@ -63,6 +127,20 @@ class TripDetails extends Component
         if (in_array($field, ['title', 'start_date', 'end_date', 'travelers', 'budget'])) {
             $this->validateOnly($field, $this->getValidationRules());
         }
+
+        // Auto-sync data to Alpine.js on field updates
+        $this->syncDataToAlpine();
+    }
+
+    /**
+     * Sync current data to Alpine.js
+     */
+    private function syncDataToAlpine()
+    {
+        $this->dispatch('syncStepData', [
+            'step' => 'trip_details',
+            'data' => $this->getTripDataForAlpine()
+        ]);
     }
 
     public function getValidationRules()
@@ -100,6 +178,12 @@ class TripDetails extends Component
 
         // Save to session
         session(['trip_details' => $tripDetails]);
+        
+        // Sync with Alpine.js
+        $this->dispatch('syncStepData', [
+            'step' => 'trip_details',
+            'data' => $this->getTripDataForAlpine()
+        ]);
         
         // Log for debugging
         Log::info("Trip Details saved, dispatching specific event to move to itinerary");

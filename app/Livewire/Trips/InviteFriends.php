@@ -28,6 +28,10 @@ class InviteFriends extends Component
         'friendEmail.email' => 'Please enter a valid email address.',
     ];
 
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
+
     public function mount()
     {
         Log::info('InviteFriends component mounting...');
@@ -40,6 +44,61 @@ class InviteFriends extends Component
             'destination' => $this->destination,
             'trip_type' => $this->tripType,
             'invite_count' => count($this->inviteEmails)
+        ]);
+    }
+
+    public function render()
+    {
+        return view('livewire.trips.invite-friends', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'trip_invites' => $this->inviteEmails,
+            'invite_details' => [
+                'destination' => $this->destination,
+                'trip_title' => $this->tripTitle,
+                'trip_type' => $this->tripType,
+                'total_travelers' => $this->getTotalTravelersProperty()
+            ],
+            'step' => 'invite_friends'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['trip_invites']) && !Session::has('trip_invites')) {
+            $this->inviteEmails = $data['trip_invites'];
+            Session::put('trip_invites', $this->inviteEmails);
+            
+            // Update travelers count in trip details
+            $tripDetails = Session::get('trip_details', []);
+            $tripDetails['travelers'] = 1 + count($this->inviteEmails);
+            Session::put('trip_details', $tripDetails);
+            
+            Log::info('Friend invites restored from storage', [
+                'invite_count' => count($this->inviteEmails)
+            ]);
+        }
+    }
+
+    /**
+     * Sync current data to Alpine.js
+     */
+    private function syncDataToAlpine()
+    {
+        $this->dispatch('syncStepData', [
+            'step' => 'invite_friends',
+            'data' => $this->getTripDataForAlpine()
         ]);
     }
 
@@ -104,6 +163,14 @@ class InviteFriends extends Component
         // Save to session
         Session::put('trip_invites', $this->inviteEmails);
 
+        // Update travelers count in trip details
+        $tripDetails = Session::get('trip_details', []);
+        $tripDetails['travelers'] = 1 + count($this->inviteEmails);
+        Session::put('trip_details', $tripDetails);
+
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
+
         // Reset form fields
         $this->reset(['friendName', 'friendEmail', 'personalMessage']);
         $this->resetValidation();
@@ -124,7 +191,16 @@ class InviteFriends extends Component
             unset($this->inviteEmails[$index]);
             $this->inviteEmails = array_values($this->inviteEmails);
             
+            // Save to session
             Session::put('trip_invites', $this->inviteEmails);
+
+            // Update travelers count in trip details
+            $tripDetails = Session::get('trip_details', []);
+            $tripDetails['travelers'] = 1 + count($this->inviteEmails);
+            Session::put('trip_details', $tripDetails);
+
+            // Sync with Alpine.js
+            $this->syncDataToAlpine();
 
             Log::info('Invite removed', [
                 'email' => $removedEmail,
@@ -146,15 +222,13 @@ class InviteFriends extends Component
         $tripDetails['travelers'] = 1;
         Session::put('trip_details', $tripDetails);
         
+        // Sync with Alpine.js (clear invites)
+        $this->dispatch('clearStepData', 'invite_friends');
+        
         Log::info('Skipped invites step');
         
         // Dispatch to parent component
         $this->dispatch('completeInvitesStep');
-    }
-
-    public function render()
-    {
-        return view('livewire.trips.invite-friends');
     }
 
     // Computed properties

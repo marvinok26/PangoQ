@@ -192,8 +192,8 @@ Route::prefix('api')->name('api.')->group(function () {
 
 // ==================== AUTHENTICATED USER ROUTES ====================
 
-Route::middleware(['auth', HandleTripSessionData::class])->group(function () {
-    
+
+Route::middleware(['auth', 'save-trip', 'handle-trip-session'])->group(function () {  
     // ==================== DASHBOARD ====================
     
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

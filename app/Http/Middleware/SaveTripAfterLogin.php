@@ -19,6 +19,12 @@ class SaveTripAfterLogin
      */
     public function handle(Request $request, Closure $next)
     {
+        Log::info('SaveTripAfterLogin middleware executed', [
+    'user_id' => $request->user()?->id,
+    'has_trip_data' => session()->has('trip_data_not_saved'),
+    'session_keys' => array_keys(session()->all())
+]);
+
         // Process the request first to allow authentication to complete
         $response = $next($request);
 
@@ -36,10 +42,13 @@ class SaveTripAfterLogin
                 Log::info('Restored trip data from social auth session');
             }
 
+            // Check if we need to restore from Alpine.js localStorage
+            $this->restoreFromLocalStorageIfNeeded($request);
+
             // Check if we have trip data to save
             $hasMinimumTripData = session('selected_trip_type') && 
                                 (session('selected_destination') || session('selected_trip_template'));
-            $shouldSave = session('trip_data_not_saved', false);
+            $shouldSave = session('trip_data_not_saved', false) || session('trip_creation_pending', false);
 
             if ($shouldSave && $hasMinimumTripData) {
                 // Instead of processing immediately, defer it to after response is sent
@@ -47,12 +56,12 @@ class SaveTripAfterLogin
                 
                 // Set flash message and clear flag immediately
                 session()->flash('success', 'Your trip is being created! You\'ll see it in your trips shortly.');
-                session()->forget('trip_data_not_saved');
+                session()->forget(['trip_data_not_saved', 'trip_creation_pending']);
                 
                 Log::info('Trip creation deferred for user', ['user_id' => $user->id]);
             } else {
                 // Clear the flag if no data to save but preserve the data for manual creation
-                session()->forget('trip_data_not_saved');
+                session()->forget(['trip_data_not_saved', 'trip_creation_pending']);
                 
                 // If user has trip data but no flag set, set a notification
                 if ($hasMinimumTripData && !session()->has('trip_restoration_notified')) {
@@ -64,6 +73,31 @@ class SaveTripAfterLogin
         }
 
         return $response;
+    }
+
+    /**
+     * Restore trip data from Alpine.js localStorage if session is empty
+     */
+    private function restoreFromLocalStorageIfNeeded($request)
+    {
+        // Check if we have minimal session data
+        $hasSessionData = session('selected_trip_type') || 
+                         session('selected_destination') || 
+                         session('selected_trip_template');
+
+        // Only attempt restoration if we don't have session data but might have localStorage data
+        if (!$hasSessionData) {
+            // Check if request indicates localStorage data is available
+            $hasLocalStorageData = $request->has('_restore_from_storage') || 
+                                  $request->header('X-Has-Trip-Data') === 'true';
+
+            if ($hasLocalStorageData) {
+                // Set a flag to trigger Alpine.js restoration on the frontend
+                session(['restore_trip_data_needed' => true]);
+                
+                Log::info('Flagged for trip data restoration from localStorage');
+            }
+        }
     }
 
     /**
@@ -81,7 +115,9 @@ class SaveTripAfterLogin
             'trip_activities' => session('trip_activities'),
             'trip_invites' => session('trip_invites'),
             'selected_optional_activities' => session('selected_optional_activities'),
-            'trip_total_price' => session('trip_total_price', 0)
+            'trip_total_price' => session('trip_total_price', 0),
+            'trip_base_price' => session('trip_base_price', 0),
+            'recent_searches' => session('recent_searches', [])
         ];
 
         // Use Laravel's built-in dispatch after response
@@ -89,7 +125,7 @@ class SaveTripAfterLogin
             $this->createTripFromSessionData($tripData);
         })->afterResponse();
 
-        // Clear session data immediately
+        // Clear session data immediately, but preserve some user preferences
         $this->clearTripSessionData();
     }
 
@@ -133,15 +169,20 @@ class SaveTripAfterLogin
                 'invitation_status' => 'accepted'
             ]);
 
+            // Store the newly created trip ID for redirect
+            session(['newly_created_trip_id' => $trip->id]);
+
             Log::info('Trip created successfully in background', [
                 'trip_id' => $trip->id,
-                'user_id' => $user->id
+                'user_id' => $user->id,
+                'trip_type' => $tripData['trip_type']
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error creating trip from session data', [
                 'error' => $e->getMessage(),
-                'user_id' => $tripData['user_id'] ?? null
+                'user_id' => $tripData['user_id'] ?? null,
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }
@@ -162,12 +203,16 @@ class SaveTripAfterLogin
 
         // Set destination
         if ($tripData['destination']) {
-            $trip->destination = $tripData['destination']['name'];
+            if (is_array($tripData['destination'])) {
+                $trip->destination = $tripData['destination']['name'];
+            } else {
+                $trip->destination = $tripData['destination'];
+            }
         }
 
         // Set trip details
         $tripDetails = $tripData['trip_details'] ?? [];
-        $trip->title = $tripDetails['title'] ?? ('Trip to ' . ($tripData['destination']['name'] ?? 'Unknown'));
+        $trip->title = $tripDetails['title'] ?? ('Trip to ' . ($tripData['destination']['name'] ?? $tripData['destination'] ?? 'Unknown'));
         $trip->description = $tripDetails['description'] ?? null;
         $trip->start_date = $tripDetails['start_date'] ?? \Carbon\Carbon::now()->addWeeks(2);
         $trip->end_date = $tripDetails['end_date'] ?? \Carbon\Carbon::now()->addWeeks(3);
@@ -218,6 +263,8 @@ class SaveTripAfterLogin
         $startDate = \Carbon\Carbon::parse($trip->start_date);
 
         foreach ($tripActivities as $day => $activities) {
+            if (!is_array($activities)) continue;
+
             $date = clone $startDate;
             $date->addDays($day - 1);
 
@@ -232,14 +279,16 @@ class SaveTripAfterLogin
 
             // Add activities for this day
             foreach ($activities as $activityData) {
+                if (!is_array($activityData)) continue;
+
                 \App\Models\Activity::create([
                     'itinerary_id' => $itinerary->id,
-                    'title' => $activityData['title'],
+                    'title' => $activityData['title'] ?? 'Activity',
                     'description' => $activityData['description'] ?? null,
                     'location' => $activityData['location'] ?? null,
                     'start_time' => $activityData['start_time'] ?? null,
                     'end_time' => $activityData['end_time'] ?? null,
-                    'cost' => $activityData['cost'] ?? null,
+                    'cost' => is_numeric($activityData['cost'] ?? null) ? $activityData['cost'] : null,
                     'created_by' => $trip->creator_id,
                     'category' => $activityData['category'] ?? 'activity',
                     'is_optional' => $activityData['is_optional'] ?? false,
@@ -277,7 +326,11 @@ class SaveTripAfterLogin
      */
     private function processInvites($trip, $invites)
     {
+        if (!is_array($invites)) return;
+
         foreach ($invites as $invite) {
+            if (!is_array($invite)) continue;
+
             $email = $invite['email'] ?? null;
             if (!$email) continue;
 
@@ -294,10 +347,11 @@ class SaveTripAfterLogin
     }
 
     /**
-     * Clear trip planning session data
+     * Clear trip planning session data, but preserve user preferences
      */
     private function clearTripSessionData()
     {
+        // Clear trip planning data
         session()->forget([
             'selected_trip_type',
             'selected_destination',
@@ -306,7 +360,11 @@ class SaveTripAfterLogin
             'trip_activities',
             'trip_invites',
             'selected_optional_activities',
-            'trip_total_price'
+            'trip_total_price',
+            'trip_base_price'
         ]);
+
+        // Preserve some user preferences (don't clear recent_searches)
+        // These will be useful for future trip planning
     }
 }

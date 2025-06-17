@@ -11,6 +11,10 @@ class TripTypeSelection extends Component
     public $selectedType = null;
     public $isAutoAdvancing = false;
 
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
+
     public function mount()
     {
         // Check if trip type was already selected
@@ -23,7 +27,35 @@ class TripTypeSelection extends Component
 
     public function render()
     {
-        return view('livewire.trips.trip-type-selection');
+        return view('livewire.trips.trip-type-selection', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'selected_trip_type' => $this->selectedType,
+            'step' => 'trip_type_selection'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['selected_trip_type']) && !$this->selectedType) {
+            $this->selectedType = $data['selected_trip_type'];
+            Session::put('selected_trip_type', $this->selectedType);
+            
+            Log::info('Trip type restored from storage', [
+                'type' => $this->selectedType
+            ]);
+        }
     }
     
     public function selectTripType($type)
@@ -38,6 +70,12 @@ class TripTypeSelection extends Component
         
         // Store the selected trip type in session
         Session::put('selected_trip_type', $type);
+        
+        // Sync with Alpine.js
+        $this->dispatch('syncStepData', [
+            'step' => 'trip_type_selection',
+            'data' => $this->getTripDataForAlpine()
+        ]);
         
         Log::info('Trip type selected', [
             'type' => $type,
@@ -56,6 +94,9 @@ class TripTypeSelection extends Component
         $this->selectedType = null;
         $this->isAutoAdvancing = false;
         Session::forget('selected_trip_type');
+        
+        // Clear from Alpine.js storage
+        $this->dispatch('clearStepData', 'trip_type_selection');
         
         Log::info('Trip type selection cleared');
     }

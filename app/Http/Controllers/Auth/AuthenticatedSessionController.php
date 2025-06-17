@@ -4,24 +4,34 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
+use App\Services\TripPlanningStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    protected $tripPlanningStore;
+
+    public function __construct(TripPlanningStore $tripPlanningStore)
+    {
+        $this->tripPlanningStore = $tripPlanningStore;
+    }
+
     /**
      * Display the login view.
      */
     public function create(): View
     {
         // Check if we have trip planning data
-        $hasTripData = session()->has('selected_trip_type') || 
-                     session()->has('selected_destination') || 
-                     session()->has('trip_details');
+        $hasTripData = $this->tripPlanningStore->hasUnsavedTripData();
         
-        return view('auth.login', ['hasTripData' => $hasTripData]);
+        return view('auth.login', [
+            'hasTripData' => $hasTripData,
+            'tripProgress' => $hasTripData ? $this->tripPlanningStore->getTripProgress() : 0
+        ]);
     }
 
     /**
@@ -32,24 +42,33 @@ class AuthenticatedSessionController extends Controller
         // Start timing for performance debugging
         $startTime = microtime(true);
         
+        // Check if we need to restore from Alpine.js localStorage OR if coming from registration
+        $shouldRestore = $request->has('_restore_from_storage') || 
+                        $request->header('X-Has-Trip-Data') === 'true' ||
+                        Session::get('preserve_trip_data_for_login', false);
+        
         // Log login attempt for debugging
         Log::info('User login initiated', [
             'email' => $request->email,
-            'has_trip_data' => session()->has('trip_data_not_saved'),
+            'has_trip_data' => $this->tripPlanningStore->hasUnsavedTripData(),
+            'should_restore' => $shouldRestore,
+            'preserve_trip_data' => Session::get('preserve_trip_data_for_login', false),
             'session_id' => session()->getId()
         ]);
 
-        // If we have trip data in session, mark it for saving
-        if (
-            session()->has('selected_trip_type') || 
-            session()->has('selected_destination')
-        ) {
-            session(['trip_data_not_saved' => true]);
+        // If request indicates localStorage data should be restored
+        if ($shouldRestore && $request->has('trip_data')) {
+            $this->tripPlanningStore->restoreTripData($request->input('trip_data', []));
+            Log::info('Trip data restored from Alpine.js localStorage during login');
+        }
+
+        // Mark trip data for saving if we have minimum data
+        if ($this->tripPlanningStore->hasMinimumTripData()) {
+            $this->tripPlanningStore->markForCreation();
 
             Log::info('Trip data marked for saving after login', [
-                'trip_type' => session('selected_trip_type'),
-                'has_destination' => session()->has('selected_destination'),
-                'has_trip_details' => session()->has('trip_details')
+                'progress' => $this->tripPlanningStore->getTripProgress(),
+                'current_step' => $this->tripPlanningStore->getCurrentStep()
             ]);
         }
 
@@ -63,10 +82,14 @@ class AuthenticatedSessionController extends Controller
             if (Auth::attempt($credentials, $request->boolean('remember'))) {
                 $request->session()->regenerate();
 
+                // Clear the preserve flag since we're now logged in
+                Session::forget(['preserve_trip_data_for_login', 'registered_user_email']);
+
                 // Log successful login
                 Log::info('User login successful', [
                     'email' => $request->email,
                     'user_id' => Auth::id(),
+                    'has_trip_data' => $this->tripPlanningStore->hasUnsavedTripData(),
                     'time_taken' => microtime(true) - $startTime
                 ]);
 

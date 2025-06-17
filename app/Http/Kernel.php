@@ -54,7 +54,7 @@ class Kernel extends HttpKernel
      *
      * @var array<string, class-string|string>
      */
-    protected $middlewareAliases = [
+   protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
@@ -65,7 +65,8 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'save.trip.after.login' => \App\Http\Middleware\SaveTripAfterLogin::class,
+        'save-trip' => \App\Http\Middleware\SaveTripAfterLogin::class,
+        'handle-trip-session' => \App\Http\Middleware\HandleTripSessionData::class,
         'tripmember' => \App\Http\Middleware\CheckTripMembership::class,
         'set.language' => \App\Http\Middleware\SetLanguage::class,
         'trip.step' => \App\Http\Middleware\TripStepMiddleware::class,

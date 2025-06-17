@@ -3,6 +3,7 @@
 namespace App\Livewire\Trips;
 
 use App\Models\TripTemplate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
 
@@ -20,6 +21,10 @@ class Review extends Component
     public $optionalActivities = [];
     public $basePrice;
     public $totalCost;
+
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
 
     public function mount()
     {
@@ -107,31 +112,128 @@ class Review extends Component
 
     public function render()
     {
-        return view('livewire.trips.review');
+        return view('livewire.trips.review', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'review_summary' => [
+                'trip_type' => $this->tripType,
+                'destination' => $this->destination,
+                'trip_details' => $this->tripDetails,
+                'trip_activities' => $this->tripActivities,
+                'invites' => $this->invites,
+                'selected_optional_activities' => $this->selectedOptionalActivities,
+                'base_price' => $this->basePrice,
+                'total_cost' => $this->totalCost,
+                'template_id' => session('selected_trip_template'),
+                'template_highlights' => $this->templateHighlights
+            ],
+            'step' => 'review'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['review_summary'])) {
+            $summary = $data['review_summary'];
+            
+            // Restore basic trip data if not in session
+            if (!$this->tripType && isset($summary['trip_type'])) {
+                $this->tripType = $summary['trip_type'];
+                Session::put('selected_trip_type', $this->tripType);
+            }
+            
+            if (!$this->destination && isset($summary['destination'])) {
+                $this->destination = $summary['destination'];
+                Session::put('selected_destination', $this->destination);
+            }
+            
+            if (empty($this->tripDetails) && isset($summary['trip_details'])) {
+                $this->tripDetails = $summary['trip_details'];
+                Session::put('trip_details', $this->tripDetails);
+            }
+            
+            if (empty($this->tripActivities) && isset($summary['trip_activities'])) {
+                $this->tripActivities = $summary['trip_activities'];
+                Session::put('trip_activities', $this->tripActivities);
+            }
+            
+            if (empty($this->invites) && isset($summary['invites'])) {
+                $this->invites = $summary['invites'];
+                Session::put('trip_invites', $this->invites);
+            }
+            
+            if (empty($this->selectedOptionalActivities) && isset($summary['selected_optional_activities'])) {
+                $this->selectedOptionalActivities = $summary['selected_optional_activities'];
+                Session::put('selected_optional_activities', $this->selectedOptionalActivities);
+            }
+            
+            if (isset($summary['template_id']) && !Session::has('selected_trip_template')) {
+                Session::put('selected_trip_template', $summary['template_id']);
+            }
+            
+            if (isset($summary['total_cost'])) {
+                $this->totalCost = $summary['total_cost'];
+                Session::put('trip_total_price', $this->totalCost);
+            }
+            
+            if (isset($summary['base_price'])) {
+                $this->basePrice = $summary['base_price'];
+                Session::put('trip_base_price', $this->basePrice);
+            }
+            
+            Log::info('Review data restored from storage');
+        }
+    }
+
+    /**
+     * Sync current data to Alpine.js
+     */
+    private function syncDataToAlpine()
+    {
+        $this->dispatch('syncStepData', [
+            'step' => 'review',
+            'data' => $this->getTripDataForAlpine()
+        ]);
     }
 
     public function editTripType()
     {
+        $this->syncDataToAlpine();
         $this->dispatch('goToStep', step: 0);
     }
 
     public function editDestination()
     {
+        $this->syncDataToAlpine();
         $this->dispatch('goToStep', step: 1);
     }
 
     public function editDetails()
     {
+        $this->syncDataToAlpine();
         $this->dispatch('goToStep', step: 2);
     }
 
     public function editItinerary()
     {
+        $this->syncDataToAlpine();
         $this->dispatch('goToStep', step: 3);
     }
 
     public function editInvites()
     {
+        $this->syncDataToAlpine();
         $this->dispatch('goToStep', step: 4);
     }
 }

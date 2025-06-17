@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Services\TripPlanningStore;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,17 +16,25 @@ use Illuminate\Validation\Rules;
 
 class RegisteredUserController extends Controller
 {
+    protected $tripPlanningStore;
+
+    public function __construct(TripPlanningStore $tripPlanningStore)
+    {
+        $this->tripPlanningStore = $tripPlanningStore;
+    }
+
     /**
      * Display the registration view.
      */
     public function create()
     {
         // Check if we have trip planning data to customize the registration message
-        $hasTripData = session()->has('selected_trip_type') || 
-                       session()->has('selected_destination') || 
-                       session()->has('trip_details');
+        $hasTripData = $this->tripPlanningStore->hasUnsavedTripData();
         
-        return view('auth.register', ['hasTripData' => $hasTripData]);
+        return view('auth.register', [
+            'hasTripData' => $hasTripData,
+            'tripProgress' => $hasTripData ? $this->tripPlanningStore->getTripProgress() : 0
+        ]);
     }
 
     /**
@@ -41,25 +50,33 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // Check if we need to restore from Alpine.js localStorage
+        $shouldRestore = $request->has('_restore_from_storage') || 
+                        $request->header('X-Has-Trip-Data') === 'true';
+
         // Log registration step for debugging
         Log::info('User registration initiated', [
             'email' => $request->email,
-            'has_trip_data' => session()->has('selected_trip_type')
+            'has_trip_data' => $this->tripPlanningStore->hasUnsavedTripData(),
+            'should_restore' => $shouldRestore
         ]);
 
-        // Check if we have trip data in session
-        $hasTripData = session()->has('selected_trip_type') || 
-                      session()->has('selected_destination') || 
-                      session()->has('trip_details');
+        // If request indicates localStorage data should be restored
+        if ($shouldRestore && $request->has('trip_data')) {
+            $this->tripPlanningStore->restoreTripData($request->input('trip_data', []));
+            Log::info('Trip data restored from Alpine.js localStorage during registration');
+        }
 
-        // If we have trip data in session, mark it for saving after login
-        if ($hasTripData) {
-            session(['trip_data_not_saved' => true]);
+        // Check if we have trip data
+        $hasTripData = $this->tripPlanningStore->hasUnsavedTripData();
+
+        // Mark trip data for saving if we have minimum data
+        if ($this->tripPlanningStore->hasMinimumTripData()) {
+            $this->tripPlanningStore->markForCreation();
 
             Log::info('Trip data marked for saving after registration', [
-                'trip_type' => session('selected_trip_type'),
-                'has_destination' => session()->has('selected_destination'),
-                'has_trip_details' => session()->has('trip_details')
+                'progress' => $this->tripPlanningStore->getTripProgress(),
+                'current_step' => $this->tripPlanningStore->getCurrentStep()
             ]);
         }
 
@@ -77,10 +94,16 @@ class RegisteredUserController extends Controller
             'has_trip_data' => $hasTripData
         ]);
 
-        // Always redirect to login page after registration
+        // If we have trip data, we need to preserve it through the login process
         if ($hasTripData) {
+            // Store trip data in a way that survives the redirect to login
+            Session::put('preserve_trip_data_for_login', true);
+            Session::put('registered_user_email', $user->email);
+            
             return redirect()->route('login')
-                ->with('status', 'Your account has been created successfully! Please log in to continue your trip planning.');
+                ->with('status', 'Your account has been created successfully! Please log in to continue your trip planning.')
+                ->with('message', 'Your trip planning progress will be saved after you log in.')
+                ->with('auto_fill_email', $user->email);
         } else {
             return redirect()->route('login')
                 ->with('status', 'Your account has been created successfully! Please log in.');

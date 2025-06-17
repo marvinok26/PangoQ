@@ -42,6 +42,10 @@ class ItineraryPlanning extends Component
     
     // Suggested activities
     public $suggestedActivities = [];
+
+    protected $listeners = [
+        'restoreFromStorage' => 'restoreFromStorage'
+    ];
     
     public function mount()
     {
@@ -124,13 +128,77 @@ class ItineraryPlanning extends Component
 
     public function render()
     {
-        return view('livewire.trips.itinerary-planning');
+        return view('livewire.trips.itinerary-planning', [
+            'tripData' => $this->getTripDataForAlpine()
+        ]);
+    }
+
+    /**
+     * Get trip data for Alpine.js persistence
+     */
+    private function getTripDataForAlpine()
+    {
+        return [
+            'trip_activities' => $this->dayActivities,
+            'selected_optional_activities' => $this->selectedOptionalActivities,
+            'itinerary_details' => [
+                'budget' => $this->budget,
+                'total_cost' => $this->totalCost,
+                'base_price' => $this->basePrice,
+                'active_day' => $this->activeDay
+            ],
+            'step' => 'itinerary_planning'
+        ];
+    }
+
+    /**
+     * Restore data from Alpine.js localStorage
+     */
+    public function restoreFromStorage($data)
+    {
+        if (isset($data['trip_activities']) && !Session::has('trip_activities')) {
+            $this->dayActivities = $data['trip_activities'];
+            Session::put('trip_activities', $this->dayActivities);
+            
+            Log::info('Trip activities restored from storage');
+        }
+
+        if (isset($data['selected_optional_activities']) && !Session::has('selected_optional_activities')) {
+            $this->selectedOptionalActivities = $data['selected_optional_activities'];
+            Session::put('selected_optional_activities', $this->selectedOptionalActivities);
+        }
+
+        if (isset($data['itinerary_details'])) {
+            $details = $data['itinerary_details'];
+            
+            if (isset($details['budget']) && !$this->budget) {
+                $this->budget = $details['budget'];
+            }
+            if (isset($details['total_cost']) && !$this->totalCost) {
+                $this->totalCost = $details['total_cost'];
+            }
+            if (isset($details['active_day'])) {
+                $this->activeDay = $details['active_day'];
+            }
+        }
+    }
+
+    /**
+     * Sync current data to Alpine.js
+     */
+    private function syncDataToAlpine()
+    {
+        $this->dispatch('syncStepData', [
+            'step' => 'itinerary_planning',
+            'data' => $this->getTripDataForAlpine()
+        ]);
     }
     
     public function changeActiveDay($day)
     {
         if ($day >= 1 && $day <= $this->totalDays) {
             $this->activeDay = $day;
+            $this->syncDataToAlpine();
         }
     }
     
@@ -164,6 +232,9 @@ class ItineraryPlanning extends Component
         
         // Save to session
         session(['trip_activities' => $this->dayActivities]);
+        
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
         
         // Reset form
         $this->resetNewActivity();
@@ -211,6 +282,9 @@ class ItineraryPlanning extends Component
             
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
+            
+            // Sync with Alpine.js
+            $this->syncDataToAlpine();
         }
     }
     
@@ -246,6 +320,9 @@ class ItineraryPlanning extends Component
         
         // Save selected optional activities to session
         session(['selected_optional_activities' => $this->selectedOptionalActivities]);
+        
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
     }
     
     public function updateBudget()
@@ -266,6 +343,9 @@ class ItineraryPlanning extends Component
                 'budget' => $this->budget
             ]]);
         }
+        
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
     }
     
     public function addSuggestedActivity($index)
@@ -312,6 +392,9 @@ class ItineraryPlanning extends Component
             
             // Save to session
             session(['trip_activities' => $this->dayActivities]);
+            
+            // Sync with Alpine.js
+            $this->syncDataToAlpine();
         }
     }
     
@@ -370,6 +453,9 @@ class ItineraryPlanning extends Component
         
         // Save activities to session
         session(['trip_activities' => $this->dayActivities]);
+        
+        // Sync with Alpine.js
+        $this->syncDataToAlpine();
         
         // Log for debugging
         Log::info("Itinerary planning saved, dispatching specific event to move to invites");

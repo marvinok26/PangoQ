@@ -11,9 +11,19 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Register admin middleware
+        // Register all middleware aliases
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'save-trip' => \App\Http\Middleware\SaveTripAfterLogin::class,
+            'handle-trip-session' => \App\Http\Middleware\HandleTripSessionData::class,
+            'tripmember' => \App\Http\Middleware\CheckTripMembership::class,
+            'set.language' => \App\Http\Middleware\SetLanguage::class,
+            'trip.step' => \App\Http\Middleware\TripStepMiddleware::class,
+        ]);
+        
+        // Register web middleware group customizations if needed
+        $middleware->web(append: [
+            \App\Http\Middleware\CheckRedisConnection::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

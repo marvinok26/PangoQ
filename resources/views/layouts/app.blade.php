@@ -1,4 +1,4 @@
-{{-- resources/views/welcome.blade.php --}}
+{{-- resources/views/layouts/app.blade.php --}}
 @extends('layouts.app')
 
 @section('content')

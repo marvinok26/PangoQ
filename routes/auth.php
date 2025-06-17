@@ -8,7 +8,6 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Middleware\SaveTripAfterLogin;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -16,15 +15,13 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware(SaveTripAfterLogin::class);
+    Route::post('register', [RegisteredUserController::class, 'store']);
 
     // Login routes
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware(SaveTripAfterLogin::class);
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
     // Password reset routes
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
@@ -44,7 +41,6 @@ Route::middleware('guest')->group(function () {
         ->name('auth.redirect');
 
     Route::get('auth/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback'])
-        ->middleware(SaveTripAfterLogin::class)
         ->name('auth.callback');
 });
 
@@ -71,4 +67,10 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
+});
+
+// Apply SaveTripAfterLogin middleware to authenticated routes that need it
+Route::middleware(['auth', 'save.trip.after.login'])->group(function () {
+    // Dashboard and other routes where trip data should be processed
+    Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 });
