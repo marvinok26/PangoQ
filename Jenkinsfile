@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Docker Hub Configuration
         DOCKERHUB_USERNAME = 'your-dockerhub-username'  // Change this
-        IMAGE_NAME = 'pangoq-app'
+        IMAGE_NAME = 'marvinok26/pangoq-app'
         IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
     }
